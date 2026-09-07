@@ -1,26 +1,26 @@
 # Backend API
 
-API backend em TypeScript com Fastify, Drizzle ORM e PostgreSQL, usando Bun como runtime principal.
+TypeScript backend API built with Fastify, Drizzle ORM, and PostgreSQL, using Bun as the main runtime.
 
-## Requisitos essenciais
+## Essential requirements
 
-Antes de rodar o projeto, você precisa ter instalado no computador:
+Before running the project, you need to have the following installed on your machine:
 
 - Git
-- Node.js LTS (recomendado v20 ou superior)
+- Node.js LTS (recommended v20 or higher)
 - Bun
-- Docker e Docker Compose
-- Editor de código (VS Code recomendado)
+- Docker and Docker Compose
+- Code editor (VS Code recommended)
 
-> Importante: apesar do projeto usar Bun, o Node.js ainda é útil para ambiente geral, ferramentas e compatibilidade de alguns setups. Em muitos computadores, o Bun não substitui completamente o Node em tudo, então vale instalar ambos.
+> Important: even though the project uses Bun, Node.js is still useful for the general environment, tools, and compatibility with some setups. On many machines, Bun does not completely replace Node in every scenario, so installing both is recommended.
 
 ---
 
-## 1) Instalar o Git
+## 1) Install Git
 
 ### Windows
 
-Baixe e instale pelo site oficial:
+Download and install from the official site:
 
 https://git-scm.com/download/win
 
@@ -30,7 +30,7 @@ https://git-scm.com/download/win
 xcode-select --install
 ```
 
-Ou via Homebrew:
+Or with Homebrew:
 
 ```bash
 brew install git
@@ -42,7 +42,7 @@ brew install git
 sudo apt update && sudo apt install git
 ```
 
-Verifique:
+Verify:
 
 ```bash
 git --version
@@ -50,30 +50,30 @@ git --version
 
 ---
 
-## 2) Instalar o Node.js
+## 2) Install Node.js
 
 ### Windows
 
-#### Opção 1: via nvm-windows
+#### Option 1: via nvm-windows
 
 ```powershell
 winget install CoreyButler.NVMforWindows
 ```
 
-Depois reinicie o terminal e rode:
+Then restart the terminal and run:
 
 ```powershell
 nvm install 20.17.0
 nvm use 20.17.0
 ```
 
-#### Opção 2: via instalador oficial
+#### Option 2: via the official installer
 
 https://nodejs.org/
 
-Selecione a versão LTS e instale.
+Select the LTS version and install it.
 
-Valide:
+Verify:
 
 ```powershell
 node -v
@@ -82,13 +82,13 @@ npm -v
 
 ### macOS
 
-Com Homebrew:
+With Homebrew:
 
 ```bash
 brew install node
 ```
 
-Valide:
+Verify:
 
 ```bash
 node -v
@@ -104,7 +104,7 @@ sudo apt update
 sudo apt install -y nodejs npm
 ```
 
-Ou use nvm:
+Or use nvm:
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
@@ -113,7 +113,7 @@ nvm install 20
 nvm use 20
 ```
 
-Valide:
+Verify:
 
 ```bash
 node -v
@@ -122,7 +122,7 @@ npm -v
 
 ---
 
-## 3) Instalar o Bun
+## 3) Install Bun
 
 ### Windows
 
@@ -138,7 +138,7 @@ powershell -c "irm https://bun.sh/install.ps1 | iex"
 winget install Oven-sh.Bun
 ```
 
-Valide:
+Verify:
 
 ```powershell
 bun --version
@@ -150,7 +150,7 @@ bun --version
 brew install oven-sh/bun/bun
 ```
 
-Valide:
+Verify:
 
 ```bash
 bun --version
@@ -162,13 +162,13 @@ bun --version
 curl -fsSL https://bun.sh/install | bash
 ```
 
-Depois, no terminal atual ou em um novo terminal:
+Then, in the current terminal or a new one:
 
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"
 ```
 
-Valide:
+Verify:
 
 ```bash
 bun --version
@@ -176,19 +176,19 @@ bun --version
 
 ---
 
-## 4) Instalar o Docker e Docker Compose
+## 4) Install Docker and Docker Compose
 
 ### Windows
 
-Instale o Docker Desktop:
+Install Docker Desktop:
 
 https://www.docker.com/products/docker-desktop/
 
-Depois abra o Docker Desktop e confirme que o serviço está rodando.
+Then open Docker Desktop and confirm the service is running.
 
 ### macOS
 
-Instale o Docker Desktop:
+Install Docker Desktop:
 
 https://www.docker.com/products/docker-desktop/
 
@@ -200,7 +200,7 @@ sudo apt install docker.io docker-compose-plugin
 sudo systemctl enable --now docker
 ```
 
-Valide:
+Verify:
 
 ```bash
 docker --version
@@ -209,36 +209,36 @@ docker compose version
 
 ---
 
-## 5) Clonar o projeto
+## 5) Clone the project
 
 ```bash
-git clone <url-do-repositorio>
+git clone <repository-url>
 cd backend
 ```
 
 ---
 
-## 6) Instalar dependências do projeto
+## 6) Install project dependencies
 
-Na raiz do projeto:
+At the project root:
 
 ```bash
 bun install
 ```
 
-Se por algum motivo o Bun falhar, use também o Node para garantir ambiente:
+If Bun fails for any reason, you can also use Node to set up the environment:
 
 ```bash
 npm install
 ```
 
-> Em geral, o projeto foi pensado para ser executado com Bun, mas o Node ainda pode ser útil para instalar e diagnosticar problemas.
+> In general, the project is designed to run with Bun, but Node can still be useful for installation and troubleshooting.
 
 ---
 
-## 7) Configurar o arquivo de ambiente
+## 7) Configure the environment file
 
-Crie o arquivo `.env` a partir do exemplo:
+Create the `.env` file from the example:
 
 ### Windows (PowerShell)
 
@@ -258,7 +258,7 @@ cp .env.example .env
 cp .env.example .env
 ```
 
-Depois edite o arquivo `.env`:
+Then edit the `.env` file:
 
 ```env
 PORT=3336
@@ -267,7 +267,7 @@ NODE_ENV=development
 DATABASE_URL=postgres://root:rootpassword@localhost:5432/dev_db
 ```
 
-Se estiver usando PostgreSQL via Docker, normalmente o host será `localhost` nas máquinas locais. Caso o banco não conecte, tente:
+If you are using PostgreSQL through Docker, the host is usually `localhost` on local machines. If the database does not connect, try:
 
 ```env
 DATABASE_URL=postgres://root:rootpassword@host.docker.internal:5432/dev_db
@@ -275,23 +275,23 @@ DATABASE_URL=postgres://root:rootpassword@host.docker.internal:5432/dev_db
 
 ---
 
-## 8) Subir o banco PostgreSQL com Docker
+## 8) Start the PostgreSQL database with Docker
 
-O projeto já possui um `compose.yaml` com o PostgreSQL.
+The project already includes a `compose.yaml` with PostgreSQL.
 
-### Iniciar o banco
+### Start the database
 
 ```bash
 docker compose up -d postgres
 ```
 
-### Iniciar backend e banco juntos
+### Start backend and database together
 
 ```bash
 docker compose up --build
 ```
 
-### Parar os containers
+### Stop the containers
 
 ```bash
 docker compose down
@@ -299,21 +299,21 @@ docker compose down
 
 ---
 
-## 9) Rodar a aplicação
+## 9) Run the application
 
-### Desenvolvimento
+### Development
 
 ```bash
 bun run dev
 ```
 
-### Produção local
+### Local production
 
 ```bash
 bun run start
 ```
 
-### Build do projeto
+### Build the project
 
 ```bash
 bun run build
@@ -321,30 +321,30 @@ bun run build
 
 ---
 
-## 10) Acessar a API
+## 10) Access the API
 
-Com o servidor rodando, acesse:
+When the server is running, access:
 
 - http://localhost:3336
 - Swagger UI: http://localhost:3336/docs
 
 ---
 
-## 11) Trabalhar com Drizzle
+## 11) Work with Drizzle
 
-### Gerar migrations
+### Generate migrations
 
 ```bash
 bunx drizzle-kit generate --config=drizzle.config.ts
 ```
 
-### Enviar schema para o banco
+### Push schema to the database
 
 ```bash
 bunx drizzle-kit push --config=drizzle.config.ts
 ```
 
-### Abrir o Drizzle Studio
+### Open Drizzle Studio
 
 ```bash
 bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0
@@ -352,23 +352,23 @@ bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0
 
 ---
 
-## 12) Dicas por sistema operacional
+## 12) Tips by operating system
 
 ### Windows
 
-- Prefira usar PowerShell ou WSL2.
-- Se o Docker e o banco não se conectarem, teste `host.docker.internal`.
-- Reinicie o terminal após instalar Node/Bun para que os comandos fiquem no `PATH`.
+- Prefer PowerShell or WSL2.
+- If Docker and the database do not connect, test `host.docker.internal`.
+- Restart the terminal after installing Node/Bun so the commands are available in `PATH`.
 
 ### macOS
 
-- Use Homebrew para instalar Node e Bun.
-- Docker Desktop normalmente resolve bem a conexão com PostgreSQL local.
+- Use Homebrew to install Node and Bun.
+- Docker Desktop usually handles PostgreSQL local connections well.
 
 ### Linux
 
-- Use `curl` para instalar Bun e `apt` para instalar Node/Docker.
-- Se o Bun não estiver no `PATH`, adicione no seu shell:
+- Use `curl` to install Bun and `apt` to install Node/Docker.
+- If Bun is not in `PATH`, add this to your shell:
 
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"
@@ -376,16 +376,16 @@ export PATH="$HOME/.bun/bin:$PATH"
 
 ---
 
-## 13) Boas práticas
+## 13) Best practices
 
-- Nunca commite o arquivo `.env`.
-- Mantenha um `.env.example` com valores vazios ou apenas exemplos.
-- Em produção, use secrets do ambiente ou variáveis do provedor de deploy.
-- O projeto foi criado principalmente para rodar com Bun, então prefira usar `bun` nos comandos de desenvolvimento.
+- Never commit the `.env` file.
+- Keep a `.env.example` with empty or sample values only.
+- In production, use environment secrets or deployment provider variables.
+- The project was mainly created to run with Bun, so prefer using `bun` for development commands.
 
 ---
 
-## 14) Comandos úteis
+## 14) Useful commands
 
 ```bash
 git --version
@@ -404,4 +404,4 @@ docker compose down
 
 ---
 
-Este projeto foi configurado para uso com Bun, Fastify, Drizzle e PostgreSQL. Com todos os requisitos instalados, ele pode ser executado em qualquer sistema operacional compatível com esses softwares.
+This project was configured for use with Bun, Fastify, Drizzle, and PostgreSQL. With all requirements installed, it can run on any operating system compatible with these tools.
