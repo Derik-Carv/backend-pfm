@@ -12,7 +12,7 @@
         "allowImportingTsExtensions": true,
         "verbatimModuleSyntax": true,
         "noEmit": true,
-        "ignoreDeprecations": "6.0",
+        "ignoreDeprecations": "5.0",
 
         /* Alias de importa��o (mantido da print) */
         "baseUrl": ".",
