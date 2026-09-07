@@ -5,3 +5,6 @@ DB_HOST=
 DB_PORT=
 DB_USER=
 DB_PASSWORD=
+
+DATABASE_URL="postgres://root:password@postgres:5432/user_db"
+JWT_SECRET="seu_secret_super_seguro_e_longo_aqui"
