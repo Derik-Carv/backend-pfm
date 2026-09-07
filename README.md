@@ -2,39 +2,149 @@
 
 API backend em TypeScript com Fastify, Drizzle ORM e PostgreSQL, usando Bun como runtime principal.
 
-## Requisitos
+## Requisitos essenciais
 
-Antes de rodar o projeto, tenha instalado:
+Antes de rodar o projeto, você precisa ter instalado no computador:
 
-- Bun 1.x
 - Git
-- Docker e Docker Compose (opcional, mas recomendado para o PostgreSQL)
+- Node.js LTS (recomendado v20 ou superior)
+- Bun
+- Docker e Docker Compose
+- Editor de código (VS Code recomendado)
 
-## 1) Instalar o Bun
+> Importante: apesar do projeto usar Bun, o Node.js ainda é útil para ambiente geral, ferramentas e compatibilidade de alguns setups. Em muitos computadores, o Bun não substitui completamente o Node em tudo, então vale instalar ambos.
+
+---
+
+## 1) Instalar o Git
 
 ### Windows
 
-No PowerShell ou Git Bash:
+Baixe e instale pelo site oficial:
+
+https://git-scm.com/download/win
+
+### macOS
+
+```bash
+xcode-select --install
+```
+
+Ou via Homebrew:
+
+```bash
+brew install git
+```
+
+### Linux
+
+```bash
+sudo apt update && sudo apt install git
+```
+
+Verifique:
+
+```bash
+git --version
+```
+
+---
+
+## 2) Instalar o Node.js
+
+### Windows
+
+#### Opção 1: via nvm-windows
+
+```powershell
+winget install CoreyButler.NVMforWindows
+```
+
+Depois reinicie o terminal e rode:
+
+```powershell
+nvm install 20.17.0
+nvm use 20.17.0
+```
+
+#### Opção 2: via instalador oficial
+
+https://nodejs.org/
+
+Selecione a versão LTS e instale.
+
+Valide:
+
+```powershell
+node -v
+npm -v
+```
+
+### macOS
+
+Com Homebrew:
+
+```bash
+brew install node
+```
+
+Valide:
+
+```bash
+node -v
+npm -v
+```
+
+### Linux
+
+#### Ubuntu / Debian
+
+```bash
+sudo apt update
+sudo apt install -y nodejs npm
+```
+
+Ou use nvm:
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.nvm/nvm.sh
+nvm install 20
+nvm use 20
+```
+
+Valide:
+
+```bash
+node -v
+npm -v
+```
+
+---
+
+## 3) Instalar o Bun
+
+### Windows
+
+#### via PowerShell
 
 ```powershell
 powershell -c "irm https://bun.sh/install.ps1 | iex"
 ```
 
-Se preferir via winget:
+#### via winget
 
 ```powershell
 winget install Oven-sh.Bun
 ```
 
-Feche e abra o terminal e valide:
+Valide:
 
 ```powershell
 bun --version
 ```
 
 ### macOS
-
-Com Homebrew:
 
 ```bash
 brew install oven-sh/bun/bun
@@ -52,7 +162,7 @@ bun --version
 curl -fsSL https://bun.sh/install | bash
 ```
 
-Depois, reinicie o terminal ou rode:
+Depois, no terminal atual ou em um novo terminal:
 
 ```bash
 export PATH="$HOME/.bun/bin:$PATH"
@@ -64,22 +174,69 @@ Valide:
 bun --version
 ```
 
-## 2) Clonar o projeto
+---
+
+## 4) Instalar o Docker e Docker Compose
+
+### Windows
+
+Instale o Docker Desktop:
+
+https://www.docker.com/products/docker-desktop/
+
+Depois abra o Docker Desktop e confirme que o serviço está rodando.
+
+### macOS
+
+Instale o Docker Desktop:
+
+https://www.docker.com/products/docker-desktop/
+
+### Linux
+
+```bash
+sudo apt update
+sudo apt install docker.io docker-compose-plugin
+sudo systemctl enable --now docker
+```
+
+Valide:
+
+```bash
+docker --version
+docker compose version
+```
+
+---
+
+## 5) Clonar o projeto
 
 ```bash
 git clone <url-do-repositorio>
 cd backend
 ```
 
-## 3) Instalar dependências
+---
 
-No diretório do projeto:
+## 6) Instalar dependências do projeto
+
+Na raiz do projeto:
 
 ```bash
 bun install
 ```
 
-## 4) Configurar variáveis de ambiente
+Se por algum motivo o Bun falhar, use também o Node para garantir ambiente:
+
+```bash
+npm install
+```
+
+> Em geral, o projeto foi pensado para ser executado com Bun, mas o Node ainda pode ser útil para instalar e diagnosticar problemas.
+
+---
+
+## 7) Configurar o arquivo de ambiente
 
 Crie o arquivo `.env` a partir do exemplo:
 
@@ -101,7 +258,7 @@ cp .env.example .env
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` com as configurações locais:
+Depois edite o arquivo `.env`:
 
 ```env
 PORT=3336
@@ -110,31 +267,39 @@ NODE_ENV=development
 DATABASE_URL=postgres://root:rootpassword@localhost:5432/dev_db
 ```
 
-> Se estiver usando Docker Compose, normalmente o host para o banco em desenvolvimento é `localhost` no Windows, macOS e Linux. Caso o banco não conecte, teste `host.docker.internal` no ambiente Docker.
+Se estiver usando PostgreSQL via Docker, normalmente o host será `localhost` nas máquinas locais. Caso o banco não conecte, tente:
 
-## 5) Subir o banco PostgreSQL
+```env
+DATABASE_URL=postgres://root:rootpassword@host.docker.internal:5432/dev_db
+```
 
-O projeto já inclui o arquivo `compose.yaml` com o serviço do PostgreSQL.
+---
 
-### Iniciar apenas o banco
+## 8) Subir o banco PostgreSQL com Docker
+
+O projeto já possui um `compose.yaml` com o PostgreSQL.
+
+### Iniciar o banco
 
 ```bash
 docker compose up -d postgres
 ```
 
-### Iniciar backend + banco
+### Iniciar backend e banco juntos
 
 ```bash
 docker compose up --build
 ```
 
-Para parar:
+### Parar os containers
 
 ```bash
 docker compose down
 ```
 
-## 6) Rodar a aplicação
+---
+
+## 9) Rodar a aplicação
 
 ### Desenvolvimento
 
@@ -142,28 +307,30 @@ docker compose down
 bun run dev
 ```
 
-O projeto usa o Bun em modo watch, então ele recarrega automaticamente ao salvar arquivos.
-
 ### Produção local
 
 ```bash
 bun run start
 ```
 
-### Build da aplicação
+### Build do projeto
 
 ```bash
 bun run build
 ```
 
-## 7) Acessar a API
+---
 
-Com o servidor rodando, a API fica disponível em:
+## 10) Acessar a API
+
+Com o servidor rodando, acesse:
 
 - http://localhost:3336
 - Swagger UI: http://localhost:3336/docs
 
-## 8) Drizzle ORM
+---
+
+## 11) Trabalhar com Drizzle
 
 ### Gerar migrations
 
@@ -177,22 +344,56 @@ bunx drizzle-kit generate --config=drizzle.config.ts
 bunx drizzle-kit push --config=drizzle.config.ts
 ```
 
-### Abrir Drizzle Studio
+### Abrir o Drizzle Studio
 
 ```bash
 bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0
 ```
 
-## 9) Observações importantes
+---
 
-- Não commite o arquivo `.env`.
-- Mantenha um `.env.example` com valores vazios ou exemplos públicos.
-- Em ambientes reais, use variáveis sensíveis via secrets do ambiente / deploy provider.
-- O projeto foi criado para rodar com Bun, então prefira os comandos `bun ...` em vez de `npm` ou `yarn`.
+## 12) Dicas por sistema operacional
 
-## 10) Comandos úteis
+### Windows
+
+- Prefira usar PowerShell ou WSL2.
+- Se o Docker e o banco não se conectarem, teste `host.docker.internal`.
+- Reinicie o terminal após instalar Node/Bun para que os comandos fiquem no `PATH`.
+
+### macOS
+
+- Use Homebrew para instalar Node e Bun.
+- Docker Desktop normalmente resolve bem a conexão com PostgreSQL local.
+
+### Linux
+
+- Use `curl` para instalar Bun e `apt` para instalar Node/Docker.
+- Se o Bun não estiver no `PATH`, adicione no seu shell:
 
 ```bash
+export PATH="$HOME/.bun/bin:$PATH"
+```
+
+---
+
+## 13) Boas práticas
+
+- Nunca commite o arquivo `.env`.
+- Mantenha um `.env.example` com valores vazios ou apenas exemplos.
+- Em produção, use secrets do ambiente ou variáveis do provedor de deploy.
+- O projeto foi criado principalmente para rodar com Bun, então prefira usar `bun` nos comandos de desenvolvimento.
+
+---
+
+## 14) Comandos úteis
+
+```bash
+git --version
+node -v
+npm -v
+bun --version
+docker --version
+docker compose version
 bun install
 bun run dev
 bun run build
@@ -201,23 +402,6 @@ docker compose up -d postgres
 docker compose down
 ```
 
-## 11) Dicas por sistema operacional
-
-### Windows
-
-- Recomendado usar PowerShell ou WSL2 para desenvolvimento.
-- Se o Docker não conseguir acessar o banco pelo `localhost`, tente `host.docker.internal`.
-
-### macOS
-
-- O processo mais simples é usar Homebrew para instalar Bun.
-- Docker Desktop costuma funcionar bem com o PostgreSQL local.
-
-### Linux
-
-- O comando de instalação via curl geralmente funciona bem.
-- Se o Bun não estiver no `PATH`, adicione `export PATH="$HOME/.bun/bin:$PATH"` ao seu perfil.
-
 ---
 
-Este projeto foi configurado para uso com Bun e Fastify. Para mais detalhes, consulte o restante da estrutura e os arquivos de configuração do projeto.
+Este projeto foi configurado para uso com Bun, Fastify, Drizzle e PostgreSQL. Com todos os requisitos instalados, ele pode ser executado em qualquer sistema operacional compatível com esses softwares.
