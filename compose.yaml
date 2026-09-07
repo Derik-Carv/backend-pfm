@@ -1,0 +1,30 @@
+services:
+    postgres:
+        image: postgres:16-alpine
+        container_name: bun_postgres_db
+        restart: always
+        environment:
+            POSTGRES_USER: root
+            POSTGRES_PASSWORD: rootpassword
+            POSTGRES_DB: dev_db
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+
+    backend:
+        build:
+            context: .
+            target: development
+        container_name: bun_backend_dev
+        ports:
+            - "${PORT:-3000}:${PORT:-3000}"
+            - "4983:4983" # Port Default for Drizzle Studio
+        volumes:
+            - .:/usr/src/app
+            - /usr/src/app/node_modules
+        env_file:
+            - .env
+
+volumes:
+    postgres_data:
