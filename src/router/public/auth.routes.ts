@@ -1,10 +1,14 @@
 import type { FastifyInstance } from "fastify";
+import { rateLimitProfiles } from "@/lib/rateLimit";
 import { loginSchema, healthSchema } from "@/router/public/schemasPublic";
 
 export async function publicRoutes(app: FastifyInstance) {
     app.post(
         "/login",
         {
+            config: {
+                rateLimit: rateLimitProfiles.standard,
+            },
             schema: loginSchema,
         },
         async (request, reply) => {
@@ -15,6 +19,9 @@ export async function publicRoutes(app: FastifyInstance) {
     app.get(
         "/health",
         {
+            config: {
+                rateLimit: rateLimitProfiles.standard,
+            },
             schema: healthSchema,
         },
         async (request, reply) => {
