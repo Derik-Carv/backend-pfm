@@ -1,6 +1,8 @@
 import fastify from "fastify";
 import fasfitySwagger from "@fastify/swagger";
 import fasfitySwaggerUi from "@fastify/swagger-ui";
+import rateLimit from "@fastify/rate-limit";
+import { globalRateLimitConfig } from "@/lib/rateLimit";
 import { appRoutes } from "@/router";
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -19,6 +21,8 @@ export const app = fastify({
           }
         : true,
 });
+
+app.register(rateLimit, globalRateLimitConfig);
 
 // configuration of swagger and swagger-ui for API documentation
 app.register(fasfitySwagger, {
