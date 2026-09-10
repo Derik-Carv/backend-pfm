@@ -1,10 +1,19 @@
-PORT=3000
+# Configurações do Servidor
+PORT=3336
 HOST=0.0.0.0
+
+# Ambiente
 NODE_ENV=development
-DB_HOST=
-DB_PORT=
-DB_USER=
-DB_PASSWORD=
+
+# CORS
+CORS_ORIGIN="localhost"
+
+# Credenciais / Banco de Dados (Exemplo)
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=secret
 
 DATABASE_URL="postgres://root:password@postgres:5432/user_db"
+
 JWT_SECRET="seu_secret_super_seguro_e_longo_aqui"
