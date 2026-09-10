@@ -5,25 +5,25 @@ export const rateLimitProfiles = {
         max: 7,
         timeWindow: "1 minute",
         ban: 10000,
-        hook: "preParsing", // check before checking the payload in fastify
+        hook: "onRequest", // check before checking the payload in fastify
     },
     standard: {
         max: 15,
         timeWindow: "1 minute",
         ban: 10000,
-        hook: "preParsing",
+        hook: "onRequest",
     },
     advanced: {
         max: 20,
         timeWindow: "1 minute",
         ban: 10000,
-        hook: "preParsing",
+        hook: "onRequest",
     },
     manager: {
         max: 500,
         timeWindow: "1 minute",
         ban: 1000,
-        hook: "preParsing",
+        hook: "onRequest",
     },
 } as const;
 

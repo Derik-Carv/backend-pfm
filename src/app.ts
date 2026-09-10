@@ -1,6 +1,8 @@
 import fastify from "fastify";
 import fasfitySwagger from "@fastify/swagger";
 import fasfitySwaggerUi from "@fastify/swagger-ui";
+import cors from "@fastify/cors";
+import { corsOptions } from "./policies/cors";
 import rateLimit from "@fastify/rate-limit";
 import { globalRateLimitConfig } from "@/lib/rateLimit";
 import { appRoutes } from "@/router";
@@ -22,7 +24,9 @@ export const app = fastify({
         : true,
 });
 
-app.register(rateLimit, globalRateLimitConfig);
+await app.register(cors, corsOptions);
+
+await app.register(rateLimit, globalRateLimitConfig);
 
 // configuration of swagger and swagger-ui for API documentation
 app.register(fasfitySwagger, {
