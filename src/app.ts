@@ -3,9 +3,11 @@ import fasfitySwagger from "@fastify/swagger";
 import fasfitySwaggerUi from "@fastify/swagger-ui";
 import cors from "@fastify/cors";
 import { corsOptions } from "./policies/cors";
+import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import { globalRateLimitConfig } from "@/lib/rateLimit";
 import { appRoutes } from "@/router";
+import { helmetOptions } from "@/policies/helmet";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -25,6 +27,8 @@ export const app = fastify({
 });
 
 await app.register(cors, corsOptions);
+
+await app.register(helmet, helmetOptions);
 
 await app.register(rateLimit, globalRateLimitConfig);
 
