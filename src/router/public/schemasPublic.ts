@@ -1,37 +1,19 @@
-import type { FastifySchema } from "fastify";
+import { z } from "zod";
 
-export const loginSchema: FastifySchema = {
-    description: "Route for login authentication",
-    tags: ["Public"],
-    body: {
-        type: "object",
-        required: ["username", "password"],
-        properties: {
-            username: { type: "string", description: "Username for login" },
-            password: { type: "string", description: "Password for login" },
-        },
-    },
-    response: {
-        200: {
-            description: "Successful login response",
-            type: "object",
-            properties: {
-                message: { type: "string", description: "Success message" },
-            },
-        },
-    },
-};
+export const loginSchema = z.object({
+    username: z
+        .string()
+        .max(50, { message: "Username can have maximun 50 characters" }),
+    password: z
+        .string()
+        .min(6, { message: "Password must have at least 6 characters" })
+        .max(50, { message: "Password can have maximun 50 characters" }),
+});
 
-export const healthSchema: FastifySchema = {
-    description: "Check server health status",
-    tags: ["Public"],
-    response: {
-        200: {
-            description: "Successful check of server health status",
-            type: "object",
-            properties: {
-                status: { type: "string" },
-            },
-        },
-    },
-};
+export const loginResponseSchema = z.object({
+    message: z.string(),
+});
+
+export const healthResponseSchema = z.object({
+    status: z.string(),
+});
