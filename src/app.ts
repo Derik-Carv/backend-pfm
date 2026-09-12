@@ -8,6 +8,11 @@ import rateLimit from "@fastify/rate-limit";
 import { globalRateLimitConfig } from "@/lib/rateLimit";
 import { appRoutes } from "@/router";
 import { helmetOptions } from "@/policies/helmet";
+import {
+    serializerCompiler,
+    validatorCompiler,
+} from "@fastify/type-provider-zod";
+import type { ZodTypeProvider } from "@fastify/type-provider-zod";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -24,7 +29,10 @@ export const app = fastify({
               },
           }
         : true,
-});
+})
+    .withTypeProvider<ZodTypeProvider>()
+    .setValidatorCompiler(validatorCompiler)
+    .setSerializerCompiler(serializerCompiler);
 
 await app.register(cors, corsOptions);
 

@@ -1,7 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { rateLimitProfiles } from "@/lib/rateLimit";
-import { loginSchema, healthSchema } from "@/router/public/schemasPublic";
-import { corsOptions } from "@/policies/cors";
+import {
+    healthResponseSchema,
+    loginResponseSchema,
+    loginSchema,
+} from "@/router/public/schemasPublic";
 
 export async function publicRoutes(app: FastifyInstance) {
     app.post(
@@ -10,7 +13,12 @@ export async function publicRoutes(app: FastifyInstance) {
             config: {
                 rateLimit: rateLimitProfiles.standard,
             },
-            schema: loginSchema,
+            schema: {
+                description: "Route for login authetication",
+                tags: ["Public"],
+                body: loginSchema,
+                response: { 200: loginResponseSchema },
+            },
         },
         async (request, reply) => {
             return await { message: "Login route" };
@@ -23,7 +31,11 @@ export async function publicRoutes(app: FastifyInstance) {
             config: {
                 rateLimit: rateLimitProfiles.standard,
             },
-            schema: healthSchema,
+            schema: {
+                description: "Check server status health",
+                tags: ["Public"],
+                response: { 200: healthResponseSchema },
+            },
         },
         async (request, reply) => {
             return await { status: "ok" };
