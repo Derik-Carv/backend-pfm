@@ -5,7 +5,7 @@ import cors from "@fastify/cors";
 import { corsOptions } from "./policies/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
-import { globalRateLimitConfig } from "@/lib/rateLimit";
+import { globalRateLimitConfig } from "@/policies/rateLimit";
 import { appRoutes } from "@/router";
 import { helmetOptions } from "@/policies/helmet";
 import {
