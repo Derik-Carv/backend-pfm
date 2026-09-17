@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { getRolesRepository } from "@/database/users/roles.repository";
+import { getRolesResponseSchema } from "./role.schemas";
 
 export const getRolesController = async (
     request: FastifyRequest,

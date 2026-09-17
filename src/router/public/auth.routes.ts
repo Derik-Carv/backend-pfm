@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import { type FastifyInstance } from "fastify";
 import { healthRouteOptions } from "@/router/public/health/health.options";
 import { healthController } from "./health/health.controller";
 import { loginController } from "./login/login.controller";

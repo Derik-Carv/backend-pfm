@@ -1,5 +1,9 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import type { CreateUserInput } from "./user.schemas";
+import {
+    createUserResponseSchema,
+    createUserSchema,
+    type CreateUserInput,
+} from "./user.schemas";
 import { generateNick } from "@/utils/createNick";
 import {
     createUserRepository,
@@ -14,7 +18,8 @@ export const createUserController = async (
     reply: FastifyReply,
 ) => {
     try {
-        const { name, surname, username, password, cpf, roleId } = request.body;
+        const { name, surname, username, password, cpf, roleId } =
+            createUserSchema.parse(request.body);
         const serverCreateNick = await generateNick(name, surname);
 
         const serverValidNick =

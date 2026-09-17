@@ -1,5 +1,6 @@
 import { getUsersRepository } from "@/database/users/users.repository";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import { getUserResponseSchema } from "./user.schemas";
 
 export const getUserController = async (
     request: FastifyRequest,
@@ -9,9 +10,10 @@ export const getUserController = async (
         const users = await getUsersRepository();
 
         if (users) {
-            return reply
-                .status(200)
-                .send({ message: "Users here", users: users });
+            return reply.status(200).send({
+                message: "Users here",
+                users: users,
+            });
         }
 
         return reply.status(404).send({ message: "Users not found" });
