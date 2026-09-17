@@ -3,7 +3,7 @@ import {
     loginSchema,
     loginResponseOkSchema,
 } from "@/router/public/login/login.schemas";
-import { errorResponseSchema } from "../error.schema";
+import { errorResponseSchema } from "../../error.schema";
 
 export const loginRouteOptions = {
     config: {
