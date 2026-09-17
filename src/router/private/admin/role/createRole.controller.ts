@@ -1,5 +1,9 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import type { CreateRoleInput } from "./role.schemas";
+import {
+    createRoleResponseSchema,
+    createRoleSchema,
+    type CreateRoleInput,
+} from "./role.schemas";
 import {
     createRoleRepository,
     getRoleForNameRepository,
@@ -10,7 +14,7 @@ export const createRoleController = async (
     reply: FastifyReply,
 ) => {
     try {
-        const { name } = request.body;
+        const { name } = createRoleSchema.parse(request.body);
 
         console.log(name);
 

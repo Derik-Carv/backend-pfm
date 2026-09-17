@@ -9,10 +9,11 @@ import { globalRateLimitConfig } from "@/policies/rateLimit";
 import { appRoutes } from "@/router";
 import { helmetOptions } from "@/policies/helmet";
 import {
-    serializerCompiler,
+    type ZodTypeProvider,
     validatorCompiler,
-} from "@fastify/type-provider-zod";
-import type { ZodTypeProvider } from "@fastify/type-provider-zod";
+    serializerCompiler,
+    jsonSchemaTransform,
+} from "fastify-type-provider-zod";
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -49,6 +50,7 @@ app.register(fasfitySwagger, {
             version: "1.0.0",
         },
     },
+    transform: jsonSchemaTransform,
 });
 
 app.register(fasfitySwaggerUi, {
