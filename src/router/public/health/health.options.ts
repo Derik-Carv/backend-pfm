@@ -1,6 +1,6 @@
 import { rateLimitProfiles } from "@/policies/rateLimit";
 import { healthOkResponse } from "@/router/public/health/health.schemas";
-import { errorResponseSchema } from "../error.schema";
+import { errorResponseSchema } from "../../error.schema";
 
 export const healthRouteOptions = {
     config: {

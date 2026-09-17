@@ -3,8 +3,10 @@ import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 export const roles = pgTable("roles", {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").unique().notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+        .defaultNow()
+        .$onUpdateFn(() => new Date()),
 });
 
 export const users = pgTable("users", {
@@ -17,5 +19,8 @@ export const users = pgTable("users", {
         .references(() => roles.id),
     cpf: text("cpf").unique().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+        .defaultNow()
+        .notNull()
+        .$onUpdateFn(() => new Date()),
 });
