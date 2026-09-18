@@ -1,7 +1,7 @@
 import {
     createRoleRepository,
     getRoleForNameRepository,
-} from "@/database/users/roles.repository";
+} from "@/database/roles/roles.repository";
 
 export async function usecaseCreateRole(name: string) {
     const checkName = await getRoleForNameRepository(name);

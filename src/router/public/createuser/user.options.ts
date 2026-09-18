@@ -4,7 +4,7 @@ import {
     createUserResponseSchema,
     getUserResponseSchema,
 } from "@/router/public/createuser/user.schemas";
-import { errorResponseSchema } from "../../error.schema";
+import { errorResponseSchema } from "@/router/error.schema";
 
 export const createUserRouteOptions = {
     config: {

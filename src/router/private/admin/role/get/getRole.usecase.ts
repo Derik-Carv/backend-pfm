@@ -1,4 +1,4 @@
-import { getRolesRepository } from "@/database/users/roles.repository";
+import { getRolesRepository } from "@/database/roles/roles.repository";
 
 export async function usecaseGetRole() {
     const checkRoles = await getRolesRepository();
