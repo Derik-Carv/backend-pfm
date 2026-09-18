@@ -13,7 +13,9 @@
         "preview": "bun run dist/server.js",
         "db:generate": "docker exec -it bun_backend_dev bunx drizzle-kit generate --config=drizzle.config.ts",
         "db:push": "docker exec -it bun_backend_dev bunx drizzle-kit push --config=drizzle.config.ts",
-        "db:studio": "docker exec -it bun_backend_dev bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0"
+        "db:studio": "docker exec -it bun_backend_dev bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0",
+        "db:seed": "docker exec -it bun_backend_dev bun run src/database/seed.ts",
+        "db-reset-and-seed": "docker compose down -v && docker compose up -d --build && sleep 3 && bun run db:push && bun run db:seed"
     },
     "devDependencies": {
         "@types/bun": "latest",

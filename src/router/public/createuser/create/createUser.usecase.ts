@@ -1,4 +1,4 @@
-import { getRoleForidRepository } from "@/database/users/roles.repository";
+import { getRoleForidRepository } from "@/database/roles/roles.repository";
 import {
     createUserRepository,
     getCompareUsernameRepository,
