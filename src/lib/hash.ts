@@ -1,7 +1,7 @@
 export async function hashPassword(password: string): Promise<string> {
     return Bun.password.hash(password, {
         algorithm: "argon2id",
-        memoryCost: 4096,
+        memoryCost: 65536,
         timeCost: 3,
     });
 }
