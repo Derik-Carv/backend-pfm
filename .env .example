@@ -16,6 +16,7 @@ DB_PASSWORD=secret
 
 # Create role and admin user
 ADMIN_DEFAULT_PASSWORD=Admin@123456
+CPFADMIN="167.030.850-21"
 
 DATABASE_URL="postgres://root:password@postgres:5432/user_db"
 

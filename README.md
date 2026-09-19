@@ -42,16 +42,32 @@ Then open:
 Create a `.env` file by copying the project example exactly:
 
 ```env
-PORT=3000
+# Configurações do Servidor
+PORT=3336
 HOST=0.0.0.0
+
+# Ambiente
 NODE_ENV=development
-DB_HOST=
-DB_PORT=
-DB_USER=
-DB_PASSWORD=
+
+# CORS
+CORS_ORIGIN="localhost"
+
+# Credenciais / Banco de Dados (Exemplo)
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=secret
+
+# Create role and admin user
+ADMIN_DEFAULT_PASSWORD=Admin@123456
+CPFADMIN="167.030.850-21"
 
 DATABASE_URL="postgres://root:password@postgres:5432/user_db"
-JWT_SECRET="seu_secret_super_seguro_e_longo_aqui"
+
+JWT_SECRET="your_secret_here"
+
+# Betterstack token
+LOGTOKEN=seu_token_copiado_aqui
 ```
 
 Then replace the empty values with your local credentials when needed. Keep the structure consistent with the repository example and do not commit the real `.env` file.
