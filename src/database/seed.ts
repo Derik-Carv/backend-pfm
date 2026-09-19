@@ -14,8 +14,8 @@ export async function startSeed() {
     const adminName = "administrator";
     const adminSurname = "system";
     const adminUsername = "administrator.system";
-    const cpf = await cpfClean("705.535.060-30");
-    const rawPassword = process.env.ADMIN_DEFAULT_PASSWORD || "Admin@123456";
+    const cpf = await cpfClean(process.env.CPFADMIN as string);
+    const rawPassword = process.env.ADMIN_DEFAULT_PASSWORD as string;
 
     let adminRole = await getRoleForNameRepository(adminRoleName);
 
