@@ -14,8 +14,10 @@ import {
     serializerCompiler,
     jsonSchemaTransform,
 } from "fastify-type-provider-zod";
+import fastifyJwt from "@fastify/jwt";
 
 const isDev = process.env.NODE_ENV !== "production";
+const jwtSecret = process.env.JWT_SECRET as string;
 
 // define fastify and logger configuration
 export const app = fastify({
@@ -40,6 +42,10 @@ await app.register(cors, corsOptions);
 await app.register(helmet, helmetOptions);
 
 await app.register(rateLimit, globalRateLimitConfig);
+
+await app.register(fastifyJwt, {
+    secret: jwtSecret,
+});
 
 // configuration of swagger and swagger-ui for API documentation
 app.register(fasfitySwagger, {
