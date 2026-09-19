@@ -18,8 +18,7 @@ export const loginSchema = z
 export const loginResponseOkSchema = z
     .object({
         message: z.string(),
-        name: z.string(),
-        surname: z.string(),
+        token: z.string(),
     })
     .strict();
 
