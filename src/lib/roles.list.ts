@@ -1,4 +1,4 @@
-import { getRolesRepository } from "@/database/roles/roles.repository";
+import { getRolesRepository } from "@/database/tables/roles/roles.repository";
 
 const rolesFromDb = await getRolesRepository();
 

@@ -1,4 +1,4 @@
-import { getCompareUsernameRepository } from "@/database/users/users.repository";
+import { getCompareUsernameRepository } from "@/database/tables/users/users.repository";
 import type { LoginUserInput } from "@/router/public/login/login.schemas";
 import { hashPassword, verifyPassword } from "@/lib/hash";
 

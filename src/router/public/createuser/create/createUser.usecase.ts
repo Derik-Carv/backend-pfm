@@ -1,8 +1,8 @@
-import { getRoleForidRepository } from "@/database/roles/roles.repository";
+import { getRoleForidRepository } from "@/database/tables/roles/roles.repository";
 import {
     createUserRepository,
     getCompareUsernameRepository,
-} from "@/database/users/users.repository";
+} from "@/database/tables/users/users.repository";
 import { hashPassword } from "@/lib/hash";
 import { cpfValidateNormal } from "@/utils/checkCpf";
 import { generateNick } from "@/utils/createNick";
