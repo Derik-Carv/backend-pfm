@@ -8,6 +8,13 @@
       "when": 1789745690038,
       "tag": "0000_greedy_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790035390792,
+      "tag": "0001_elite_smasher",
+      "breakpoints": true
     }
   ]
 }

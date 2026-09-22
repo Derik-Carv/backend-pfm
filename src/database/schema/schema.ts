@@ -60,6 +60,7 @@ export const movimentation = pgTable("movimentation", {
     id: uuid("id")
         .primaryKey()
         .$defaultFn(() => uuidv7()),
+    name: text("name").notNull(),
     nfId: uuid("nf_id"),
     destinationUserId: uuid("destination_user_id").references(() => users.id),
     destinationClientId: uuid("destination_client_id").references(

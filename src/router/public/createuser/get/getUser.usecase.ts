@@ -1,4 +1,4 @@
-import { getUsersRepository } from "@/database/users/users.repository";
+import { getUsersRepository } from "@/database/tables/users/users.repository";
 
 export async function usecaseGetUser() {
     const users = await getUsersRepository();

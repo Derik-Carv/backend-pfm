@@ -1,11 +1,11 @@
 import {
     createRoleRepository,
     getRoleForNameRepository,
-} from "@/database/roles/roles.repository";
+} from "@/database/tables/roles/roles.repository";
 import {
     createUserRepository,
     getCompareUsernameRepository,
-} from "@/database/users/users.repository";
+} from "@/database/tables/users/users.repository";
 import { cpfClean } from "@/utils/checkCpf";
 import { hashPassword } from "@/lib/hash";
 
