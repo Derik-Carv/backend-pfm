@@ -11,6 +11,7 @@ A Fastify-based backend written in TypeScript, using Bun as the runtime, Postgre
 - Drizzle ORM
 - Docker Compose
 - Swagger / OpenAPI
+- Zod (Validation)
 
 ## Requirements
 
@@ -72,60 +73,6 @@ LOGTOKEN=seu_token_copiado_aqui
 
 Then replace the empty values with your local credentials when needed. Keep the structure consistent with the repository example and do not commit the real `.env` file.
 
-## Installing the Tools
-
-### Windows
-
-Install Git:
-
-```powershell
-git --version
-```
-
-Install Node.js LTS:
-
-```powershell
-winget install OpenJS.NodeJS.LTS
-```
-
-Install Bun:
-
-```powershell
-powershell -c "irm https://bun.sh/install.ps1 | iex"
-```
-
-Install Docker Desktop:
-
-https://www.docker.com/products/docker-desktop/
-
-### macOS
-
-```bash
-brew install git node bun
-```
-
-Then verify:
-
-```bash
-git --version
-node -v
-bun --version
-```
-
-### Linux
-
-```bash
-sudo apt update
-sudo apt install -y git nodejs npm
-curl -fsSL https://bun.sh/install | bash
-```
-
-Add Bun to PATH if needed:
-
-```bash
-export PATH="$HOME/.bun/bin:$PATH"
-```
-
 ## Running the Project
 
 ### Start the full stack with Docker
@@ -135,77 +82,62 @@ bun run dc
 ```
 
 This starts:
-
 - PostgreSQL database
 - Backend service
 - Swagger UI
 
 ### Run only the backend in development mode
-
 ```bash
 bun run dev
 ```
 
-### Run the built version locally
-
+### Build and Run for production
 ```bash
+bun run build
 bun run start
 ```
 
-### Build for production
+## Project Structure & Architecture
 
-```bash
-bun run build
-```
+The project follows a layered architectural pattern separating concerns into Routes, Controllers, UseCases, and Repositories.
 
-## Swagger Documentation
+- **`src/router`**: Defines API endpoints, validation schemas (Zod), and OpenAPI options.
+- **`src/controllers`** (or within routers): Handles HTTP requests, responses, and maps status codes.
+- **`src/usecases`**: Contains the core business logic.
+- **`src/database/tables`**: Repository layer that interacts with the Drizzle ORM.
+- **`src/middlewares`**: Contains Auth and Role verification logic.
+
+## Available Routes & Swagger Documentation
 
 The API uses Fastify Swagger and exposes OpenAPI docs automatically.
+The docs are available at `http://localhost:3336/docs`.
 
-Available routes:
+### Public Routes (`/public`)
+- `POST /public/login`: User authentication.
+- `POST /public/register`: User registration.
+- `GET /public/health`: Application health check.
 
-- `POST /public/login`
-- `GET /public/health`
-
-The docs are available at:
-
-- http://localhost:3336/docs
-- http://localhost:3336/docs/json
+### Admin Routes (`/admin`) - Protected
+*Requires JWT and Administrator Role*
+- `GET /admin/users`: List users.
+- `POST /admin/roles`: Create a new role.
+- `GET /admin/roles`: List available roles.
 
 ## Drizzle Commands
 
 Generate migrations:
-
 ```bash
 bunx drizzle-kit generate --config=drizzle.config.ts
 ```
 
 Push the schema to the database:
-
 ```bash
 bunx drizzle-kit push --config=drizzle.config.ts
 ```
 
 Open Drizzle Studio:
-
 ```bash
 bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0
-```
-
-## Useful Commands
-
-```bash
-git --version
-node -v
-bun --version
-docker --version
-docker compose version
-bun install
-bun run dev
-bun run build
-bun run start
-bun run dc
-docker compose down
 ```
 
 ## Notes
