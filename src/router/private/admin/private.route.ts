@@ -14,7 +14,7 @@ import { allRoles } from "@/lib/roles.list";
 export async function adminRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
 
-    app.addHook("preHandler", inspectRole(allRoles.administrator));
+    app.addHook("preHandler", inspectRole([allRoles.administrator]));
 
     app.get("/users", getUserRouteOptions, getUserController);
 

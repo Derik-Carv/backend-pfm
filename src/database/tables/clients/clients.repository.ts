@@ -1,82 +1,72 @@
 import { db } from "@/database/index";
 import { clients } from "@/database/schema/schema";
 import { eq } from "drizzle-orm";
+import type {
+    IClient,
+    Client,
+    CreateClientDatabaseInput,
+} from "@/database/tables/clients/clients.interface";
 
-type CreateClientDatabaseInput = typeof clients.$inferInsert;
+export class ClientRepository implements IClient {
+    async create(data: CreateClientDatabaseInput): Promise<Client> {
+        const [newClient] = await db.insert(clients).values(data).returning();
+        return newClient;
+    }
 
-export async function getAllCLientsRepository() {
-    return await db.query.clients.findMany();
-}
-
-export async function createClientRepository(data: CreateClientDatabaseInput) {
-    const [newClient] = await db.insert(clients).values(data).returning();
-    return newClient;
-}
-
-export async function getFindIdClientRepository(idCheck: string) {
-    try {
+    async findById(id: string): Promise<Client | null> {
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.id, idCheck))
+            .where(eq(clients.id, id))
             .limit(1);
-
-        return client;
-    } catch (err) {
-        return false;
+        return client || null;
     }
-}
 
-export async function getFindCompanyNameClientRepository(nameCheck: string) {
-    try {
+    async findByCompanyName(name: string): Promise<Client | null> {
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.registeredCompanyName, nameCheck))
+            .where(eq(clients.registeredCompanyName, name))
             .limit(1);
-
-        return client;
-    } catch (err) {
-        return false;
+        return client || null;
     }
-}
 
-export async function getFindTradeNameClientRepository(nameCheck: string) {
-    try {
+    async findByTradeName(name: string): Promise<Client | null> {
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.tradeName, nameCheck))
+            .where(eq(clients.tradeName, name))
             .limit(1);
-
-        return client;
-    } catch (err) {
-        return false;
+        return client || null;
     }
-}
 
-export async function getActivesClientsRepository() {
-    try {
+    async findByCpf(cpf: string): Promise<Client | null> {
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.active, true));
-
-        return client;
-    } catch (err) {
-        return false;
+            .where(eq(clients.cpf, cpf))
+            .limit(1);
+        return client || null;
     }
-}
 
-export async function getInactivesClientsRepository() {
-    try {
+    async findByCnpj(cnpj: string): Promise<Client | null> {
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.active, false));
+            .where(eq(clients.cnpj, cnpj))
+            .limit(1);
+        return client || null;
+    }
 
-        return client;
-    } catch (err) {
-        return false;
+    async findAll(): Promise<Client[]> {
+        return await db.query.clients.findMany();
+    }
+
+    async findActives(): Promise<Client[]> {
+        return await db.select().from(clients).where(eq(clients.active, true));
+    }
+
+    async findInactives(): Promise<Client[]> {
+        return await db.select().from(clients).where(eq(clients.active, false));
     }
 }
