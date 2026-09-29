@@ -1,6 +1,5 @@
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
 import type { CreateClientInput } from "@/router/private/manager/client/client.schemas";
-import { DatabaseSync } from "node:sqlite";
 
 export async function usecaseCreateClient(data: CreateClientInput) {
     const clientsDb = new ClientRepository();
