@@ -1,121 +1,107 @@
 import { db } from "@/database/index";
 import { nf } from "@/database/schema/schema";
 import { eq } from "drizzle-orm";
+import type { CreateNfDatabaseInput, INF, NF } from "./nf.interface";
 
-type CreateNfDatabaseInput = typeof nf.$inferInsert;
+export class NfRepository implements INF {
+    async create(data: CreateNfDatabaseInput): Promise<NF> {
+        const [newNf] = await db.insert(nf).values(data).returning();
+        return newNf;
+    }
 
-export async function getAllNfRepository() {
-    return await db.query.nf.findMany();
-}
+    async findAll(): Promise<NF[]> {
+        return await db.query.nf.findMany();
+    }
 
-export async function createNfRepository(data: CreateNfDatabaseInput) {
-    const [newNf] = await db.insert(nf).values(data).returning();
-    return newNf;
-}
-
-export async function getNfNumberRepository(nfNumber: string) {
-    try {
+    async findNfNumber(number: string): Promise<NF> {
         const [returnNf] = await db
             .select()
             .from(nf)
-            .where(eq(nf.numberNf, nfNumber))
+            .where(eq(nf.numberNf, number))
             .limit(1);
 
-        return returnNf;
-    } catch (err) {
-        return false;
+        return returnNf || null;
     }
-}
 
-export async function getNfAccessKeyRepository(acessKey: string) {
-    try {
+    async findAcessKey(acessKey: string): Promise<NF> {
         const [returnKey] = await db
             .select()
             .from(nf)
             .where(eq(nf.numberNf, acessKey))
             .limit(1);
 
-        return returnKey;
-    } catch (err) {
-        return false;
+        return returnKey || null;
     }
-}
 
-export async function getNfClientIdRepository(clientId: string) {
-    try {
+    async findClientId(clientId: string): Promise<NF> {
         const [returnClient] = await db
             .select()
             .from(nf)
             .where(eq(nf.thirdPartyClientId, clientId))
             .limit(1);
 
-        return returnClient;
-    } catch (err) {
-        return false;
+        return returnClient || null;
     }
-}
 
-export async function getNfEmissionDateRepository(emissionDate: string) {
-    try {
+    async findEmissionDate(emissionDate: string): Promise<NF> {
         const [returnDate] = await db
             .select()
             .from(nf)
             .where(eq(nf.emissionDate, emissionDate));
 
-        return returnDate;
-    } catch (err) {
-        return false;
+        return returnDate || null;
     }
-}
 
-export async function getNfCancelDateRepository(cancelDate: string) {
-    try {
+    async findCancelDate(cancelDate: string): Promise<NF> {
         const [returnDate] = await db
             .select()
             .from(nf)
             .where(eq(nf.cancelDate, cancelDate));
 
-        return returnDate;
-    } catch (err) {
-        return false;
+        return returnDate || null;
     }
-}
 
-export async function getNfTotalValueRepository(totalValue: string) {
-    try {
+    async findTotalValue(totalValue: string): Promise<NF> {
         const [returnValue] = await db
             .select()
             .from(nf)
             .where(eq(nf.totalValue, totalValue));
 
-        return returnValue;
-    } catch (err) {
-        return false;
+        return returnValue || null;
     }
-}
 
-export async function getNfForServiceIdRepository(id: string) {
-    try {
+    async findServiceId(serviceId: string): Promise<NF> {
         const [returnService] = await db
             .select()
             .from(nf)
-            .where(eq(nf.servicesId, id));
+            .where(eq(nf.servicesId, serviceId));
 
-        return returnService;
-    } catch (err) {
-        return false;
+        return returnService || null;
     }
-}
 
-export async function getNfForMovimentationIdRepository(id: string) {
-    try {
+    async findMovimentationId(movimentationId: string): Promise<NF> {
         const [returnMovimentatation] = await db
             .select()
             .from(nf)
-            .where(eq(nf.movimentationId, id));
+            .where(eq(nf.movimentationId, movimentationId));
 
-        return returnMovimentatation;
-    } catch (err) {
-        return false;
+        return returnMovimentatation || null;
+    }
+
+    async findId(id: string): Promise<NF> {
+        const [returnMovimentatation] = await db
+            .select()
+            .from(nf)
+            .where(eq(nf.id, id));
+
+        return returnMovimentatation || null;
+    }
+
+    async findActives(): Promise<NF[]> {
+        return await db.select().from(nf).where(eq(nf.active, true));
+    }
+
+    async findInactives(): Promise<NF[]> {
+        return await db.select().from(nf).where(eq(nf.active, false));
     }
 }

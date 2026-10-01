@@ -15,6 +15,7 @@ export const roles = pgTable("roles", {
         .primaryKey()
         .$defaultFn(() => uuidv7()),
     name: text("name").unique().notNull(),
+    active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
         .defaultNow()
@@ -33,6 +34,7 @@ export const users = pgTable("users", {
         .notNull()
         .references(() => roles.id),
     cpf: text("cpf").unique().notNull(),
+    active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
         .defaultNow()
@@ -116,6 +118,7 @@ export const services = pgTable("services", {
     statusServiceId: uuid("status_service_id").references(
         () => statusService.id,
     ),
+    active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
         .defaultNow()
@@ -145,6 +148,7 @@ export const nf = pgTable("nf", {
     movimentationId: uuid("movimentation_id")
         .references(() => movimentation.id)
         .notNull(),
+    active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
         .defaultNow()

@@ -11,12 +11,21 @@ services:
             - "5432:5432"
         volumes:
             - postgres_data:/var/lib/postgresql/data
+        # Adicionado: O Docker agora testa se o banco está pronto
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U root -d dev_db"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
 
     backend:
         build:
             context: .
             target: development
         container_name: bun_backend_dev
+        depends_on:
+            postgres:
+                condition: service_healthy
         ports:
             - "${PORT:-3000}:${PORT:-3000}"
             - "4983:4983" # Port Default for Drizzle Studio
