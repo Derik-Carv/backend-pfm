@@ -6,7 +6,7 @@ import {
     getClientsResponseSchema,
 } from "@/router/private/manager/client/client.schemas";
 
-export const createRoleRouteOptions = {
+export const createClientRouteOptions = {
     config: {
         rateLimit: rateLimitProfiles.manager,
     },

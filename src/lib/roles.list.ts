@@ -1,6 +1,8 @@
-import { getRolesRepository } from "@/database/tables/roles/roles.repository";
+import { RoleRepository } from "@/database/tables/roles/roles.repository";
 
-const rolesFromDb = await getRolesRepository();
+const roles = new RoleRepository();
+
+const rolesFromDb = await roles.findActives();
 
 export const allRoles = rolesFromDb.reduce(
     (acc, role) => {

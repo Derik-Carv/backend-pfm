@@ -1,4 +1,4 @@
-import { getCompareUsernameRepository } from "@/database/tables/users/users.repository";
+import { UsersRepository } from "@/database/tables/users/users.repository";
 import type { LoginUserInput } from "@/router/public/login/login.schemas";
 import { hashPassword, verifyPassword } from "@/lib/hash";
 
@@ -7,7 +7,9 @@ export async function usecaseLogin(data: LoginUserInput) {
     if (!username || !password)
         throw new Error("USERNAME_OR_PASSOWORD_INVALID");
 
-    const validUsername = await getCompareUsernameRepository(username);
+    const userRepository = new UsersRepository();
+
+    const validUsername = await userRepository.findName(username);
 
     if (!validUsername) throw new Error("USERNAME_OR_PASSOWORD_INVALID");
 

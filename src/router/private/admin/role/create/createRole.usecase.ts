@@ -1,13 +1,14 @@
-import {
-    createRoleRepository,
-    getRoleForNameRepository,
-} from "@/database/tables/roles/roles.repository";
+import { RoleRepository } from "@/database/tables/roles/roles.repository";
 
 export async function usecaseCreateRole(name: string) {
-    const checkName = await getRoleForNameRepository(name);
+    const role = new RoleRepository();
+
+    const data = { name: name };
+
+    const checkName = await role.findByName(data.name);
 
     if (checkName) {
         throw new Error("ROLE_ALREADY_EXISTS");
     }
-    return await createRoleRepository(name);
+    return await role.create(data);
 }

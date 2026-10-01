@@ -1,15 +1,12 @@
-import {
-    createRoleRepository,
-    getRoleForNameRepository,
-} from "@/database/tables/roles/roles.repository";
-import {
-    createUserRepository,
-    getCompareUsernameRepository,
-} from "@/database/tables/users/users.repository";
+import { RoleRepository } from "@/database/tables/roles/roles.repository";
+import { UsersRepository } from "@/database/tables/users/users.repository";
 import { cpfClean } from "@/utils/checkCpf";
 import { hashPassword } from "@/lib/hash";
 
 export async function startSeed() {
+    const roleRepo = new RoleRepository();
+    const userRepository = new UsersRepository();
+
     const adminRoleName = "administrator";
     const adminName = "administrator";
     const adminSurname = "system";
@@ -17,11 +14,13 @@ export async function startSeed() {
     const cpf = await cpfClean(process.env.CPFADMIN as string);
     const rawPassword = process.env.ADMIN_DEFAULT_PASSWORD as string;
 
-    let adminRole = await getRoleForNameRepository(adminRoleName);
+    let adminRole = await roleRepo.findByName(adminRoleName);
 
-    if (!adminRole) adminRole = await createRoleRepository(adminRoleName);
+    const createRole = { name: adminRoleName };
 
-    const existingUser = await getCompareUsernameRepository(adminUsername);
+    if (!adminRole) adminRole = await roleRepo.create(createRole);
+
+    const existingUser = await userRepository.findUsername(adminUsername);
 
     if (existingUser) {
         console.log("admin user already exists");
@@ -38,8 +37,9 @@ export async function startSeed() {
         password: hashedPassword,
         roleId: adminRole.id,
         cpf: cpf,
+        active: true,
     };
 
-    await createUserRepository(data);
+    await userRepository.create(data);
     console.log("admin user created with sucess");
 }

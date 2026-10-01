@@ -49,6 +49,7 @@ export const createUserResponseSchema = z.object({
         username: z.string(),
         role: z.string(),
         cpf: z.string(),
+        active: z.boolean(),
         createdAt: z.coerce.date(),
     }),
 });
@@ -61,6 +62,7 @@ export const getUserResponseSchema = z.object({
         username: z.string(),
         role: z.string(),
         cpf: z.string(),
+        active: z.boolean(),
         createdAt: z.date(),
     }),
 });

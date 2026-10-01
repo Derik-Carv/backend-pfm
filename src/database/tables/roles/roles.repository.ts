@@ -1,40 +1,47 @@
 import { db } from "@/database/index";
-import { roles } from "@/database/schema/schema";
 import { eq } from "drizzle-orm";
+import type {
+    CreateRoleDatabaseInput,
+    IRoles,
+    Roles,
+} from "@/database/tables/roles/roles.interface";
+import { roles } from "@/database/schema/schema";
 
-export async function createRoleRepository(name: string) {
-    const [newRole] = await db.insert(roles).values({ name }).returning();
-    return newRole;
-}
-
-export async function getRolesRepository() {
-    return await db.query.roles.findMany();
-}
-
-export async function getRoleForNameRepository(nameCheck: string) {
-    try {
-        const [role] = await db
-            .select()
-            .from(roles)
-            .where(eq(roles.name, nameCheck))
-            .limit(1);
-
-        return role;
-    } catch (err) {
-        return false;
+export class RoleRepository implements IRoles {
+    async create(data: CreateRoleDatabaseInput): Promise<Roles> {
+        const [newRole] = await db.insert(roles).values(data).returning();
+        return newRole;
     }
-}
 
-export async function getRoleForidRepository(idCheck: string) {
-    try {
+    async findAll(): Promise<Roles[]> {
+        return await db.query.roles.findMany();
+    }
+
+    async findById(id: string): Promise<Roles | null> {
         const [role] = await db
             .select()
             .from(roles)
-            .where(eq(roles.id, idCheck))
+            .where(eq(roles.id, id))
             .limit(1);
 
-        return role;
-    } catch (err) {
-        return false;
+        return role || null;
+    }
+
+    async findByName(name: string): Promise<Roles | null> {
+        const [role] = await db
+            .select()
+            .from(roles)
+            .where(eq(roles.name, name))
+            .limit(1);
+
+        return role || null;
+    }
+
+    async findActives(): Promise<Roles[]> {
+        return await db.select().from(roles).where(eq(roles.active, true));
+    }
+
+    async findInactives(): Promise<Roles[]> {
+        return await db.select().from(roles).where(eq(roles.active, false));
     }
 }
