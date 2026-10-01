@@ -13,7 +13,7 @@ export const createClientController = async (
 
         return reply.status(201).send({
             message: "Client register with sucess",
-            client: newClient,
+            clients: newClient,
         });
     } catch (error: any) {
         if (error.name === "ZodError") {
