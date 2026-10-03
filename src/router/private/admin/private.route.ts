@@ -1,5 +1,5 @@
-import { getUserController } from "@/router/public/createuser/get/getUser.controller";
-import { getUserRouteOptions } from "@/router/public/createuser/user.options";
+import { getUserController } from "@/router/private/admin/users/get/getUser.controller";
+import { getUserRouteOptions } from "@/router/private/admin/users/user.options";
 import { type FastifyInstance } from "fastify";
 import {
     createRoleRouteOptions,

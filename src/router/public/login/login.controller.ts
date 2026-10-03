@@ -22,13 +22,18 @@ export const loginController = async (
         });
 
         return reply.status(200).send({ message: "login sucess", token });
-    } catch (error: any) {
-        if (error.message === "USERNAME_OR_PASSOWORD_INVALID") {
-            reply.status(401).send({ message: "username or password invalid" });
+    } catch (error: unknown) {
+        if (
+            error instanceof Error &&
+            error.message === "USERNAME_OR_PASSOWORD_INVALID"
+        ) {
+            return reply
+                .status(401)
+                .send({ message: "username or password invalid" });
         }
 
         return reply.status(500).send({
-            message: "Internal server error while registering user",
+            message: "Internal server error while logging in",
         });
     }
 };

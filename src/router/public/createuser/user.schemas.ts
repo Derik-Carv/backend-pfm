@@ -37,7 +37,6 @@ export const createUserSchema = z
             .refine((val) => val.length === 11, {
                 message: "CPF must contain exactly 11 digits",
             }),
-        roleId: z.string({ message: "Role id is required" }).trim(),
     })
     .strict();
 
@@ -51,19 +50,6 @@ export const createUserResponseSchema = z.object({
         cpf: z.string(),
         active: z.boolean(),
         createdAt: z.coerce.date(),
-    }),
-});
-
-export const getUserResponseSchema = z.object({
-    message: z.string(),
-    user: z.object({
-        name: z.string(),
-        surname: z.string(),
-        username: z.string(),
-        role: z.string(),
-        cpf: z.string(),
-        active: z.boolean(),
-        createdAt: z.date(),
     }),
 });
 

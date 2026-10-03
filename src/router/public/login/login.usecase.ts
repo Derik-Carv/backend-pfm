@@ -1,6 +1,7 @@
 import { UsersRepository } from "@/database/tables/users/users.repository";
+import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import type { LoginUserInput } from "@/router/public/login/login.schemas";
-import { hashPassword, verifyPassword } from "@/lib/hash";
+import { verifyPassword } from "@/lib/hash";
 
 export async function usecaseLogin(data: LoginUserInput) {
     const { username, password } = data;
@@ -9,14 +10,18 @@ export async function usecaseLogin(data: LoginUserInput) {
 
     const userRepository = new UsersRepository();
 
-    const validUsername = await userRepository.findName(username);
+    const validUsername = await userRepository.findUsername(username);
 
     if (!validUsername) throw new Error("USERNAME_OR_PASSOWORD_INVALID");
 
-    const testPassword = await hashPassword(password);
-    const validPassword = await verifyPassword(password, testPassword);
+    const validPassword = await verifyPassword(password, validUsername.password);
 
     if (!validPassword) throw new Error("USERNAME_OR_PASSOWORD_INVALID");
+
+    const roleRepository = new RoleRepository();
+    const role = await roleRepository.findById(validUsername.roleId);
+
+    if (!role) throw new Error("ROLE_NOT_FOUND");
 
     return {
         message: "login successfully",
@@ -26,7 +31,7 @@ export async function usecaseLogin(data: LoginUserInput) {
             surname: validUsername.surname,
             cpf: validUsername.cpf,
             username: validUsername.username,
-            role: validUsername.name,
+            role: role.name,
         },
     };
 }

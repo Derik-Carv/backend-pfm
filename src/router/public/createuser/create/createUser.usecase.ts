@@ -4,10 +4,11 @@ import { hashPassword } from "@/lib/hash";
 import { cpfValidateNormal } from "@/utils/checkCpf";
 import { generateNick } from "@/utils/createNick";
 import type { CreateUserInput } from "@/router/public/createuser/user.schemas";
+import { allRoles } from "@/lib/roles.list";
 
 export async function usecaseCreateUser(data: CreateUserInput) {
     const UserRepository = new UsersRepository();
-
+    const roleDefaultRepository = new RoleRepository();
     const validCpf = await cpfValidateNormal(data.cpf);
     if (!validCpf) {
         throw new Error("INVALID_CPF");
@@ -24,14 +25,15 @@ export async function usecaseCreateUser(data: CreateUserInput) {
         throw new Error("INVALID_USERNAME");
     }
 
-    const roleRepository = new RoleRepository();
-
-    const roleName = await roleRepository.findById(data.roleId);
-    if (!roleName) {
-        throw new Error("ROLE_NOT_FOUND");
-    }
+    const defaultRole = await roleDefaultRepository.findByName(
+        allRoles.colaborator,
+    );
 
     const newPassword = await hashPassword(data.password);
+
+    if (!defaultRole) {
+        throw new Error("ROLE_NOT_FOUND");
+    }
 
     const createdUserData = {
         name: data.name,
@@ -39,7 +41,7 @@ export async function usecaseCreateUser(data: CreateUserInput) {
         username: serverCreateNick,
         password: newPassword,
         cpf: data.cpf,
-        roleId: data.roleId,
+        roleId: defaultRole.id,
     };
 
     const newUser = await UserRepository.create(createdUserData);
@@ -50,7 +52,7 @@ export async function usecaseCreateUser(data: CreateUserInput) {
             name: newUser.name,
             surname: newUser.surname,
             username: newUser.username,
-            role: roleName.name,
+            role: defaultRole.name,
             cpf: newUser.cpf,
             active: newUser.active,
             createdAt: newUser.createdAt ?? new Date(),

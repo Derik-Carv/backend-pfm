@@ -30,6 +30,7 @@ export const users = pgTable("users", {
     name: text("name").notNull(),
     surname: text("surname").notNull(),
     username: text("username").unique().notNull(),
+    password: text("password").notNull(),
     roleId: uuid("role_id")
         .notNull()
         .references(() => roles.id),
