@@ -1,19 +1,36 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
+import { usecaseGetService } from "@/router/private/home/services/get/getServices.usecase";
 
 export const getServicesController = async (
     request: FastifyRequest,
     reply: FastifyReply,
 ) => {
     try {
-        // return reply.status(201).send({
-        //     message: "Role register with sucess",
-        //     role: newRole,
-        // });
+        const userId = request.user.id;
+
+        const allServices = await usecaseGetService(userId);
+
+        return reply.status(200).send({
+            message: "Get services with sucess",
+            services: allServices,
+        });
     } catch (error: any) {
         if (error.name === "ZodError") {
             return reply.status(400).send({
                 message: "Validation error",
                 issues: error.errors,
+            });
+        }
+
+        if (error.message === "ROLE_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "Role not found",
+            });
+        }
+
+        if (error.message === "ROLE_ACESS_DENIED") {
+            return reply.status(403).send({
+                message: "Access denied",
             });
         }
 
