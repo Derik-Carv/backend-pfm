@@ -156,3 +156,21 @@ export const nf = pgTable("nf", {
         .notNull()
         .$onUpdateFn(() => new Date()),
 });
+
+export const bundled = pgTable("bundled", {
+    id: uuid("id")
+        .primaryKey()
+        .$defaultFn(() => uuidv7()),
+    serviceBundledId: uuid("service_bundled_id")
+        .references(() => services.id)
+        .notNull(),
+    userId: uuid("user_id")
+        .references(() => users.id)
+        .notNull(),
+    active: boolean("active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+        .defaultNow()
+        .notNull()
+        .$onUpdateFn(() => new Date()),
+});
