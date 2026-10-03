@@ -12,6 +12,13 @@ export async function getClientsController(
             clients: newClients,
         });
     } catch (error: any) {
+        if (error.name === "ZodError") {
+            return reply.status(400).send({
+                message: "Validation error",
+                issues: error.errors,
+            });
+        }
+
         if (error.message === "CLIENTS_NOT_EXISTS") {
             return reply.status(404).send({ message: "Clients not exists" });
         }

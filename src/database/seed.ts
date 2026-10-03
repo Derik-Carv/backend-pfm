@@ -8,6 +8,7 @@ export async function startSeed() {
     const userRepository = new UsersRepository();
 
     const adminRoleName = "administrator";
+    const colaboratorRoleName = "colaborator";
     const adminName = "administrator";
     const adminSurname = "system";
     const adminUsername = "administrator.system";
@@ -15,9 +16,13 @@ export async function startSeed() {
     const rawPassword = process.env.ADMIN_DEFAULT_PASSWORD as string;
 
     let adminRole = await roleRepo.findByName(adminRoleName);
+    let colaboratorRole = await roleRepo.findByName(colaboratorRoleName);
 
     const createRole = { name: adminRoleName };
+    const createColaboratorRole = { name: colaboratorRoleName };
 
+    if (!colaboratorRole)
+        colaboratorRole = await roleRepo.create(createColaboratorRole);
     if (!adminRole) adminRole = await roleRepo.create(createRole);
 
     const existingUser = await userRepository.findUsername(adminUsername);

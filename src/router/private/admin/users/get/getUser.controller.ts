@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { usecaseGetUser } from "@/router/public/createuser/get/getUser.usecase";
+import { usecaseGetUser } from "@/router/private/admin/users/get/getUser.usecase";
 
 export const getUserController = async (
     request: FastifyRequest,
