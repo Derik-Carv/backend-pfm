@@ -29,5 +29,5 @@ export async function usecaseGetService(userId: string) {
         throw new Error("ROLE_ACESS_DENIED");
     }
 
-    return await servicesData.findAll();
+    return await servicesData.findActives();
 }
