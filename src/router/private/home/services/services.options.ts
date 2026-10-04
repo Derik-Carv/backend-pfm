@@ -1,17 +1,18 @@
 import { rateLimitProfiles } from "@/policies/rateLimit";
 import { errorResponseSchema } from "@/router/error.schema";
-import { getServicesResponseSchema } from "@/router/private/home/services/services.schemas";
+import { getMenuOverviewResponseSchema } from "@/router/private/home/services/services.schemas";
 
-export const getServicesRouteOptions = {
+export const getServicesHomeRouteOptions = {
     config: {
         rateLimit: rateLimitProfiles.standard,
     },
     schema: {
-        tags: ["Services"],
-        summary: "Find all services",
-        description: "Find all services in system",
+        tags: ["Dashboard", "Services"],
+        summary: "Find home services overview",
+        description:
+            "Returns top 3 services categorized by high value, recent, and oldest",
         response: {
-            201: getServicesResponseSchema,
+            200: getMenuOverviewResponseSchema,
             400: errorResponseSchema,
             404: errorResponseSchema,
             409: errorResponseSchema,
