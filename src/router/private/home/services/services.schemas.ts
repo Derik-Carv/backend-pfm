@@ -16,14 +16,14 @@ export const getServiceResponseSchema = z.object({
     service: z.object({
         id: z.string(),
         serviceName: z.string(),
-        price: z.number().positive(),
+        price: z.union([z.string(), z.number()]),
         initialDate: z.string(),
         finishDate: z.string(),
         clientId: z.string(),
         details: z.string(),
-        statusServiceId: z.string(),
-        createdAt: z.string(),
-        updatedAt: z.string(),
+        statusServiceId: z.string().nullable().optional(),
+        createdAt: z.date(),
+        updatedAt: z.date(),
     }),
 });
 
@@ -39,4 +39,11 @@ export const getMenuOverviewResponseSchema = z.object({
 export const getMyServicesResponseSchema = z.object({
     message: z.string(),
     services: z.array(getServiceResponseSchema.shape.service),
+});
+
+export const getMyServicesFinderResponseSchema = z.object({
+    message: z.string(),
+    finder: z.object({
+        list: z.array(serviceBaseSchema),
+    }),
 });

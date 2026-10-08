@@ -45,6 +45,15 @@ export class ServicesRepository implements IServices {
         return service || null;
     }
 
+    async findClientServices(clientId: string): Promise<Services> {
+        const [service] = await db
+            .select()
+            .from(services)
+            .where(eq(services.clientId, clientId));
+
+        return service || null;
+    }
+
     async findInitialServiceDate(initialDate: string): Promise<Services> {
         const [service] = await db
             .select()
