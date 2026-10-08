@@ -50,6 +50,13 @@
       "when": 1791496474500,
       "tag": "0006_sleepy_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791498536624,
+      "tag": "0007_fine_the_enforcers",
+      "breakpoints": true
     }
   ]
 }
