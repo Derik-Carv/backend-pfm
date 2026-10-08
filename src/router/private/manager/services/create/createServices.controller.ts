@@ -45,6 +45,12 @@ export const createServicesController = async (
             });
         }
 
+        if (error.message === "BUNDLED_CREATION_FAILED") {
+            return reply.status(422).send({
+                message: "Failed to create bundled record",
+            });
+        }
+
         return reply.status(500).send({
             message: "Internal server error while registering role",
         });
