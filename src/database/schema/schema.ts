@@ -111,7 +111,7 @@ export const services = pgTable("services", {
     serviceName: text("service_name").notNull(),
     price: numeric("price", { precision: 10, scale: 2 }).notNull(),
     initialDate: date("initial_date", { mode: "string" }).notNull(),
-    finishDate: date("finish_date", { mode: "string" }).notNull(),
+    finishDate: date("finish_date", { mode: "string" }),
     clientId: uuid("client_id")
         .references(() => clients.id)
         .notNull(),

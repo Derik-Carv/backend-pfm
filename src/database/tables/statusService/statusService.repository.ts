@@ -46,15 +46,13 @@ export class StatusServiceRepository implements IStatusServices {
         return await db
             .select()
             .from(statusService)
-            .where(eq(statusService.active, true))
-            .limit(1);
+            .where(eq(statusService.active, true));
     }
 
     async findInactives(): Promise<StatusServices[]> {
         return await db
             .select()
             .from(statusService)
-            .where(eq(statusService.active, false))
-            .limit(1);
+            .where(eq(statusService.active, false));
     }
 }

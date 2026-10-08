@@ -1,22 +1,21 @@
 import { rateLimitProfiles } from "@/policies/rateLimit";
 import { errorResponseSchema } from "@/router/error.schema";
 import {
-    getMenuOverviewResponseSchema,
-    getMyServicesFinderResponseSchema,
-    getMyServicesResponseSchema,
-} from "@/router/private/home/services/services.schemas";
+    getServiceResponseSchema,
+    getStatusResponseSchema,
+    createServiceInputSchema,
+} from "@/router/private/manager/services/services.schemas";
 
 export const getServicesHomeRouteOptions = {
     config: {
         rateLimit: rateLimitProfiles.standard,
     },
     schema: {
-        tags: ["Dashboard", "Services"],
-        summary: "Find home services overview",
-        description:
-            "Returns top 3 services categorized by high value, recent, and oldest",
+        tags: ["Services"],
+        summary: "Get all services",
+        description: "Returns a list of all services",
         response: {
-            200: getMenuOverviewResponseSchema,
+            200: getServiceResponseSchema,
             400: errorResponseSchema,
             404: errorResponseSchema,
             409: errorResponseSchema,
@@ -25,16 +24,17 @@ export const getServicesHomeRouteOptions = {
     },
 };
 
-export const getServicesFinderHomeRouteOptions = {
+export const createServicesRouteOptions = {
     config: {
         rateLimit: rateLimitProfiles.standard,
     },
     schema: {
-        tags: ["Dashboard", "Services"],
-        summary: "Find home services overview",
-        description: "Returns services with finded",
+        tags: ["Services"],
+        body: createServiceInputSchema,
+        summary: "Create a new service",
+        description: "Returns the created service with all its details",
         response: {
-            200: getMyServicesFinderResponseSchema,
+            201: getServiceResponseSchema,
             400: errorResponseSchema,
             404: errorResponseSchema,
             409: errorResponseSchema,
@@ -43,16 +43,16 @@ export const getServicesFinderHomeRouteOptions = {
     },
 };
 
-export const getServicesRouteOptions = {
+export const getStatusServicesRouteOptions = {
     config: {
         rateLimit: rateLimitProfiles.standard,
     },
     schema: {
-        tags: ["Dashboard", "Services"],
-        summary: "Find home services overview",
-        description: "Returns services with finded",
+        tags: ["Status Services"],
+        summary: "Get all active status services",
+        description: "Returns a list of all active status services",
         response: {
-            200: getMyServicesResponseSchema,
+            200: getStatusResponseSchema,
             400: errorResponseSchema,
             404: errorResponseSchema,
             409: errorResponseSchema,

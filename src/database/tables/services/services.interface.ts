@@ -8,6 +8,7 @@ export interface IServices {
     findId(id: string): Promise<Services>;
     findName(name: string): Promise<Services>;
     findValue(value: string): Promise<Services>;
+    findClientServices(clientId: string): Promise<Services>;
     findInitialServiceDate(initialDate: string): Promise<Services>;
     findFinishServiceDate(finishDate: string): Promise<Services>;
     findHighValueByIds(

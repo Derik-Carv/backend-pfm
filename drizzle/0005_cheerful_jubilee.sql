@@ -1,0 +1,1 @@
+ALTER TABLE "services" ALTER COLUMN "finish_date" DROP NOT NULL;

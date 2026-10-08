@@ -8,6 +8,10 @@ import {
 } from "@/router/private/manager/client/client.options";
 import { createClientController } from "@/router/private/manager/client/create/createClient.controller";
 import { getClientsController } from "./client/get/getClient.controller";
+import { getStatusServicesRouteOptions } from "@/router/private/manager/services/services.options";
+import { getStatusServiceController } from "@/router/private/manager/services/status/getStatus.controller";
+import { createServicesRouteOptions } from "@/router/private/manager/services/services.options";
+import { createServicesController } from "@/router/private/manager/services/create/createServices.controller";
 
 const allowedRoles = [allRoles.administrator, allRoles.manager];
 
@@ -19,4 +23,12 @@ export async function managerRoutes(app: FastifyInstance) {
     app.post("/clients", createClientRouteOptions, createClientController);
 
     app.get("/clients", getClientRouteOptions, getClientsController);
+
+    app.get(
+        "/services/status",
+        getStatusServicesRouteOptions,
+        getStatusServiceController,
+    );
+
+    app.post("/services", createServicesRouteOptions, createServicesController);
 }
