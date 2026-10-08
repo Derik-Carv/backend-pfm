@@ -47,10 +47,17 @@ export async function usecaseCreateService(
     const newService = await servicesData.create(data);
 
     if (user) {
-        await bundled.create({
+        const newBundled = await bundled.create({
             userId: user.id,
             serviceBundledId: newService.id,
+            serviceNameBundled: newService.serviceName,
+            priceBundled: newService.price,
+            initialDateBundled: newService.initialDate,
+            finishDateBundled: newService.finishDate,
         });
+        if (!newBundled) {
+            throw new Error("BUNDLED_CREATION_FAILED");
+        }
     }
 
     return newService;
