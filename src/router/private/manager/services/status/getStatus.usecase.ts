@@ -29,8 +29,6 @@ export async function usecaseGetStatusService(userId: string) {
         throw new Error("STATUS_SERVICE_NOT_FOUND");
     }
 
-    console.log("Active Status Services:", actives);
-
     return actives.map((status) => ({
         id: status.id,
         name: status.name,

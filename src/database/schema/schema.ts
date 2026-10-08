@@ -167,6 +167,10 @@ export const bundled = pgTable("bundled", {
     userId: uuid("user_id")
         .references(() => users.id)
         .notNull(),
+    serviceNameBundled: text("service_name").notNull(),
+    priceBundled: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    initialDateBundled: date("initial_date", { mode: "string" }).notNull(),
+    finishDateBundled: date("finish_date", { mode: "string" }),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

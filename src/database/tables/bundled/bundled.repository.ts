@@ -41,6 +41,36 @@ export class BundledRepository implements IBundled {
             .where(eq(bundled.serviceBundledId, serviceId));
     }
 
+    async findName(name: string): Promise<Bundled | null> {
+        const [bundle] = await db
+            .select()
+            .from(bundled)
+            .where(eq(bundled.serviceNameBundled, name));
+
+        return bundle || null;
+    }
+
+    async findPrice(price: string): Promise<Bundled[]> {
+        return await db
+            .select()
+            .from(bundled)
+            .where(eq(bundled.priceBundled, price));
+    }
+
+    async findInitialDate(initialDate: string): Promise<Bundled[]> {
+        return await db
+            .select()
+            .from(bundled)
+            .where(eq(bundled.initialDateBundled, initialDate));
+    }
+
+    async findFinishDate(finishDate: string): Promise<Bundled[]> {
+        return await db
+            .select()
+            .from(bundled)
+            .where(eq(bundled.finishDateBundled, finishDate));
+    }
+
     async findActives(): Promise<Bundled[]> {
         return await db.select().from(bundled).where(eq(bundled.active, true));
     }
