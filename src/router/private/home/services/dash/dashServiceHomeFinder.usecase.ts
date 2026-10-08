@@ -3,6 +3,7 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
+import { INSPECT_MAX_BYTES } from "node:buffer";
 
 export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
     const allowedRoles = [
@@ -40,12 +41,6 @@ export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
         const userBundles = await bundledData.findByUserId(userId);
         const serviceIds = userBundles.map((b) => b.serviceBundledId);
 
-        console.log("Finder:", finder);
-        console.log("Service IDs:", serviceIds);
-
-        console.log("Service Find:", serviceFind);
-        console.log("Service Type:", serviceType);
-
         if (serviceIds.length === 0) {
             return {
                 list: [],
@@ -53,14 +48,21 @@ export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
         }
 
         // if (serviceType === "id") {
-        //     const services = await servicesData.findId(serviceFind);
-        //     return services ? { list: [services] } : { list: [] };
+        //     const services = await serviceIds.map(());
+        //     // return services ? { list: [services] } : { list: [] };
         // }
 
-        // if (serviceType === "client") {
-        //     const services = await servicesData.findClientServices(serviceFind);
-        //     return services ? { list: [services] } : { list: [] };
-        // }
+        if (serviceType === "client") {
+            const find = userBundles.filter(
+                (item) => item.clientIdBundled === serviceFind,
+            );
+
+            const serviceList = await Promise.all(
+                find.map((item) => servicesData.findId(item.serviceBundledId)),
+            );
+
+            return { list: serviceList.filter(Boolean) };
+        }
 
         // if (serviceType === "price") {
         //     const services = await servicesData.findValue(serviceFind);
