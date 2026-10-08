@@ -50,6 +50,15 @@ export class BundledRepository implements IBundled {
         return bundle || null;
     }
 
+    async findClient(client: string): Promise<Bundled | null> {
+        const [responseClient] = await db
+            .select()
+            .from(bundled)
+            .where(eq(bundled.clientIdBundled, client));
+
+        return responseClient || null;
+    }
+
     async findPrice(price: string): Promise<Bundled[]> {
         return await db
             .select()

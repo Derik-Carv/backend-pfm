@@ -1,0 +1,1 @@
+ALTER TABLE "bundled" ADD COLUMN "client_bundled" text NOT NULL;

@@ -169,6 +169,7 @@ export const bundled = pgTable("bundled", {
         .notNull(),
     serviceNameBundled: text("service_name").notNull(),
     priceBundled: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    clientIdBundled: text("client_bundled").notNull(),
     initialDateBundled: date("initial_date", { mode: "string" }).notNull(),
     finishDateBundled: date("finish_date", { mode: "string" }),
     active: boolean("active").default(true).notNull(),

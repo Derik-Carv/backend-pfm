@@ -52,6 +52,7 @@ export async function usecaseCreateService(
             serviceBundledId: newService.id,
             serviceNameBundled: newService.serviceName,
             priceBundled: newService.price,
+            clientIdBundled: newService.clientId,
             initialDateBundled: newService.initialDate,
             finishDateBundled: newService.finishDate,
         });
