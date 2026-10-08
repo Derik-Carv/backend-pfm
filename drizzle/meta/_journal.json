@@ -43,6 +43,13 @@
       "when": 1791421222845,
       "tag": "0005_cheerful_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791496474500,
+      "tag": "0006_sleepy_la_nuit",
+      "breakpoints": true
     }
   ]
 }
