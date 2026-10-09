@@ -3,7 +3,6 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
-import { INSPECT_MAX_BYTES } from "node:buffer";
 
 export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
     const allowedRoles = [
@@ -39,47 +38,33 @@ export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
 
     if (userRole.name === allRoles.colaborator) {
         const userBundles = await bundledData.findByUserId(userId);
-        const serviceIds = userBundles.map((b) => b.serviceBundledId);
+        const findBundles = userBundles.filter((item) => {
+            if (serviceType === "id")
+                return item.serviceBundledId === serviceFind;
+            if (serviceType === "client")
+                return item.serviceBundledId === serviceFind;
+            if (serviceType === "price")
+                return item.serviceBundledId === serviceFind;
+            if (serviceType === "initialdate")
+                return item.serviceBundledId === serviceFind;
+            if (serviceType === "finishdate")
+                return item.serviceBundledId === serviceFind;
 
-        if (serviceIds.length === 0) {
-            return {
-                list: [],
-            };
+            throw new Error("TYPE_OR_FINDER_ERROR");
+        });
+
+        const serviceIds = [
+            ...new Set(findBundles.map((item) => item.serviceBundledId)),
+        ];
+        const serviceList = await Promise.all(
+            serviceIds.map((id) => servicesData.findId(id)),
+        );
+
+        if (!serviceList) {
+            throw new Error("TYPE_OR_FINDER_ERROR");
         }
 
-        // if (serviceType === "id") {
-        //     const services = await serviceIds.map(());
-        //     // return services ? { list: [services] } : { list: [] };
-        // }
-
-        if (serviceType === "client") {
-            const find = userBundles.filter(
-                (item) => item.clientIdBundled === serviceFind,
-            );
-
-            const serviceList = await Promise.all(
-                find.map((item) => servicesData.findId(item.serviceBundledId)),
-            );
-
-            return { list: serviceList.filter(Boolean) };
-        }
-
-        // if (serviceType === "price") {
-        //     const services = await servicesData.findValue(serviceFind);
-        //     return services ? { list: [services] } : { list: [] };
-        // }
-
-        // if (serviceType === "initialdate") {
-        //     const services =
-        //         await servicesData.findInitialServiceDate(serviceFind);
-        //     return services ? { list: [services] } : { list: [] };
-        // }
-
-        // if (serviceType === "finishdate") {
-        //     const services =
-        //         await servicesData.findFinishServiceDate(serviceFind);
-        //     return services ? { list: [services] } : { list: [] };
-        // }
+        return { list: serviceList.filter(Boolean) };
     }
 
     if (serviceType === "id") {
@@ -105,6 +90,10 @@ export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
     if (serviceType === "finishdate") {
         const services = await servicesData.findFinishServiceDate(serviceFind);
         return services ? { list: [services] } : { list: [] };
+    }
+
+    if (!serviceType) {
+        throw new Error("TYPE_OR_FINDER_ERROR");
     }
 
     return { list: [] };

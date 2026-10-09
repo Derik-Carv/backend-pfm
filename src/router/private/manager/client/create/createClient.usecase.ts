@@ -26,5 +26,7 @@ export async function usecaseCreateClient(data: CreateClientInput) {
         if (cnpjExists) throw new Error("CNPJ_ALREADY_EXISTS");
     }
 
+    data.active = true;
+
     return await clientsDb.create(data);
 }
