@@ -63,7 +63,7 @@ export class ServicesRepository implements IServices {
         return service || null;
     }
 
-    async findFinishServiceDate(finishDate: string): Promise<Services> {
+    async findFinishServiceDate(finishDate: string): Promise<Services | null> {
         const [service] = await db
             .select()
             .from(services)

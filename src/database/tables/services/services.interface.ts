@@ -10,7 +10,7 @@ export interface IServices {
     findValue(value: string): Promise<Services>;
     findClientServices(clientId: string): Promise<Services>;
     findInitialServiceDate(initialDate: string): Promise<Services>;
-    findFinishServiceDate(finishDate: string): Promise<Services>;
+    findFinishServiceDate(finishDate: string): Promise<Services | null>;
     findHighValueByIds(
         ids: string[],
         limitNumber?: number,

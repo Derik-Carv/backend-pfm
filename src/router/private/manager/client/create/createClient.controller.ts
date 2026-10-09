@@ -1,13 +1,14 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { createClientSchema } from "@/router/private/manager/client/client.schemas";
 import { usecaseCreateClient } from "@/router/private/manager/client/create/createClient.usecase";
+import type { CreateClientDatabaseInput } from "@/database/tables/clients/clients.interface";
 
 export const createClientController = async (
-    request: FastifyRequest,
+    request: FastifyRequest<{ Body: CreateClientDatabaseInput }>,
     reply: FastifyReply,
 ) => {
     try {
-        const data = createClientSchema.parse(request);
+        const data = createClientSchema.parse(request.body);
 
         const newClient = await usecaseCreateClient(data);
 

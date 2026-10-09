@@ -29,6 +29,12 @@ export const getServicesHomeFinderController = async (
             });
         }
 
+        if (error.message === "TYPE_OR_FINDER_ERROR") {
+            return reply.status(404).send({
+                message: "Type of finder not found",
+            });
+        }
+
         if (error.message === "ROLE_NOT_FOUND") {
             return reply.status(404).send({
                 message: "Role not found",
