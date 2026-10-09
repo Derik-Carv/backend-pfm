@@ -39,6 +39,12 @@ export const createServicesController = async (
             });
         }
 
+        if (error.message === "CLIENT_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "Client service not found",
+            });
+        }
+
         if (error.message === "ROLE_ACESS_DENIED") {
             return reply.status(403).send({
                 message: "Access denied",
