@@ -5,6 +5,7 @@ import { ServicesRepository } from "@/database/tables/services/services.reposito
 import { StatusServiceRepository } from "@/database/tables/statusService/statusService.repository";
 import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
 import type { CreateServiceInput } from "../services.schemas";
+import { ClientRepository } from "@/database/tables/clients/clients.repository";
 
 export async function usecaseCreateService(
     userId: string,
@@ -19,6 +20,7 @@ export async function usecaseCreateService(
 
     const userData = new UsersRepository();
     const roleData = new RoleRepository();
+    const clientData = new ClientRepository();
     const statusData = new StatusServiceRepository();
     const servicesData = new ServicesRepository();
     const bundled = new BundledRepository();
@@ -34,6 +36,12 @@ export async function usecaseCreateService(
 
     if (!roleCheck) {
         throw new Error("ROLE_ACESS_DENIED");
+    }
+
+    const validClient = await clientData.findById(data.clientId);
+
+    if (!validClient) {
+        throw new Error("CLIENT_NOT_FOUND");
     }
 
     const defaultStatus = await statusData.findName("Fila");
