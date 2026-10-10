@@ -29,10 +29,12 @@ export const getServiceResponseSchema = z.object({
 
 export const getStatusResponseSchema = z.object({
     message: z.string(),
-    status: z.object({
-        id: z.string(),
-        name: z.string(),
-    }),
+    status: z.array(
+        z.object({
+            id: z.string(),
+            name: z.string(),
+        }),
+    ),
 });
 
 export const createServiceInputSchema = z.object({
