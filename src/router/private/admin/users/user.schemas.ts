@@ -6,7 +6,7 @@ export const getUserResponseSchema = z.object({
         name: z.string(),
         surname: z.string(),
         username: z.string(),
-        role: z.string(),
+        role: z.uuid(),
         cpf: z.string(),
         active: z.boolean(),
         createdAt: z.date(),
