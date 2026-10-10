@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const getUserResponseSchema = z.object({
     message: z.string(),
-    user: z.object({
+    users: z.object({
         name: z.string(),
         surname: z.string(),
         username: z.string(),
