@@ -14,7 +14,7 @@ export const createClientController = async (
 
         return reply.status(201).send({
             message: "Client register with sucess",
-            clients: newClient,
+            client: newClient,
         });
     } catch (error: any) {
         if (error.name === "ZodError") {
@@ -42,6 +42,8 @@ export const createClientController = async (
         if (error.message === "CNPJ_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "CNPJ already in use" });
         }
+
+        console.log("teste error 500:\n", error);
 
         return reply.status(500).send({
             message: "Internal server error while registering client",
