@@ -7,7 +7,7 @@ export const getUserRouteOptions = {
         rateLimit: rateLimitProfiles.standard,
     },
     schema: {
-        tags: ["Auth"],
+        tags: ["Users"],
         summary: "Find all usersr",
         description: "Find all users in system",
         response: {
