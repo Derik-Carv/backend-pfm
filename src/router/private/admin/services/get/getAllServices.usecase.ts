@@ -3,7 +3,7 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 
-export async function usecaseMyServices(userId: string) {
+export async function usecaseGetAllServices(userId: string) {
     const allowedRoles = [
         allRoles.administrator,
         allRoles.manager,
@@ -29,5 +29,5 @@ export async function usecaseMyServices(userId: string) {
         throw new Error("ROLE_ACESS_DENIED");
     }
 
-    return await servicesData.findActives();
+    return await servicesData.findAll();
 }

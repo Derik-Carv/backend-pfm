@@ -10,6 +10,8 @@ import { getRolesController } from "@/router/private/admin/role/get/getRole.cont
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { inspectRole } from "@/middlewares/role.middleware";
 import { allRoles } from "@/lib/roles.list";
+import { getAllServicesAdminRouteOptions } from "./services/services.options";
+import { getAllServicesController } from "./services/get/getAllServices.controller";
 
 export async function adminRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
@@ -21,4 +23,10 @@ export async function adminRoutes(app: FastifyInstance) {
     app.post("/roles", createRoleRouteOptions, createRoleController);
 
     app.get("/roles", getRoleRouteOptions, getRolesController);
+
+    app.get(
+        "/services",
+        getAllServicesAdminRouteOptions,
+        getAllServicesController,
+    );
 }
