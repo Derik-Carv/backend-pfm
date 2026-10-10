@@ -1,18 +1,18 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { usecaseMyServices } from "./dashService.usecase";
+import { usecaseGetAllServices } from "./getAllServices.usecase";
 
-export const getServicesController = async (
+export const getAllServicesController = async (
     request: FastifyRequest,
     reply: FastifyReply,
 ) => {
     try {
         const userId = request.user.id;
 
-        const myServices = await usecaseMyServices(userId);
+        const allServices = await usecaseGetAllServices(userId);
 
         return reply.status(200).send({
             message: "Get services with sucess",
-            myServices: myServices,
+            allServices: allServices,
         });
     } catch (error: any) {
         if (error.name === "ZodError") {
