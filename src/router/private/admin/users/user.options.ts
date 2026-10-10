@@ -11,7 +11,7 @@ export const getUserRouteOptions = {
         summary: "Find all usersr",
         description: "Find all users in system",
         response: {
-            201: getUserResponseSchema,
+            200: getUserResponseSchema,
             400: errorResponseSchema,
             404: errorResponseSchema,
             409: errorResponseSchema,
