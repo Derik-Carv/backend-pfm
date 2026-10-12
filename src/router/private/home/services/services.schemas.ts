@@ -57,6 +57,6 @@ export const getMyServicesResponseSchema = z.object({
 export const getMyServicesFinderResponseSchema = z.object({
     message: z.string(),
     finder: z.object({
-        list: z.array(serviceBaseSchema),
+        list: z.array(serviceHomeSchema),
     }),
 });
