@@ -3,7 +3,6 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
-import { id } from "zod/locales";
 
 export async function usecaseMyServicesList(userId: string) {
     const userData = new UsersRepository();

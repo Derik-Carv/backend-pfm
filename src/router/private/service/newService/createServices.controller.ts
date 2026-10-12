@@ -1,0 +1,71 @@
+import type { FastifyRequest, FastifyReply } from "fastify";
+import { usecaseCreateService } from "./createServices.usecase";
+import type { CreateServiceInput } from "../../manager/services/services.schemas";
+import {
+    serviceCreateBaseSchema,
+    type ServiceCreateInput,
+} from "../myServicesList.schemas";
+
+export const createServicesController = async (
+    request: FastifyRequest<{ Body: ServiceCreateInput }>,
+    reply: FastifyReply,
+) => {
+    try {
+        const userId = request.user.id;
+        const data = serviceCreateBaseSchema.parse(request.body);
+
+        const newService = await usecaseCreateService(userId, data);
+
+        return reply.status(201).send({
+            message: "Create service with sucess",
+            service: newService,
+        });
+    } catch (error: any) {
+        if (error.name === "ZodError") {
+            return reply.status(400).send({
+                message: "Validation error",
+                issues: error.errors,
+            });
+        }
+
+        if (error.message === "ROLE_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "Role not found",
+            });
+        }
+
+        if (error.message === "STATUS_SERVICE_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "Status service not found",
+            });
+        }
+
+        if (error.message === "CLIENT_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "Client service not found",
+            });
+        }
+
+        if (error.message === "SERVICE_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "Service not found",
+            });
+        }
+
+        if (error.message === "ROLE_ACESS_DENIED") {
+            return reply.status(403).send({
+                message: "Access denied",
+            });
+        }
+
+        if (error.message === "BUNDLED_CREATION_FAILED") {
+            return reply.status(422).send({
+                message: "Failed to create bundled record",
+            });
+        }
+
+        return reply.status(500).send({
+            message: "Internal server error while registering role",
+        });
+    }
+};

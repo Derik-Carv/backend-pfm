@@ -43,8 +43,6 @@ export const createClientController = async (
             return reply.status(409).send({ message: "CNPJ already in use" });
         }
 
-        console.log("teste error 500:\n", error);
-
         return reply.status(500).send({
             message: "Internal server error while registering client",
         });
