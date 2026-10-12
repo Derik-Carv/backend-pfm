@@ -1,8 +1,25 @@
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
-import type { CreateClientInput } from "@/router/private/manager/client/client.schemas";
+import type { CreateClientInput } from "../client.schemas";
+import { allRoles } from "@/lib/roles.list";
 
-export async function usecaseCreateClient(data: CreateClientInput) {
+export async function usecaseCreateClient(
+    userId: string,
+    data: CreateClientInput,
+) {
     const clientsDb = new ClientRepository();
+
+    const allowedRoles = [
+        allRoles.administrator,
+        allRoles.manager,
+        allRoles.finance,
+        allRoles.observer,
+    ];
+
+    const roleCheck = allowedRoles.includes(userId);
+
+    if (!roleCheck) {
+        throw new Error("ROLE_ACESS_DENIED");
+    }
 
     const companyExists = await clientsDb.findByCompanyName(
         data.registeredCompanyName,

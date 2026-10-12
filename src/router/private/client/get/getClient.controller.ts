@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { usecaseAllCLients } from "@/router/private/manager/client/get/getClient.usecase";
+import { usecaseAllCLients } from "./getClient.usecase";
 
 export async function getClientsController(
     request: FastifyRequest,
