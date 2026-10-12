@@ -11,6 +11,19 @@ const serviceBaseSchema = z.object({
     statusServiceId: z.string().nullable().optional(),
 });
 
+const serviceHomeSchema = z.object({
+    id: z.string(),
+    serviceName: z.string(),
+    price: z.union([z.string(), z.number()]),
+    initialDate: z.string(),
+    finishDate: z.string().nullable().optional(),
+    clientId: z.string(),
+    clientName: z.string().nullable(),
+    details: z.string(),
+    statusServiceId: z.string().nullable().optional(),
+    statusName: z.string().nullable(),
+});
+
 export const getServiceResponseSchema = z.object({
     message: z.string(),
     service: z.object({
@@ -30,9 +43,9 @@ export const getServiceResponseSchema = z.object({
 export const getMenuOverviewResponseSchema = z.object({
     message: z.string(),
     data: z.object({
-        highValueServices: z.array(serviceBaseSchema),
-        recentServices: z.array(serviceBaseSchema),
-        oldestServices: z.array(serviceBaseSchema),
+        highValueServices: z.array(serviceHomeSchema),
+        recentServices: z.array(serviceHomeSchema),
+        oldestServices: z.array(serviceHomeSchema),
     }),
 });
 
