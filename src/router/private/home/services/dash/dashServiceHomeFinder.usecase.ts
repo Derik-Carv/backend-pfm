@@ -3,6 +3,7 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
+import { addNames } from "./addNamesService";
 
 export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
     const allowedRoles = [
@@ -64,32 +65,36 @@ export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
             throw new Error("TYPE_OR_FINDER_ERROR");
         }
 
-        return { list: serviceList.filter(Boolean) };
+        const services = serviceList.filter((service) => service != null);
+
+        return {
+            list: await Promise.all(services.map(addNames)),
+        };
     }
 
     if (serviceType === "id") {
         const services = await servicesData.findId(serviceFind);
-        return services ? { list: [services] } : { list: [] };
+        return services ? { list: [await addNames(services)] } : { list: [] };
     }
 
     if (serviceType === "client") {
         const services = await servicesData.findClientServices(serviceFind);
-        return services ? { list: [services] } : { list: [] };
+        return services ? { list: [await addNames(services)] } : { list: [] };
     }
 
     if (serviceType === "price") {
         const services = await servicesData.findValue(serviceFind);
-        return services ? { list: [services] } : { list: [] };
+        return services ? { list: [await addNames(services)] } : { list: [] };
     }
 
     if (serviceType === "initialdate") {
         const services = await servicesData.findInitialServiceDate(serviceFind);
-        return services ? { list: [services] } : { list: [] };
+        return services ? { list: [await addNames(services)] } : { list: [] };
     }
 
     if (serviceType === "finishdate") {
         const services = await servicesData.findFinishServiceDate(serviceFind);
-        return services ? { list: [services] } : { list: [] };
+        return services ? { list: [await addNames(services)] } : { list: [] };
     }
 
     if (!serviceType) {
