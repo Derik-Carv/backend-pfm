@@ -3,6 +3,9 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
+import { StatusServiceRepository } from "@/database/tables/statusService/statusService.repository";
+import { ClientRepository } from "@/database/tables/clients/clients.repository";
+import type { Services } from "@/database/tables/services/services.interface";
 
 export async function usecaseMyServicesHome(userId: string) {
     const allowedRoles = [
@@ -52,7 +55,18 @@ export async function usecaseMyServicesHome(userId: string) {
                 servicesData.findOldestByIds(serviceIds, 3),
             ]);
 
-        return { highValueServices, recentServices, oldestServices };
+        const [highValueWithNames, recentWithNames, oldestWithNames] =
+            await Promise.all([
+                Promise.all(highValueServices.map(addNames)),
+                Promise.all(recentServices.map(addNames)),
+                Promise.all(oldestServices.map(addNames)),
+            ]);
+
+        return {
+            highValueServices: highValueWithNames,
+            recentServices: recentWithNames,
+            oldestServices: oldestWithNames,
+        };
     }
 
     const [highValueServices, recentServices, oldestServices] =
@@ -62,5 +76,34 @@ export async function usecaseMyServicesHome(userId: string) {
             servicesData.findOldest(3),
         ]);
 
-    return { highValueServices, recentServices, oldestServices };
+    const [highValueWithNames, recentWithNames, oldestWithNames] =
+        await Promise.all([
+            Promise.all(highValueServices.map(addNames)),
+            Promise.all(recentServices.map(addNames)),
+            Promise.all(oldestServices.map(addNames)),
+        ]);
+
+    return {
+        highValueServices: highValueWithNames,
+        recentServices: recentWithNames,
+        oldestServices: oldestWithNames,
+    };
+}
+
+const statusRepository = new StatusServiceRepository();
+const clientRepository = new ClientRepository();
+
+async function addNames(service: Services) {
+    const [client, status] = await Promise.all([
+        clientRepository.findById(service.clientId),
+        service.statusServiceId
+            ? statusRepository.findId(service.statusServiceId)
+            : Promise.resolve(null),
+    ]);
+
+    return {
+        ...service,
+        clientName: client?.tradeName ?? null,
+        statusName: status?.name ?? null,
+    };
 }

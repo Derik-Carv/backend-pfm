@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { createClientSchema } from "@/router/private/manager/client/client.schemas";
-import { usecaseCreateClient } from "@/router/private/manager/client/create/createClient.usecase";
+import { createClientSchema } from "../client.schemas";
+import { usecaseCreateClient } from "./createClient.usecase";
 import type { CreateClientDatabaseInput } from "@/database/tables/clients/clients.interface";
 
 export const createClientController = async (
@@ -9,8 +9,9 @@ export const createClientController = async (
 ) => {
     try {
         const data = createClientSchema.parse(request.body);
+        const userId = request.user.id;
 
-        const newClient = await usecaseCreateClient(data);
+        const newClient = await usecaseCreateClient(userId, data);
 
         return reply.status(201).send({
             message: "Client register with sucess",
@@ -21,6 +22,12 @@ export const createClientController = async (
             return reply.status(400).send({
                 message: "Validation error",
                 issues: error.errors,
+            });
+        }
+
+        if (error.message === "ROLE_ACESS_DENIED") {
+            return reply.status(403).send({
+                message: "Access denied",
             });
         }
 

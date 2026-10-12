@@ -4,7 +4,7 @@ import {
     createClientResponseSchema,
     createClientSchema,
     getClientsResponseSchema,
-} from "@/router/private/manager/client/client.schemas";
+} from "./client.schemas";
 
 export const createClientRouteOptions = {
     config: {
