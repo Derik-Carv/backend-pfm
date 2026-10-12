@@ -2,10 +2,20 @@ import { allRoles } from "@/lib/roles.list";
 import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
-import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
-import { addNames } from "./addNamesService";
+import type {
+    getServicesFinderParamsSchema,
+    getServicesQuerySchema,
+} from "../services.schemas";
+import type { z } from "zod";
 
-export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
+type FinderParams = z.infer<typeof getServicesFinderParamsSchema>;
+type Pagination = z.infer<typeof getServicesQuerySchema>;
+
+export async function usecaseMyServicesHomeFind(
+    userId: string,
+    finder: FinderParams,
+    pagination: Pagination,
+) {
     const allowedRoles = [
         allRoles.administrator,
         allRoles.manager,
@@ -17,7 +27,6 @@ export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
     const userData = new UsersRepository();
     const roleData = new RoleRepository();
     const servicesData = new ServicesRepository();
-    const bundledData = new BundledRepository();
 
     const user = await userData.findId(userId);
     if (!user) {
@@ -34,72 +43,27 @@ export async function usecaseMyServicesHomeFind(userId: string, finder: any) {
         throw new Error("ROLE_ACESS_DENIED");
     }
 
-    const serviceFind = finder.finder as string;
-    const serviceType = finder.type as string;
+    const offset = (pagination.page - 1) * pagination.limit;
+    const result = await servicesData.findFinderPage(
+        finder.type,
+        finder.finder,
+        pagination.limit,
+        offset,
+        userRole.name === allRoles.colaborator ? userId : undefined,
+    );
 
-    if (userRole.name === allRoles.colaborator) {
-        const userBundles = await bundledData.findByUserId(userId);
-        const findBundles = userBundles.filter((item) => {
-            if (serviceType === "id")
-                return item.serviceBundledId === serviceFind;
-            if (serviceType === "client")
-                return item.serviceBundledId === serviceFind;
-            if (serviceType === "price")
-                return item.serviceBundledId === serviceFind;
-            if (serviceType === "initialdate")
-                return item.serviceBundledId === serviceFind;
-            if (serviceType === "finishdate")
-                return item.serviceBundledId === serviceFind;
-
-            throw new Error("TYPE_OR_FINDER_ERROR");
-        });
-
-        const serviceIds = [
-            ...new Set(findBundles.map((item) => item.serviceBundledId)),
-        ];
-        const serviceList = await Promise.all(
-            serviceIds.map((id) => servicesData.findId(id)),
-        );
-
-        if (!serviceList) {
-            throw new Error("TYPE_OR_FINDER_ERROR");
-        }
-
-        const services = serviceList.filter((service) => service != null);
-
-        return {
-            list: await Promise.all(services.map(addNames)),
-        };
-    }
-
-    if (serviceType === "id") {
-        const services = await servicesData.findId(serviceFind);
-        return services ? { list: [await addNames(services)] } : { list: [] };
-    }
-
-    if (serviceType === "client") {
-        const services = await servicesData.findClientServices(serviceFind);
-        return services ? { list: [await addNames(services)] } : { list: [] };
-    }
-
-    if (serviceType === "price") {
-        const services = await servicesData.findValue(serviceFind);
-        return services ? { list: [await addNames(services)] } : { list: [] };
-    }
-
-    if (serviceType === "initialdate") {
-        const services = await servicesData.findInitialServiceDate(serviceFind);
-        return services ? { list: [await addNames(services)] } : { list: [] };
-    }
-
-    if (serviceType === "finishdate") {
-        const services = await servicesData.findFinishServiceDate(serviceFind);
-        return services ? { list: [await addNames(services)] } : { list: [] };
-    }
-
-    if (!serviceType) {
-        throw new Error("TYPE_OR_FINDER_ERROR");
-    }
-
-    return { list: [] };
+    return {
+        list: result.list.map(({ client, status, ...service }) => ({
+            ...service,
+            clientName: client.tradeName,
+            statusName: status?.name ?? null,
+        })),
+        pagination: {
+            page: pagination.page,
+            limit: pagination.limit,
+            total: result.total,
+            totalPages: Math.ceil(result.total / pagination.limit),
+            hasMore: offset + result.list.length < result.total,
+        },
+    };
 }

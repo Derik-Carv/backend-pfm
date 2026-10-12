@@ -1,9 +1,11 @@
 import { db } from "@/database/index";
-import { services } from "@/database/schema/schema";
-import { eq, inArray, desc, asc } from "drizzle-orm";
+import { bundled, services } from "@/database/schema/schema";
+import { and, count, eq, inArray, desc, asc } from "drizzle-orm";
 import type {
     CreateServicesDatabaseInput,
     IServices,
+    ServicePageItem,
+    ServiceFinderType,
     Services,
 } from "./services.interface";
 
@@ -11,6 +13,126 @@ export class ServicesRepository implements IServices {
     async create(data: CreateServicesDatabaseInput): Promise<Services> {
         const [newService] = await db.insert(services).values(data).returning();
         return newService;
+    }
+
+    async findActives(): Promise<Services[]> {
+        return db
+            .select()
+            .from(services)
+            .where(eq(services.active, true));
+    }
+
+    async findActivePage(
+        limit: number,
+        offset: number,
+    ): Promise<{ list: ServicePageItem[]; total: number }> {
+        const activeFilter = eq(services.active, true);
+        const [list, [totalRow]] = await Promise.all([
+            db.query.services.findMany({
+                columns: {
+                    id: true,
+                    serviceName: true,
+                    price: true,
+                    initialDate: true,
+                    finishDate: true,
+                    clientId: true,
+                    details: true,
+                    statusServiceId: true,
+                },
+                with: {
+                    client: {
+                        columns: {
+                            tradeName: true,
+                        },
+                    },
+                    status: {
+                        columns: {
+                            name: true,
+                        },
+                    },
+                },
+                where: (service, { eq }) => eq(service.active, true),
+                orderBy: (service, { desc }) => [desc(service.createdAt)],
+                limit,
+                offset,
+            }),
+            db.select({ count: count() }).from(services).where(activeFilter),
+        ]);
+
+        return {
+            list,
+            total: totalRow.count,
+        };
+    }
+
+    async findFinderPage(
+        type: ServiceFinderType,
+        value: string,
+        limit: number,
+        offset: number,
+        collaboratorId?: string,
+    ): Promise<{ list: ServicePageItem[]; total: number }> {
+        const searchFilter = {
+            id: eq(services.id, value),
+            client: eq(services.clientId, value),
+            price: eq(services.price, value),
+            initialdate: eq(services.initialDate, value),
+            finishdate: eq(services.finishDate, value),
+        }[type];
+        const filters = [
+            searchFilter,
+            ...(collaboratorId
+                ? [
+                      inArray(
+                          services.id,
+                          db
+                              .select({
+                                  serviceBundledId: bundled.serviceBundledId,
+                              })
+                              .from(bundled)
+                              .where(eq(bundled.userId, collaboratorId)),
+                      ),
+                  ]
+                : []),
+        ];
+        const where = and(...filters);
+
+        const [list, [totalRow]] = await Promise.all([
+            db.query.services.findMany({
+                columns: {
+                    id: true,
+                    serviceName: true,
+                    price: true,
+                    initialDate: true,
+                    finishDate: true,
+                    clientId: true,
+                    details: true,
+                    statusServiceId: true,
+                },
+                with: {
+                    client: {
+                        columns: {
+                            tradeName: true,
+                        },
+                    },
+                    status: {
+                        columns: {
+                            name: true,
+                        },
+                    },
+                },
+                where,
+                orderBy: (service, { desc }) => [
+                    desc(service.createdAt),
+                    desc(service.id),
+                ],
+                limit,
+                offset,
+            }),
+            db.select({ count: count() }).from(services).where(where),
+        ]);
+
+        return { list, total: totalRow.count };
     }
 
     async findAll(): Promise<Services[]> {
@@ -133,13 +255,6 @@ export class ServicesRepository implements IServices {
             .from(services)
             .orderBy(asc(services.createdAt))
             .limit(limitNumber);
-    }
-
-    async findActives(): Promise<Services[]> {
-        return await db
-            .select()
-            .from(services)
-            .where(eq(services.active, true));
     }
 
     async findInactives(): Promise<Services[]> {

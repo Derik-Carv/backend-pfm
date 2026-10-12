@@ -3,7 +3,10 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 
-export async function usecaseGetService(userId: string) {
+export async function usecaseGetService(
+    userId: string,
+    pagination: { page: number; limit: number },
+) {
     const allowedRoles = [
         allRoles.administrator,
         allRoles.manager,
@@ -29,5 +32,21 @@ export async function usecaseGetService(userId: string) {
         throw new Error("ROLE_ACESS_DENIED");
     }
 
-    return await servicesData.findActives();
+    const offset = (pagination.page - 1) * pagination.limit;
+    const result = await servicesData.findActivePage(pagination.limit, offset);
+
+    return {
+        list: result.list.map(({ client, status, ...service }) => ({
+            ...service,
+            clientName: client.tradeName,
+            statusName: status?.name ?? null,
+        })),
+        pagination: {
+            page: pagination.page,
+            limit: pagination.limit,
+            total: result.total,
+            totalPages: Math.ceil(result.total / pagination.limit),
+            hasMore: offset + result.list.length < result.total,
+        },
+    };
 }
