@@ -11,7 +11,11 @@ import { getMyServicesListController } from "./listService/myServicesList.contro
 import { createServicesController } from "./newService/createServices.controller";
 import { editServicesController } from "./patchService/editService.controller";
 
-const allowedRoles = Object.values(allRoles);
+const allowedRoles = [
+    allRoles.administrator,
+    allRoles.manager,
+    allRoles.finance,
+];
 
 export async function managerServicesRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);

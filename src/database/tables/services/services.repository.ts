@@ -148,4 +148,74 @@ export class ServicesRepository implements IServices {
             .from(services)
             .where(eq(services.active, false));
     }
+
+    async editName(id: string, name: string): Promise<Services | null> {
+        const [upService] = await db
+            .update(services)
+            .set({ serviceName: name })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
+
+    async editClient(id: string, client: string): Promise<Services | null> {
+        const [upService] = await db
+            .update(services)
+            .set({ clientId: client })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
+
+    async editDetails(id: string, details: string): Promise<Services | null> {
+        const [upService] = await db
+            .update(services)
+            .set({ details: details })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
+
+    async editPrice(id: string, price: string): Promise<Services | null> {
+        const [upService] = await db
+            .update(services)
+            .set({ price: price })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
+
+    async editStatus(id: string, status: string): Promise<Services | null> {
+        const [upService] = await db
+            .update(services)
+            .set({ statusServiceId: status })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
+
+    async editInitialDate(id: string, date: string): Promise<Services | null> {
+        const [upService] = await db
+            .update(services)
+            .set({ initialDate: date })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
+
+    async editFinishDate(id: string, date: string): Promise<Services | null> {
+        const [upService] = await db
+            .update(services)
+            .set({ finishDate: date })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
 }
