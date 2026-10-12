@@ -5,34 +5,18 @@ import { ServicesRepository } from "@/database/tables/services/services.reposito
 import { StatusServiceRepository } from "@/database/tables/statusService/statusService.repository";
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
 import type { ServiceEditInput } from "../myServicesList.schemas";
-import { allStatusServices } from "@/lib/sttsService.list";
 
 export async function usecaseEditService(
     userId: string,
     params: any,
     data: ServiceEditInput,
 ) {
-    const allowedRoles = [
-        allRoles.administrator,
-        allRoles.manager,
-        allRoles.finance,
-    ];
-
-    const status = [
-        allStatusServices[0],
-        allStatusServices[1],
-        allStatusServices[2],
-    ];
-
-    console.log("VERIFICAR RESULTADAO DE TESTE DE PARAMS:\n", params);
-
-    console.log("VERIFICAR RESULTADAO DE TESTE DE STATUS:\n", status);
-
     const userData = new UsersRepository();
     const roleData = new RoleRepository();
     const clientData = new ClientRepository();
     const statusData = new StatusServiceRepository();
     const servicesData = new ServicesRepository();
+    const receivedId = params.id;
 
     const user = await userData.findId(userId);
     const userRole = await roleData.findById(user.roleId);
@@ -41,31 +25,81 @@ export async function usecaseEditService(
         throw new Error("ROLE_NOT_FOUND");
     }
 
-    const roleCheck = allowedRoles.includes(userRole.name);
+    if (data.serviceName) {
+        const newName = await servicesData.editName(
+            receivedId,
+            data.serviceName,
+        );
+        if (!newName) throw new Error("SERVICE_NOT_FOUND");
 
-    if (!roleCheck) {
-        throw new Error("ROLE_ACESS_DENIED");
+        return newName;
+    }
+
+    if (data.price) {
+        const newPrice = await servicesData.editPrice(receivedId, data.price);
+        if (!newPrice) throw new Error("SERVICE_NOT_FOUND");
+
+        return newPrice;
+    }
+
+    if (data.initialDate) {
+        const newDate = await servicesData.editInitialDate(
+            receivedId,
+            data.initialDate,
+        );
+        if (!newDate) throw new Error("SERVICE_NOT_FOUND");
+
+        return newDate;
+    }
+
+    if (data.finishDate) {
+        const newDate = await servicesData.editFinishDate(
+            receivedId,
+            data.finishDate,
+        );
+        if (!newDate) throw new Error("SERVICE_NOT_FOUND");
+
+        return newDate;
     }
 
     if (data.clientId) {
         const validClient = await clientData.findById(data.clientId);
 
-        if (!validClient) {
-            throw new Error("CLIENT_NOT_FOUND");
-        }
+        if (!validClient) throw new Error("CLIENT_NOT_FOUND");
+
+        const newClient = await servicesData.editClient(
+            receivedId,
+            data.clientId,
+        );
+        if (!newClient) throw new Error("SERVICE_NOT_FOUND");
+
+        return newClient;
     }
 
-    const defaultStatus = await statusData.findName("Fila");
+    if (data.details) {
+        if (data.details.length === 0)
+            throw new Error("NEW_SERVICE_DETAILS_INVALID");
 
-    if (!data.statusServiceId) data.statusServiceId = defaultStatus.id;
+        const newDetails = await servicesData.editDetails(
+            receivedId,
+            data.details,
+        );
+        if (!newDetails) throw new Error("SERVICE_NOT_FOUND");
 
-    if (!data.statusServiceId) {
-        throw new Error("STATUS_SERVICE_NOT_FOUND");
+        return newDetails;
     }
 
-    // const newService = await servicesData.create(data);
+    if (data.statusServiceId) {
+        const validStatus = await statusData.findId(data.statusServiceId);
 
-    // if (!newService) throw new Error("SERVICE_NOT_FOUND");
+        if (!validStatus) throw new Error("NEW_SERVICE_STATUS_INVALID");
 
-    // return newService;
+        const newStatus = await servicesData.editStatus(
+            receivedId,
+            data.statusServiceId,
+        );
+        if (!newStatus) throw new Error("SERVICE_NOT_FOUND");
+
+        return newStatus;
+    }
 }

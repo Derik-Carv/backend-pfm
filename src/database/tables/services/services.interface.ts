@@ -23,4 +23,11 @@ export interface IServices {
     findAll(): Promise<Services[]>;
     findActives(): Promise<Services[]>;
     findInactives(): Promise<Services[]>;
+    editName(id: string, name: string): Promise<Services | null>;
+    editPrice(id: string, price: string): Promise<Services | null>;
+    editInitialDate(id: string, date: string): Promise<Services | null>;
+    editFinishDate(id: string, date: string): Promise<Services | null>;
+    editClient(id: string, client: string): Promise<Services | null>;
+    editDetails(id: string, details: string): Promise<Services | null>;
+    editStatus(id: string, status: string): Promise<Services | null>;
 }

@@ -52,14 +52,8 @@ export const editServicesController = async (
             });
         }
 
-        if (error.message === "ROLE_ACESS_DENIED") {
-            return reply.status(403).send({
-                message: "Access denied",
-            });
-        }
-
         return reply.status(500).send({
-            message: "Internal server error while registering role",
+            message: "Internal server error while editing service",
         });
     }
 };
