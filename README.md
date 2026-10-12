@@ -62,6 +62,7 @@ DB_PASSWORD=secret
 # Create role and admin user
 ADMIN_DEFAULT_PASSWORD=Admin@123456
 CPFADMIN="167.030.850-21"
+DEMO_SEED_PASSWORD=Demo@123456
 
 DATABASE_URL="postgres://root:password@postgres:5432/user_db"
 
@@ -72,6 +73,18 @@ LOGTOKEN=seu_token_copiado_aqui
 ```
 
 Then replace the empty values with your local credentials when needed. Keep the structure consistent with the repository example and do not commit the real `.env` file.
+
+### Development demo data
+
+On startup with `NODE_ENV=development` or `NODE_ENV=test`, the backend inserts
+synthetic demo data: 250 clients, 20 collaborator accounts, 5,000 services with
+bundles, and 1,000 invoices with associated movements. Deterministic IDs make
+repeated startup safe; existing demo rows are left unchanged. This large dataset
+is skipped in every other environment, including production.
+
+The demo collaborator accounts use usernames `demo.colaborator.01` through
+`demo.colaborator.20`. Their shared password is `DEMO_SEED_PASSWORD`, defaulting
+to `Demo@123456`. Set that variable in `.env` to customize it.
 
 ## Running the Project
 
