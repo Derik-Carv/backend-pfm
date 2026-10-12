@@ -3,6 +3,7 @@ import { roles, users, statusService, type } from "@/database/schema/schema";
 import { cpfClean } from "@/utils/checkCpf";
 import { hashPassword } from "@/lib/hash";
 import { eq } from "drizzle-orm";
+import { seedDemoData } from "@/database/demoSeed";
 
 export async function startSeed() {
     console.log(
@@ -20,7 +21,7 @@ export async function startSeed() {
     const roleMap: Record<string, string> = {};
 
     for (const roleName of targetRoles) {
-        let [existingRole] = await db
+        const [existingRole] = await db
             .select()
             .from(roles)
             .where(eq(roles.name, roleName))
@@ -39,7 +40,7 @@ export async function startSeed() {
     }
 
     const adminUsername = "administrator.system";
-    let [existingUser] = await db
+    const [existingUser] = await db
         .select()
         .from(users)
         .where(eq(users.username, adminUsername))
@@ -91,6 +92,12 @@ export async function startSeed() {
             await db.insert(type).values({ name: typeName, active: true });
             console.log(`✅ Tipo '${typeName}' criado.`);
         }
+    }
+
+    if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
+        await seedDemoData(roleMap);
+    } else {
+        console.log("ℹ️ Dados de demonstração ignorados fora de development/test.");
     }
 
     console.log("✅ Seed essencial finalizado com sucesso!");
