@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+export const getServicesQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(10).default(10),
+});
+
+export const getServicesFinderParamsSchema = z.object({
+    type: z.enum(["id", "client", "price", "initialdate", "finishdate"]),
+    finder: z.string().min(1),
+});
+
 const serviceBaseSchema = z.object({
     id: z.string(),
     serviceName: z.string(),
@@ -51,12 +61,28 @@ export const getMenuOverviewResponseSchema = z.object({
 
 export const getMyServicesResponseSchema = z.object({
     message: z.string(),
-    services: z.array(getServiceResponseSchema.shape.service),
+    services: z.object({
+        list: z.array(serviceHomeSchema),
+        pagination: z.object({
+            page: z.number().int(),
+            limit: z.number().int(),
+            total: z.number().int(),
+            totalPages: z.number().int(),
+            hasMore: z.boolean(),
+        }),
+    }),
 });
 
 export const getMyServicesFinderResponseSchema = z.object({
     message: z.string(),
     finder: z.object({
         list: z.array(serviceHomeSchema),
+        pagination: z.object({
+            page: z.number().int(),
+            limit: z.number().int(),
+            total: z.number().int(),
+            totalPages: z.number().int(),
+            hasMore: z.boolean(),
+        }),
     }),
 });

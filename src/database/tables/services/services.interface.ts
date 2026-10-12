@@ -3,6 +3,28 @@ import type { services } from "@/database/schema/schema";
 export type CreateServicesDatabaseInput = typeof services.$inferInsert;
 export type Services = typeof services.$inferSelect;
 
+export type ServicePageItem = Pick<
+    Services,
+    | "id"
+    | "serviceName"
+    | "price"
+    | "initialDate"
+    | "finishDate"
+    | "clientId"
+    | "details"
+    | "statusServiceId"
+> & {
+    client: { tradeName: string };
+    status: { name: string } | null;
+};
+
+export type ServiceFinderType =
+    | "id"
+    | "client"
+    | "price"
+    | "initialdate"
+    | "finishdate";
+
 export interface IServices {
     create(data: CreateServicesDatabaseInput): Promise<Services>;
     findId(id: string): Promise<Services>;
@@ -22,6 +44,17 @@ export interface IServices {
     findOldest(limitNumber?: number): Promise<Services[]>;
     findAll(): Promise<Services[]>;
     findActives(): Promise<Services[]>;
+    findActivePage(
+        limit: number,
+        offset: number,
+    ): Promise<{ list: ServicePageItem[]; total: number }>;
+    findFinderPage(
+        type: ServiceFinderType,
+        value: string,
+        limit: number,
+        offset: number,
+        collaboratorId?: string,
+    ): Promise<{ list: ServicePageItem[]; total: number }>;
     findInactives(): Promise<Services[]>;
     editName(id: string, name: string): Promise<Services | null>;
     editPrice(id: string, price: string): Promise<Services | null>;

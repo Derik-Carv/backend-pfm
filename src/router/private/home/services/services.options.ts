@@ -4,6 +4,8 @@ import {
     getMenuOverviewResponseSchema,
     getMyServicesFinderResponseSchema,
     getMyServicesResponseSchema,
+    getServicesQuerySchema,
+    getServicesFinderParamsSchema,
 } from "@/router/private/home/services/services.schemas";
 
 export const getServicesHomeRouteOptions = {
@@ -33,6 +35,8 @@ export const getServicesFinderHomeRouteOptions = {
         tags: ["Dashboard", "Services"],
         summary: "Find home services overview",
         description: "Returns services with finded",
+        params: getServicesFinderParamsSchema,
+        querystring: getServicesQuerySchema,
         response: {
             200: getMyServicesFinderResponseSchema,
             400: errorResponseSchema,
@@ -51,6 +55,7 @@ export const getServicesRouteOptions = {
         tags: ["Dashboard", "Services"],
         summary: "Find home services overview",
         description: "Returns services with finded",
+        querystring: getServicesQuerySchema,
         response: {
             200: getMyServicesResponseSchema,
             400: errorResponseSchema,

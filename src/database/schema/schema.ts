@@ -9,6 +9,7 @@ import {
     varchar,
 } from "drizzle-orm/pg-core";
 import { v7 as uuidv7 } from "uuid";
+import { relations } from "drizzle-orm";
 
 export const roles = pgTable("roles", {
     id: uuid("id")
@@ -179,3 +180,14 @@ export const bundled = pgTable("bundled", {
         .notNull()
         .$onUpdateFn(() => new Date()),
 });
+
+export const servicesRelations = relations(services, ({ one }) => ({
+    client: one(clients, {
+        fields: [services.clientId],
+        references: [clients.id],
+    }),
+    status: one(statusService, {
+        fields: [services.statusServiceId],
+        references: [statusService.id],
+    }),
+}));
