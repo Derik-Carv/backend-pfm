@@ -191,3 +191,10 @@ export const servicesRelations = relations(services, ({ one }) => ({
         references: [statusService.id],
     }),
 }));
+
+export const usersRelations = relations(users, ({ one }) => ({
+    role: one(roles, {
+        fields: [users.roleId],
+        references: [roles.id],
+    }),
+}));

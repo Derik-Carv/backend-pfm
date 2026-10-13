@@ -1,5 +1,8 @@
 import { rateLimitProfiles } from "@/policies/rateLimit";
-import { getUserResponseSchema } from "@/router/private/admin/users/user.schemas";
+import {
+    getUserResponseSchema,
+    getUsersQuerySchema,
+} from "@/router/private/admin/users/user.schemas";
 import { errorResponseSchema } from "@/router/error.schema";
 
 export const getUserRouteOptions = {
@@ -10,6 +13,7 @@ export const getUserRouteOptions = {
         tags: ["Users"],
         summary: "Find all usersr",
         description: "Find all users in system",
+        querystring: getUsersQuerySchema,
         response: {
             200: getUserResponseSchema,
             400: errorResponseSchema,
