@@ -24,6 +24,18 @@ export const getServicesController = async (
             });
         }
 
+        if (error.message === "SERVICES_NO_DATA") {
+            return reply.status(404).send({
+                message: "Services not found",
+            });
+        }
+
+        if (error.message === "SERVICES_DATA_ERROR") {
+            return reply.status(404).send({
+                message: "Services error data",
+            });
+        }
+
         if (error.message === "ROLE_NOT_FOUND") {
             return reply.status(404).send({
                 message: "Role not found",

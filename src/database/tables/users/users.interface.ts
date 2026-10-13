@@ -3,6 +3,13 @@ import type { users } from "@/database/schema/schema";
 export type CreateUsersDatabaseInput = typeof users.$inferInsert;
 export type Users = typeof users.$inferSelect;
 
+export type UsersPageItem = Pick<
+    Users,
+    "id" | "name" | "surname" | "username" | "roleId" | "cpf"
+> & {
+    role: { name: string };
+};
+
 export interface IUsers {
     create(data: CreateUsersDatabaseInput): Promise<Users>;
     findId(id: string): Promise<Users>;
@@ -11,6 +18,10 @@ export interface IUsers {
     findUsername(username: string): Promise<Users>;
     findRoleId(roleId: string): Promise<Users>;
     findCpf(cpf: string): Promise<Users>;
+    findActivePage(
+        limit: number,
+        offset: number,
+    ): Promise<{ list: UsersPageItem[]; total: number }>;
     findAll(): Promise<Users[]>;
     findActives(): Promise<Users[]>;
     findInactives(): Promise<Users[]>;

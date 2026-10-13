@@ -1,16 +1,55 @@
 import { db } from "@/database/index";
 import { users } from "@/database/schema/schema";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import type {
     CreateUsersDatabaseInput,
     IUsers,
     Users,
+    UsersPageItem,
 } from "./users.interface";
 
 export class UsersRepository implements IUsers {
     async create(data: CreateUsersDatabaseInput): Promise<Users> {
         const [newUser] = await db.insert(users).values(data).returning();
         return await newUser;
+    }
+
+    async findActivePage(
+        limit: number,
+        offset: number,
+    ): Promise<{ list: UsersPageItem[]; total: number }> {
+        const activeFilter = eq(users.active, true);
+        const [list, [totalRow]] = await Promise.all([
+            db.query.users.findMany({
+                columns: {
+                    id: true,
+                    name: true,
+                    surname: true,
+                    username: true,
+                    roleId: true,
+                    cpf: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+                with: {
+                    role: {
+                        columns: {
+                            name: true,
+                        },
+                    },
+                },
+                where: (users, { eq }) => eq(users.active, true),
+                orderBy: (users, { desc }) => [desc(users.createdAt)],
+                limit,
+                offset,
+            }),
+            db.select({ count: count() }).from(users).where(activeFilter),
+        ]);
+
+        return {
+            list,
+            total: totalRow.count,
+        };
     }
 
     async findAll(): Promise<Users[]> {
