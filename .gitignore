@@ -27,6 +27,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
+# Local review notes
+/AVALIACAO-ROTAS.md
+
 # IntelliJ based IDEs
 .idea
 

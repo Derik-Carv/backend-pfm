@@ -1,10 +1,10 @@
 import { rateLimitProfiles } from "@/policies/rateLimit";
 import { errorResponseSchema } from "@/router/error.schema";
+import { paginationQuerySchema } from "@/router/pagination.schema";
 import {
     getMenuOverviewResponseSchema,
     getMyServicesFinderResponseSchema,
     getMyServicesResponseSchema,
-    getServicesQuerySchema,
     getServicesFinderParamsSchema,
 } from "@/router/private/home/services/services.schemas";
 
@@ -36,7 +36,7 @@ export const getServicesFinderHomeRouteOptions = {
         summary: "Find home services overview",
         description: "Returns services with finded",
         params: getServicesFinderParamsSchema,
-        querystring: getServicesQuerySchema,
+        querystring: paginationQuerySchema,
         response: {
             200: getMyServicesFinderResponseSchema,
             400: errorResponseSchema,
@@ -55,7 +55,7 @@ export const getServicesRouteOptions = {
         tags: ["Dashboard", "Services"],
         summary: "Find home services overview",
         description: "Returns services with finded",
-        querystring: getServicesQuerySchema,
+        querystring: paginationQuerySchema,
         response: {
             200: getMyServicesResponseSchema,
             400: errorResponseSchema,
