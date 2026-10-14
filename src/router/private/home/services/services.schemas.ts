@@ -1,24 +1,8 @@
 import { z } from "zod";
 
-export const getServicesQuerySchema = z.object({
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(10).default(10),
-});
-
 export const getServicesFinderParamsSchema = z.object({
     type: z.enum(["id", "client", "price", "initialdate", "finishdate"]),
     finder: z.string().min(1),
-});
-
-const serviceBaseSchema = z.object({
-    id: z.string(),
-    serviceName: z.string(),
-    price: z.union([z.string(), z.number()]),
-    initialDate: z.string(),
-    finishDate: z.string().nullable().optional(),
-    clientId: z.string(),
-    details: z.string(),
-    statusServiceId: z.string().nullable().optional(),
 });
 
 const serviceHomeSchema = z.object({

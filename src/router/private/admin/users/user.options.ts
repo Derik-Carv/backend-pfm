@@ -1,9 +1,7 @@
 import { rateLimitProfiles } from "@/policies/rateLimit";
-import {
-    getUserResponseSchema,
-    getUsersQuerySchema,
-} from "@/router/private/admin/users/user.schemas";
+import { getUserResponseSchema } from "@/router/private/admin/users/user.schemas";
 import { errorResponseSchema } from "@/router/error.schema";
+import { paginationQuerySchema } from "@/router/pagination.schema";
 
 export const getUserRouteOptions = {
     config: {
@@ -13,7 +11,7 @@ export const getUserRouteOptions = {
         tags: ["Users"],
         summary: "Find all usersr",
         description: "Find all users in system",
-        querystring: getUsersQuerySchema,
+        querystring: paginationQuerySchema,
         response: {
             200: getUserResponseSchema,
             400: errorResponseSchema,
