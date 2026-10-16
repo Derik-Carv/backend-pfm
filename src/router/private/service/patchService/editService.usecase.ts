@@ -6,16 +6,17 @@ import { StatusServiceRepository } from "@/database/tables/statusService/statusS
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
 import type { ServiceEditInput } from "../myServicesList.schemas";
 
+const userData = new UsersRepository();
+const roleData = new RoleRepository();
+const clientData = new ClientRepository();
+const statusData = new StatusServiceRepository();
+const servicesData = new ServicesRepository();
+
 export async function usecaseEditService(
     userId: string,
     params: any,
     data: ServiceEditInput,
 ) {
-    const userData = new UsersRepository();
-    const roleData = new RoleRepository();
-    const clientData = new ClientRepository();
-    const statusData = new StatusServiceRepository();
-    const servicesData = new ServicesRepository();
     const receivedId = params.id;
 
     const user = await userData.findId(userId);

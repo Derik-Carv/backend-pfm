@@ -198,3 +198,18 @@ export const usersRelations = relations(users, ({ one }) => ({
         references: [roles.id],
     }),
 }));
+
+export const movimentationRelations = relations(movimentation, ({ one }) => ({
+    nf: one(nf, {
+        fields: [movimentation.nfId],
+        references: [nf.numberNf],
+    }),
+    destinationUserId: one(users, {
+        fields: [movimentation.destinationUserId],
+        references: [users.name],
+    }),
+    destinationClientId: one(clients, {
+        fields: [movimentation.destinationClientId],
+        references: [clients.tradeName],
+    }),
+}));

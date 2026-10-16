@@ -1,10 +1,11 @@
 import { db } from "@/database/index";
 import { movimentation } from "@/database/schema/schema";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import type {
     CreateMovimentationDatabaseInput,
     IMovimentation,
     Movimentation,
+    MovimentationPageItem,
 } from "./movimentation.interface";
 
 export class MovimentationRepository implements IMovimentation {
@@ -16,6 +17,60 @@ export class MovimentationRepository implements IMovimentation {
             .values(data)
             .returning();
         return newMovimentation || null;
+    }
+
+    async findActivePage(
+        limit: number,
+        offset: number,
+    ): Promise<{ list: MovimentationPageItem[]; total: number }> {
+        const activeFilter = eq(movimentation.active, true);
+        const [list, [totalRow]] = await Promise.all([
+            db.query.movimentation.findMany({
+                columns: {
+                    id: true,
+                    name: true,
+                    nfId: true,
+                    active: true,
+                    destinationUserId: true,
+                    destinationClientId: true,
+                    justify: true,
+                    createdAt: true,
+                },
+                with: {
+                    nf: {
+                        columns: {
+                            numberNf: true,
+                        },
+                    },
+                    user: {
+                        columns: {
+                            name: true,
+                        },
+                    },
+                    client: {
+                        columns: {
+                            tradeName: true,
+                        },
+                    },
+                },
+                where: (movimentation, { eq }) =>
+                    eq(movimentation.active, true),
+                orderBy: (movimentation, { desc }) => [
+                    desc(movimentation.createdAt),
+                ],
+                limit,
+                offset,
+            }),
+            db
+                .select({ count: count() })
+                .from(movimentation)
+                .where(activeFilter),
+        ]);
+
+        return {
+            list: list as MovimentationPageItem[],
+            total: totalRow.count,
+        };
     }
 
     async findAll(): Promise<Movimentation[]> {
@@ -36,8 +91,7 @@ export class MovimentationRepository implements IMovimentation {
         const [nameReturning] = await db
             .select()
             .from(movimentation)
-            .where(eq(movimentation.name, name))
-            .limit(1);
+            .where(eq(movimentation.name, name));
 
         return nameReturning || null;
     }
@@ -46,15 +100,13 @@ export class MovimentationRepository implements IMovimentation {
         return await db
             .select()
             .from(movimentation)
-            .where(eq(movimentation.active, true))
-            .limit(1);
+            .where(eq(movimentation.active, true));
     }
 
     async findInactives(): Promise<Movimentation[]> {
         return await db
             .select()
             .from(movimentation)
-            .where(eq(movimentation.active, false))
-            .limit(1);
+            .where(eq(movimentation.active, false));
     }
 }
