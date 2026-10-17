@@ -213,3 +213,22 @@ export const movimentationRelations = relations(movimentation, ({ one }) => ({
         references: [clients.tradeName],
     }),
 }));
+
+export const nfRelations = relations(nf, ({ one }) => ({
+    type: one(type, {
+        fields: [nf.typeId],
+        references: [type.name],
+    }),
+    client: one(clients, {
+        fields: [nf.thirdPartyClientId],
+        references: [clients.tradeName],
+    }),
+    service: one(services, {
+        fields: [nf.servicesId],
+        references: [services.serviceName],
+    }),
+    movimentation: one(movimentation, {
+        fields: [nf.movimentationId],
+        references: [movimentation.name],
+    }),
+}));
