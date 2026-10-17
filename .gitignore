@@ -1,5 +1,8 @@
 # dependencies (bun install)
 node_modules
+drizzle
+
+.linter
 
 # output
 out

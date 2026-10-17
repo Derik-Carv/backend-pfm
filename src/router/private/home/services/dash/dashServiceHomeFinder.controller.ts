@@ -1,9 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { usecaseMyServicesHomeFind } from "./dashServiceHomeFinder.usecase";
-import {
-    getServicesFinderParamsSchema,
-    getServicesQuerySchema,
-} from "../services.schemas";
+import { getServicesFinderParamsSchema } from "../services.schemas";
+import { paginationQuerySchema } from "@/router/pagination.schema";
 
 export const getServicesHomeFinderController = async (
     request: FastifyRequest,
@@ -12,7 +10,7 @@ export const getServicesHomeFinderController = async (
     try {
         const userId = request.user.id;
         const params = getServicesFinderParamsSchema.parse(request.params);
-        const pagination = getServicesQuerySchema.parse(request.query);
+        const pagination = paginationQuerySchema.parse(request.query);
 
         const menuData = await usecaseMyServicesHomeFind(
             userId,

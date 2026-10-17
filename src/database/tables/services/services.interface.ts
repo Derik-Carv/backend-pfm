@@ -47,6 +47,7 @@ export interface IServices {
     findActivePage(
         limit: number,
         offset: number,
+        collaboratorId?: string,
     ): Promise<{ list: ServicePageItem[]; total: number }>;
     findFinderPage(
         type: ServiceFinderType,
