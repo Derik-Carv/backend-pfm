@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { usecaseGetService } from "@/router/private/home/services/get/getServices.usecase";
-import { getServicesQuerySchema } from "@/router/private/home/services/services.schemas";
+import { paginationQuerySchema } from "@/router/pagination.schema";
 
 export const getServicesController = async (
     request: FastifyRequest,
@@ -8,7 +8,7 @@ export const getServicesController = async (
 ) => {
     try {
         const userId = request.user.id;
-        const { page, limit } = getServicesQuerySchema.parse(request.query);
+        const { page, limit } = paginationQuerySchema.parse(request.query);
 
         const allServices = await usecaseGetService(userId, { page, limit });
 

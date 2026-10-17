@@ -33,7 +33,11 @@ export async function usecaseGetService(
     }
 
     const offset = (pagination.page - 1) * pagination.limit;
-    const result = await servicesData.findActivePage(pagination.limit, offset);
+    const result = await servicesData.findActivePage(
+        pagination.limit,
+        offset,
+        userRole.name === allRoles.colaborator ? userId : undefined,
+    );
 
     if (result.total === 0) throw new Error("SERVICES_NO_DATA");
     if (!result) throw new Error("SERVICES_DATA_ERROR");

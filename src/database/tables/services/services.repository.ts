@@ -25,8 +25,25 @@ export class ServicesRepository implements IServices {
     async findActivePage(
         limit: number,
         offset: number,
+        collaboratorId?: string,
     ): Promise<{ list: ServicePageItem[]; total: number }> {
-        const activeFilter = eq(services.active, true);
+        const filters = [
+            eq(services.active, true),
+            ...(collaboratorId
+                ? [
+                      inArray(
+                          services.id,
+                          db
+                              .select({
+                                  serviceBundledId: bundled.serviceBundledId,
+                              })
+                              .from(bundled)
+                              .where(eq(bundled.userId, collaboratorId)),
+                      ),
+                  ]
+                : []),
+        ];
+        const where = and(...filters);
         const [list, [totalRow]] = await Promise.all([
             db.query.services.findMany({
                 columns: {
@@ -51,12 +68,12 @@ export class ServicesRepository implements IServices {
                         },
                     },
                 },
-                where: (service, { eq }) => eq(service.active, true),
+                where,
                 orderBy: (service, { desc }) => [desc(service.createdAt)],
                 limit,
                 offset,
             }),
-            db.select({ count: count() }).from(services).where(activeFilter),
+            db.select({ count: count() }).from(services).where(where),
         ]);
 
         return {

@@ -1,13 +1,13 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { usecaseGetUser } from "@/router/private/admin/users/get/getUser.usecase";
-import { getUsersQuerySchema } from "../user.schemas";
+import { paginationQuerySchema } from "@/router/pagination.schema";
 
 export const getUserController = async (
     request: FastifyRequest,
     reply: FastifyReply,
 ) => {
     try {
-        const { page, limit } = getUsersQuerySchema.parse(request.query);
+        const { page, limit } = paginationQuerySchema.parse(request.query);
 
         const users = await usecaseGetUser({ page, limit });
 
