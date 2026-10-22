@@ -4,10 +4,12 @@ import { inspectRole } from "@/middlewares/role.middleware";
 import { allRoles } from "@/lib/roles.list";
 import {
     createClientRouteOptions,
+    editClientRouteOptions,
     getClientRouteOptions,
 } from "./client.options";
 import { getClientsController } from "./get/getClient.controller";
 import { createClientController } from "./create/createClient.controller";
+import { editClientController } from "./patch/editClient.controller";
 
 const allowedRoles = [
     allRoles.administrator,
@@ -24,4 +26,6 @@ export async function menuClientRoutes(app: FastifyInstance) {
     app.get("/", getClientRouteOptions, getClientsController);
 
     app.post("/", createClientRouteOptions, createClientController);
+
+    app.patch("/", editClientRouteOptions, editClientController);
 }

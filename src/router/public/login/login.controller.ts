@@ -23,6 +23,13 @@ export const loginController = async (
 
         return reply.status(200).send({ message: "login sucess", token });
     } catch (error: unknown) {
+        if (error instanceof Error && error.name === "ZodError") {
+            return reply.status(400).send({
+                message: "Validation error",
+                issues: "issues" in error ? error.issues : undefined,
+            });
+        }
+
         if (
             error instanceof Error &&
             error.message === "USERNAME_OR_PASSOWORD_INVALID"

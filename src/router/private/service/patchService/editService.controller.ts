@@ -34,6 +34,27 @@ export const editServicesController = async (
             });
         }
 
+        if (error.message === "USER_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "User not found",
+            });
+        }
+
+        if (error.message === "ROLE_ACESS_DENIED") {
+            return reply.status(403).send({
+                message: "Access denied",
+            });
+        }
+
+        if (
+            error.message === "NEW_SERVICE_DETAILS_INVALID" ||
+            error.message === "NEW_SERVICE_STATUS_INVALID"
+        ) {
+            return reply.status(400).send({
+                message: "Invalid service details or status",
+            });
+        }
+
         if (error.message === "STATUS_SERVICE_NOT_FOUND") {
             return reply.status(404).send({
                 message: "Status service not found",

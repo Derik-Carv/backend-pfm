@@ -42,12 +42,12 @@ export class MovimentationRepository implements IMovimentation {
                             numberNf: true,
                         },
                     },
-                    user: {
+                    destinationUserId: {
                         columns: {
                             name: true,
                         },
                     },
-                    client: {
+                    destinationClientId: {
                         columns: {
                             tradeName: true,
                         },
@@ -68,7 +68,7 @@ export class MovimentationRepository implements IMovimentation {
         ]);
 
         return {
-            list: list as MovimentationPageItem[],
+            list,
             total: totalRow.count,
         };
     }

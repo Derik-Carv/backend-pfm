@@ -30,14 +30,11 @@ export const getUserController = async (
         }
 
         if (error.message === "USERS_DATA_ERROR") {
-            return reply.status(404).send({
-                message: "Users error data",
+            return reply.status(500).send({
+                message: "Failed to retrieve users",
             });
         }
 
-        if (error.message === "USERS_NOT_FOUND") {
-            return reply.status(404).send({ message: "Users not found" });
-        }
         return reply.status(500).send({
             message: "Internal server error for find users",
         });

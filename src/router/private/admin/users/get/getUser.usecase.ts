@@ -12,8 +12,8 @@ export async function usecaseGetUser(pagination: {
         offset,
     );
 
-    if (result.total === 0) throw new Error("USERS_NO_DATA");
     if (!result) throw new Error("USERS_DATA_ERROR");
+    if (result.total === 0) throw new Error("USERS_NO_DATA");
 
     return {
         list: result.list.map(({ role, ...users }) => ({
