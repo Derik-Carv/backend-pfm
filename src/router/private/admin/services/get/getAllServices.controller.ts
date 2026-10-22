@@ -28,6 +28,12 @@ export const getAllServicesController = async (
             });
         }
 
+        if (error.message === "USER_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "User not found",
+            });
+        }
+
         if (error.message === "ROLE_ACESS_DENIED") {
             return reply.status(403).send({
                 message: "Access denied",

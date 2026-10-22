@@ -31,14 +31,20 @@ export const getServicesController = async (
         }
 
         if (error.message === "SERVICES_DATA_ERROR") {
-            return reply.status(404).send({
-                message: "Services error data",
+            return reply.status(500).send({
+                message: "Failed to retrieve services",
             });
         }
 
         if (error.message === "ROLE_NOT_FOUND") {
             return reply.status(404).send({
                 message: "Role not found",
+            });
+        }
+
+        if (error.message === "USER_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "User not found",
             });
         }
 

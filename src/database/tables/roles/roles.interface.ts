@@ -5,9 +5,7 @@ export type Roles = typeof roles.$inferSelect;
 
 export interface IRoles {
     create(data: CreateRoleDatabaseInput): Promise<Roles>;
-    findById(id: string): Promise<Roles>;
-    findIdServices(service: string): Promise<Roles>;
-    findIdUsers(id: string): Promise<Roles>;
+    findById(id: string): Promise<Roles | null>;
     findAll(): Promise<Roles[]>;
     findActives(): Promise<Roles[]>;
     findInactives(): Promise<Roles[]>;

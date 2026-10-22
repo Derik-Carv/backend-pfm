@@ -25,6 +25,18 @@ export const createClientController = async (
             });
         }
 
+        if (
+            error.message === "USER_NOT_FOUND" ||
+            error.message === "ROLE_NOT_FOUND"
+        ) {
+            return reply.status(404).send({
+                message:
+                    error.message === "USER_NOT_FOUND"
+                        ? "User not found"
+                        : "Role not found",
+            });
+        }
+
         if (error.message === "ROLE_ACESS_DENIED") {
             return reply.status(403).send({
                 message: "Access denied",

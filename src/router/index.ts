@@ -12,5 +12,5 @@ export async function appRoutes(app: FastifyInstance) {
     app.register(managerRoutes, { prefix: "/manager" });
     app.register(homeRoutes, { prefix: "/home" });
     app.register(managerServicesRoutes, { prefix: "/services" });
-    app.register(menuClientRoutes, { prefix: "/client" });
+    app.register(menuClientRoutes, { prefix: "/clients" });
 }

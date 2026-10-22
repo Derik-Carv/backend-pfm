@@ -17,6 +17,10 @@ export async function usecaseGetAllServices(userId: string) {
     const servicesData = new ServicesRepository();
 
     const user = await userData.findId(userId);
+    if (!user) {
+        throw new Error("USER_NOT_FOUND");
+    }
+
     const userRole = await roleData.findById(user.roleId);
 
     if (!userRole) {

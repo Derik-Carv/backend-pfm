@@ -1,4 +1,6 @@
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
+import { UsersRepository } from "@/database/tables/users/users.repository";
+import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import type { CreateClientInput } from "../client.schemas";
 import { allRoles } from "@/lib/roles.list";
 
@@ -7,17 +9,22 @@ export async function usecaseCreateClient(
     data: CreateClientInput,
 ) {
     const clientsDb = new ClientRepository();
+    const usersDb = new UsersRepository();
+    const rolesDb = new RoleRepository();
 
     const allowedRoles = [
         allRoles.administrator,
         allRoles.manager,
         allRoles.finance,
-        allRoles.observer,
     ];
 
-    const roleCheck = allowedRoles.includes(userId);
+    const user = await usersDb.findId(userId);
+    if (!user) throw new Error("USER_NOT_FOUND");
 
-    if (!roleCheck) {
+    const role = await rolesDb.findById(user.roleId);
+    if (!role) throw new Error("ROLE_NOT_FOUND");
+
+    if (!allowedRoles.includes(role.name)) {
         throw new Error("ROLE_ACESS_DENIED");
     }
 

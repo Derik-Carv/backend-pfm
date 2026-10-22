@@ -26,6 +26,10 @@ export async function usecaseCreateService(
     const bundled = new BundledRepository();
 
     const user = await userData.findId(userId);
+    if (!user) {
+        throw new Error("USER_NOT_FOUND");
+    }
+
     const userRole = await roleData.findById(user.roleId);
 
     if (!userRole) {
@@ -46,7 +50,12 @@ export async function usecaseCreateService(
 
     const defaultStatus = await statusData.findName("Fila");
 
-    if (!data.statusServiceId) data.statusServiceId = defaultStatus.id;
+    if (!data.statusServiceId) {
+        if (!defaultStatus) {
+            throw new Error("STATUS_SERVICE_NOT_FOUND");
+        }
+        data.statusServiceId = defaultStatus.id;
+    }
 
     if (!data.statusServiceId) {
         throw new Error("STATUS_SERVICE_NOT_FOUND");

@@ -1,15 +1,19 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { usecaseAllCLients } from "./getClient.usecase";
+import { paginationQuerySchema } from "@/router/pagination.schema";
 
 export async function getClientsController(
     request: FastifyRequest,
     reply: FastifyReply,
 ) {
     try {
-        const newClients = await usecaseAllCLients();
+        const { page, limit } = paginationQuerySchema.parse(request.query);
+        const result = await usecaseAllCLients({ page, limit });
+
         return reply.status(200).send({
             message: "Viewer Clients with sucess",
-            clients: newClients,
+            clients: result.list,
+            pagination: result.pagination,
         });
     } catch (error: any) {
         if (error.name === "ZodError") {
@@ -19,12 +23,8 @@ export async function getClientsController(
             });
         }
 
-        if (error.message === "CLIENTS_NOT_EXISTS") {
-            return reply.status(404).send({ message: "Clients not exists" });
-        }
-
         return reply.status(500).send({
-            message: "Internal server error while registering client",
+            message: "Internal server error while retrieving clients",
         });
     }
 }

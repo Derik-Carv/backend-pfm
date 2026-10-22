@@ -55,7 +55,29 @@ export const createClientResponseSchema = z.object({
 export const getClientsResponseSchema = z.object({
     message: z.string(),
     clients: z.array(clientItemSchema),
+    pagination: z.object({
+        page: z.number().int(),
+        limit: z.number().int(),
+        total: z.number().int(),
+        totalPages: z.number().int(),
+        hasMore: z.boolean(),
+    }),
+});
+
+export const editClientSchema = z.object({
+    id: z.string(),
+    registeredCompanyName: z.string().nullable().optional(),
+    tradeName: z.string().nullable().optional(),
+    cnpj: z.string().nullable().optional(),
+    cpf: z.string().nullable().optional(),
+    active: z.boolean().nullable().optional(),
+});
+
+export const editClientsResponseSchema = z.object({
+    message: z.string(),
+    client: clientItemSchema,
 });
 
 export type CreateClientInput = z.infer<typeof createClientSchema>;
 export type CreateClientResponse = z.infer<typeof createClientResponseSchema>;
+export type EditClientInput = z.infer<typeof editClientSchema>;

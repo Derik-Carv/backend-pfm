@@ -28,6 +28,12 @@ export const getStatusServiceController = async (
             });
         }
 
+        if (error.message === "USER_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "User not found",
+            });
+        }
+
         if (error.message === "STATUS_SERVICE_NOT_FOUND") {
             return reply.status(404).send({
                 message: "Status service not found",

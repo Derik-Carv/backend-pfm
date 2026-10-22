@@ -18,6 +18,13 @@ export const createUserController = async (
     } catch (error: any) {
         request.log.error(error);
 
+        if (error.name === "ZodError") {
+            return reply.status(400).send({
+                message: "Validation error",
+                issues: error.errors,
+            });
+        }
+
         if (error.message === "INVALID_CPF") {
             return reply.status(400).send({ message: "Cpf invalid" });
         }

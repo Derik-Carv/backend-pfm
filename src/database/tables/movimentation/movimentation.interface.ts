@@ -15,9 +15,9 @@ export type MovimentationPageItem = Pick<
     | "justify"
     | "createdAt"
 > & {
-    nf: { numberNf: string };
-    user: { name: string };
-    client: { tradeName: string };
+    nf: { numberNf: string | null } | null;
+    destinationUserId: { name: string } | null;
+    destinationClientId: { tradeName: string } | null;
 };
 
 export interface IMovimentation {

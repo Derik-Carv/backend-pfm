@@ -20,6 +20,10 @@ export async function usecaseGetService(
     const servicesData = new ServicesRepository();
 
     const user = await userData.findId(userId);
+    if (!user) {
+        throw new Error("USER_NOT_FOUND");
+    }
+
     const userRole = await roleData.findById(user.roleId);
 
     if (!userRole) {
@@ -39,8 +43,8 @@ export async function usecaseGetService(
         userRole.name === allRoles.colaborator ? userId : undefined,
     );
 
-    if (result.total === 0) throw new Error("SERVICES_NO_DATA");
     if (!result) throw new Error("SERVICES_DATA_ERROR");
+    if (result.total === 0) throw new Error("SERVICES_NO_DATA");
 
     return {
         list: result.list.map(({ client, status, ...service }) => ({

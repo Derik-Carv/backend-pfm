@@ -21,10 +21,17 @@ export const createRoleController = async (
     } catch (error: any) {
         request.log.error(error);
 
-        if (error.messsage === "ROLE_ALREADY_EXISTS") {
+        if (error.name === "ZodError") {
+            return reply.status(400).send({
+                message: "Validation error",
+                issues: error.errors,
+            });
+        }
+
+        if (error.message === "ROLE_ALREADY_EXISTS") {
             return reply
-                .status(404)
-                .send({ message: "Invalid name or name already registered" });
+                .status(409)
+                .send({ message: "Role name already registered" });
         }
 
         return reply.status(500).send({

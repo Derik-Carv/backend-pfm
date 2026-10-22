@@ -2,14 +2,12 @@ import { allRoles } from "@/lib/roles.list";
 import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
-import type {
-    getServicesFinderParamsSchema,
-    getServicesQuerySchema,
-} from "../services.schemas";
+import { paginationQuerySchema } from "@/router/pagination.schema";
+import { getServicesFinderParamsSchema } from "../services.schemas";
 import type { z } from "zod";
 
 type FinderParams = z.infer<typeof getServicesFinderParamsSchema>;
-type Pagination = z.infer<typeof getServicesQuerySchema>;
+type Pagination = z.infer<typeof paginationQuerySchema>;
 
 export async function usecaseMyServicesHomeFind(
     userId: string,
