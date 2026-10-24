@@ -1,9 +1,26 @@
 import { clients } from "@/database/schema/schema";
-import type { Users } from "../users/users.interface";
+import type { IUsers, Users } from "../users/users.interface";
 import type { IRoles } from "../roles/roles.interface";
 
 export type CreateClientDatabaseInput = typeof clients.$inferInsert;
 export type Client = typeof clients.$inferSelect;
+
+export type ClientDependencies = {
+    clientsDb: Pick<IClient, "findPage">;
+};
+
+export type CreateClientDependencies = {
+    clientsDb: Pick<
+        IClient,
+        | "create"
+        | "findByCompanyName"
+        | "findByTradeName"
+        | "findByCpf"
+        | "findByCnpj"
+    >;
+    findUser: Pick<IUsers, "findId">;
+    findRole: Pick<IRoles, "findById">;
+};
 
 export type EditClientDependencies = {
     clientsDb: Pick<

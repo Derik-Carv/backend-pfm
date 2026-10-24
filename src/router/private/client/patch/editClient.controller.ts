@@ -45,7 +45,9 @@ export const editClientController = async (
             error.message === "USER_NOT_FOUND" ||
             error.message === "ROLE_NOT_FOUND"
         ) {
-            return reply.status(404).send({ message: "User or role not found" });
+            return reply
+                .status(404)
+                .send({ message: "User or role not found" });
         }
 
         if (error.message === "ROLE_ACESS_DENIED") {

@@ -1,10 +1,18 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { createClientSchema } from "../client.schemas";
-import { usecaseCreateClient } from "./createClient.usecase";
-import type { CreateClientDatabaseInput } from "@/database/tables/clients/clients.interface";
+import { createClientSchema, type CreateClientInput } from "../client.schemas";
+import { ClientRepository } from "@/database/tables/clients/clients.repository";
+import { UsersRepository } from "@/database/tables/users/users.repository";
+import { RoleRepository } from "@/database/tables/roles/roles.repository";
+import { injectUseCaseCreateClient } from "./createClient.usecase";
+
+const usecaseCreateClient = injectUseCaseCreateClient({
+    clientsDb: new ClientRepository(),
+    findUser: new UsersRepository(),
+    findRole: new RoleRepository(),
+});
 
 export const createClientController = async (
-    request: FastifyRequest<{ Body: CreateClientDatabaseInput }>,
+    request: FastifyRequest<{ Body: CreateClientInput }>,
     reply: FastifyReply,
 ) => {
     try {

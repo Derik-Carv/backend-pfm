@@ -1,6 +1,11 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { usecaseAllCLients } from "./getClient.usecase";
+import { injectUseCaseActiveClients } from "./getClient.usecase";
 import { paginationQuerySchema } from "@/router/pagination.schema";
+import { ClientRepository } from "@/database/tables/clients/clients.repository";
+
+const usecaseAllCLients = injectUseCaseActiveClients({
+    clientsDb: new ClientRepository(),
+});
 
 export async function getClientsController(
     request: FastifyRequest,
