@@ -57,6 +57,13 @@
       "when": 1791498536624,
       "tag": "0007_fine_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793236436945,
+      "tag": "0008_glamorous_gargoyle",
+      "breakpoints": true
     }
   ]
 }

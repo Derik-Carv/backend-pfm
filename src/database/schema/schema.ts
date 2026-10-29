@@ -141,7 +141,7 @@ export const nf = pgTable("nf", {
         .references(() => clients.id)
         .notNull(),
     emissionDate: date("emission_date", { mode: "string" }).notNull(),
-    cancelDate: date("cancel_date", { mode: "string" }).notNull(),
+    cancelDate: date("cancel_date", { mode: "string" }),
     totalValue: numeric("total_value", { precision: 10, scale: 2 }).notNull(),
     pathFile: text("path_file"),
     servicesId: uuid("services_id")
