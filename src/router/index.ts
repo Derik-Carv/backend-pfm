@@ -5,6 +5,7 @@ import { managerRoutes } from "./private/manager/manager.route";
 import { homeRoutes } from "./private/home/home.route";
 import { managerServicesRoutes } from "./private/service/myServicesList.route";
 import { menuClientRoutes } from "./private/client/myClient.route";
+import { nfServicesRoutes } from "./private/NF/nf.route";
 
 export async function appRoutes(app: FastifyInstance) {
     app.register(publicRoutes, { prefix: "/public" });
@@ -13,4 +14,5 @@ export async function appRoutes(app: FastifyInstance) {
     app.register(homeRoutes, { prefix: "/home" });
     app.register(managerServicesRoutes, { prefix: "/services" });
     app.register(menuClientRoutes, { prefix: "/clients" });
+    app.register(nfServicesRoutes, { prefix: "/nf" });
 }
