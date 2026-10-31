@@ -1,19 +1,19 @@
 import { z } from "zod";
 
-export const bodySchemaCreateNf = {
-    type: "object",
-    properties: {
-        file: {
-            type: "string",
-            format: "binary",
-        },
-        nf: {
-            type: "string",
-            description: "JSON com os dados da NF",
-        },
+const nfMultipartExample = JSON.stringify(
+    {
+        typeId: "uuid-do-tipo",
+        numberNf: "123456",
+        acessKey: "12345678901234567890123456789012345678901234",
+        thirdPartyClientId: "uuid-do-cliente",
+        emissionDate: "2026-10-31",
+        totalValue: 5000,
+        servicesId: "uuid-do-servico",
+        movimentationId: "uuid-da-movimentacao",
     },
-    required: ["file", "nf"],
-};
+    null,
+    2,
+);
 
 export const nfCreateBaseSchema = z.object({
     typeId: z.string(),
@@ -28,6 +28,26 @@ export const nfCreateBaseSchema = z.object({
     movimentationId: z.string(),
     active: z.boolean().optional(),
 });
+
+export const nfCreateMultipartOpenApiSchema = {
+    type: "object",
+    required: ["file", "nf"],
+    properties: {
+        file: {
+            type: "string",
+            format: "binary",
+            description: "Arquivo PDF da nota fiscal",
+        },
+        nf: {
+            type: "string",
+            description:
+                "JSON serializado como texto. Envie este conteúdo no campo nf do multipart.",
+            example: nfMultipartExample,
+            examples: [nfMultipartExample],
+            default: nfMultipartExample,
+        },
+    },
+};
 
 export const nfCreateResponseSchema = z.object({
     message: z.string(),

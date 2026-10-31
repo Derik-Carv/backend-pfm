@@ -12,7 +12,33 @@ export const createNfRouteOptions = {
         tags: ["NF Menu"],
         body: z.any(),
         summary: "Create a new nf",
-        description: "Created service with details",
+        description:
+            `Envie um multipart/form-data com os campos abaixo:
+
+1. file: arquivo PDF da nota fiscal.
+2. nf: string contendo o JSON abaixo.
+
+Exemplo no frontend:
+
+const formData = new FormData();
+formData.append("file", pdfFile);
+formData.append("nf", JSON.stringify({
+  typeId: "uuid-do-tipo",
+  numberNf: "123456",
+  acessKey: "12345678901234567890123456789012345678901234",
+  thirdPartyClientId: "uuid-do-cliente",
+  emissionDate: "2026-10-31",
+  totalValue: 5000,
+  servicesId: "uuid-do-servico",
+  movimentationId: "uuid-da-movimentacao"
+}));
+
+fetch("/nf", {
+  method: "POST",
+  body: formData
+});
+
+Não defina manualmente o header Content-Type. O cliente deve gerar multipart/form-data automaticamente.`,
         response: {
             201: nfCreateResponseSchema,
             400: errorResponseSchema,
