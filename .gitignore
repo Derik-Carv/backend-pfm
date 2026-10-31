@@ -1,6 +1,10 @@
 # dependencies (bun install)
 node_modules
-drizzle
+drizzle/*
+!drizzle/0010_blushing_juggernaut.sql
+!drizzle/meta/
+drizzle/meta/*
+!drizzle/meta/0010_snapshot.json
 
 .linter
 

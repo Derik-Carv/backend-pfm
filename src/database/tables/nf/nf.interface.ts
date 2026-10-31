@@ -17,6 +17,21 @@ export type CreateNfDependencies = {
     findService: Pick<IServices, "findId">;
 };
 
+export type NfListFilters = {
+    noteNumber?: string;
+    accessKey?: string;
+    minValue?: string;
+    maxValue?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: "active" | "inactive" | "cancelled";
+};
+
+export type NfPageResult = {
+    list: NF[];
+    total: number;
+};
+
 export interface INF {
     create(data: CreateNfDatabaseInput): Promise<NF>;
     findId(id: string): Promise<NF>;
@@ -31,4 +46,14 @@ export interface INF {
     findAll(): Promise<NF[]>;
     findActives(): Promise<NF[]>;
     findInactives(): Promise<NF[]>;
+    findPage(
+        filters: NfListFilters,
+        limit: number,
+        offset: number,
+    ): Promise<NfPageResult>;
+    deactivate(
+        id: string,
+        reason: string,
+        userId: string,
+    ): Promise<NF | null>;
 }

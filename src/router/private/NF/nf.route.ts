@@ -4,8 +4,13 @@ import { inspectRole } from "@/middlewares/role.middleware";
 import { allRoles } from "@/lib/roles.list";
 import { createNfServicesController } from "./create/createNf.controller";
 import { createNfRouteOptions } from "./nf.options";
+import { deactivateNfRouteOptions, listNfRouteOptions } from "./nf.options";
+import { listNfController } from "./list/listNf.controller";
+import { deactivateNfController } from "./deactivate/deactivateNf.controller";
 
-const allowedRoles = [
+const allowedRolesFinance = [allRoles.administrator, allRoles.finance];
+
+const allowedRolesManager = [
     allRoles.administrator,
     allRoles.manager,
     allRoles.finance,
@@ -14,7 +19,19 @@ const allowedRoles = [
 export async function nfServicesRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
 
-    app.addHook("preHandler", inspectRole(allowedRoles));
+    app.addHook("preHandler", inspectRole(allowedRolesFinance));
 
     app.post("/", createNfRouteOptions, createNfServicesController);
+}
+
+export async function nfQueryRoutes(app: FastifyInstance) {
+    app.addHook("preHandler", authMiddleware);
+    app.addHook("preHandler", inspectRole(allowedRolesManager));
+
+    app.get("/", listNfRouteOptions, listNfController);
+    app.patch(
+        "/:id/deactivate",
+        deactivateNfRouteOptions,
+        deactivateNfController,
+    );
 }

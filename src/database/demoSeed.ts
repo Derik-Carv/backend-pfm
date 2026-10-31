@@ -1,14 +1,12 @@
 import { createHash } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { db } from "@/database/index";
 import {
     bundled,
     clients,
     movimentation,
-    nf,
     services,
     statusService,
-    type as invoiceType,
     users,
 } from "@/database/schema/schema";
 import { hashPassword } from "@/lib/hash";
@@ -71,17 +69,13 @@ export async function seedDemoData(roleMap: Record<string, string>) {
             active: number % 10 !== 0,
         };
     });
-    const [statusRows, typeRows, existingDemoUsers] = await Promise.all([
+    const [statusRows, existingDemoUsers] = await Promise.all([
         db.select().from(statusService).where(
             inArray(
                 statusService.name,
                 ["Fila", "Em Andamento", "Finalizado"],
             ),
         ),
-        db
-            .select()
-            .from(invoiceType)
-            .where(eq(invoiceType.name, "Serviço Prestado")),
         db
             .select({ username: users.username })
             .from(users)
@@ -132,14 +126,12 @@ export async function seedDemoData(roleMap: Record<string, string>) {
     const filaStatusId = statusIds.get("Fila");
     const inProgressStatusId = statusIds.get("Em Andamento");
     const completedStatusId = statusIds.get("Finalizado");
-    const invoiceTypeId = typeRows[0]?.id;
     if (
         savedClients.length !== CLIENT_COUNT ||
         savedUsers.length !== USER_COUNT ||
         !filaStatusId ||
         !inProgressStatusId ||
         !completedStatusId ||
-        !invoiceTypeId ||
         !roleMap.colaborator
     ) {
         throw new Error("DEMO_SEED_PREREQUISITES_MISSING");
@@ -227,33 +219,7 @@ export async function seedDemoData(roleMap: Record<string, string>) {
         await db.insert(movimentation).values(batch).onConflictDoNothing();
     });
 
-    const invoiceRows = invoiceServices
-        .slice(0, INVOICE_COUNT)
-        .map((service, index) => {
-            const number = index + 1;
-            const client = savedClients[index % savedClients.length];
-
-            return {
-                id: stableId("invoice", number),
-                typeId: invoiceTypeId,
-                numberNf: `DEMO-${String(number).padStart(6, "0")}`,
-                acessKey: String(90_000_000_000 + number).padStart(44, "0"),
-                thirdPartyClientId: client.id,
-                emissionDate: service.initialDate,
-                cancelDate: service.finishDate ?? service.initialDate,
-                totalValue: service.price,
-                pathFile: null,
-                servicesId: service.id,
-                movimentationId: stableId("movement", number),
-                active: number % 15 !== 0,
-            };
-        });
-
-    await insertInBatches(invoiceRows, async (batch) => {
-        await db.insert(nf).values(batch).onConflictDoNothing();
-    });
-
     console.log(
-        `✅ Dados de demonstração verificados: ${CLIENT_COUNT} clientes, ${USER_COUNT} usuários, ${SERVICE_COUNT} serviços e ${INVOICE_COUNT} notas/movimentações.`,
+        `✅ Dados de demonstração verificados: ${CLIENT_COUNT} clientes, ${USER_COUNT} usuários e ${SERVICE_COUNT} serviços/movimentações.`,
     );
 }

@@ -1,7 +1,12 @@
 import { db } from "@/database/index";
 import { nf } from "@/database/schema/schema";
-import { eq } from "drizzle-orm";
-import type { CreateNfDatabaseInput, INF, NF } from "./nf.interface";
+import { and, count, desc, eq, gte, ilike, lte, isNotNull } from "drizzle-orm";
+import type {
+    CreateNfDatabaseInput,
+    INF,
+    NF,
+    NfListFilters,
+} from "./nf.interface";
 
 export class NfRepository implements INF {
     async create(data: CreateNfDatabaseInput): Promise<NF> {
@@ -103,5 +108,69 @@ export class NfRepository implements INF {
 
     async findInactives(): Promise<NF[]> {
         return await db.select().from(nf).where(eq(nf.active, false));
+    }
+
+    async findPage(
+        filters: NfListFilters,
+        limit: number,
+        offset: number,
+    ) {
+        const conditions = [];
+
+        if (filters.noteNumber) {
+            conditions.push(ilike(nf.numberNf, `%${filters.noteNumber}%`));
+        }
+        if (filters.accessKey) {
+            conditions.push(ilike(nf.acessKey, `%${filters.accessKey}%`));
+        }
+        if (filters.minValue) {
+            conditions.push(gte(nf.totalValue, filters.minValue));
+        }
+        if (filters.maxValue) {
+            conditions.push(lte(nf.totalValue, filters.maxValue));
+        }
+        if (filters.startDate) {
+            conditions.push(gte(nf.emissionDate, filters.startDate));
+        }
+        if (filters.endDate) {
+            conditions.push(lte(nf.emissionDate, filters.endDate));
+        }
+        if (filters.status === "active") {
+            conditions.push(eq(nf.active, true));
+        } else if (filters.status === "inactive") {
+            conditions.push(eq(nf.active, false));
+        } else if (filters.status === "cancelled") {
+            conditions.push(isNotNull(nf.cancelDate));
+        }
+
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+        const [list, [totalRow]] = await Promise.all([
+            db
+                .select()
+                .from(nf)
+                .where(where)
+                .orderBy(desc(nf.emissionDate), desc(nf.createdAt))
+                .limit(limit)
+                .offset(offset),
+            db.select({ count: count() }).from(nf).where(where),
+        ]);
+
+        return { list, total: totalRow.count };
+    }
+
+    async deactivate(id: string, reason: string, userId: string) {
+        const [deactivated] = await db
+            .update(nf)
+            .set({
+                active: false,
+                cancelDate: new Date().toISOString().slice(0, 10),
+                deactivationReason: reason,
+                deactivatedAt: new Date(),
+                deactivatedBy: userId,
+            })
+            .where(and(eq(nf.id, id), eq(nf.active, true)))
+            .returning();
+
+        return deactivated || null;
     }
 }

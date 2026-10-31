@@ -3,6 +3,11 @@ import { errorResponseSchema } from "@/router/error.schema";
 import { z } from "zod";
 import {
     nfCreateResponseSchema,
+    nfDeactivateBodySchema,
+    nfDeactivateParamsSchema,
+    nfDeactivateResponseSchema,
+    nfListQuerySchema,
+    getNfListResponseSchema,
     nfPdfInconsistencyResponseSchema,
 } from "./nf.schemas";
 
@@ -49,6 +54,47 @@ Não defina manualmente o header Content-Type. O cliente deve gerar multipart/fo
             ]),
             404: errorResponseSchema,
             409: errorResponseSchema,
+            500: errorResponseSchema,
+        },
+    },
+};
+
+export const listNfRouteOptions = {
+    config: {
+        rateLimit: rateLimitProfiles.standard,
+    },
+    schema: {
+        tags: ["NF Menu"],
+        summary: "List fiscal notes",
+        description:
+            "Lists fiscal notes with pagination and optional number, access key, value, emission date and status filters.",
+        querystring: nfListQuerySchema,
+        response: {
+            200: getNfListResponseSchema,
+            400: errorResponseSchema,
+            422: errorResponseSchema,
+            500: errorResponseSchema,
+        },
+    },
+};
+
+export const deactivateNfRouteOptions = {
+    config: {
+        rateLimit: rateLimitProfiles.standard,
+    },
+    schema: {
+        tags: ["NF Menu"],
+        summary: "Deactivate a fiscal note",
+        description:
+            "Soft-deactivates a fiscal note, preserving its record and recording the reason, date and responsible user.",
+        params: nfDeactivateParamsSchema,
+        body: nfDeactivateBodySchema,
+        response: {
+            200: nfDeactivateResponseSchema,
+            400: errorResponseSchema,
+            404: errorResponseSchema,
+            409: errorResponseSchema,
+            422: errorResponseSchema,
             500: errorResponseSchema,
         },
     },

@@ -7,6 +7,7 @@ import {
     uuid,
     date,
     varchar,
+    index,
 } from "drizzle-orm/pg-core";
 import { v7 as uuidv7 } from "uuid";
 import { relations } from "drizzle-orm";
@@ -151,12 +152,20 @@ export const nf = pgTable("nf", {
         .references(() => movimentation.id)
         .notNull(),
     active: boolean("active").default(true).notNull(),
+    deactivationReason: text("deactivation_reason"),
+    deactivatedAt: timestamp("deactivated_at"),
+    deactivatedBy: uuid("deactivated_by").references(() => users.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
         .defaultNow()
         .notNull()
         .$onUpdateFn(() => new Date()),
-});
+}, (table) => [
+    index("nf_access_key_idx").on(table.acessKey),
+    index("nf_number_idx").on(table.numberNf),
+    index("nf_emission_date_idx").on(table.emissionDate),
+    index("nf_active_emission_date_idx").on(table.active, table.emissionDate),
+]);
 
 export const bundled = pgTable("bundled", {
     id: uuid("id")

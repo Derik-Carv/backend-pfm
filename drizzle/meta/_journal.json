@@ -71,6 +71,13 @@
       "when": 1793474126885,
       "tag": "0009_motionless_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793484322346,
+      "tag": "0010_blushing_juggernaut",
+      "breakpoints": true
     }
   ]
 }
