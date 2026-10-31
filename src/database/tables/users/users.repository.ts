@@ -1,6 +1,6 @@
 import { db } from "@/database/index";
 import { users } from "@/database/schema/schema";
-import { eq, count } from "drizzle-orm";
+import { and, eq, count } from "drizzle-orm";
 import type {
     CreateUsersDatabaseInput,
     IUsers,
@@ -90,7 +90,7 @@ export class UsersRepository implements IUsers {
         const [user] = await db
             .select()
             .from(users)
-            .where(eq(users.username, username))
+            .where(and(eq(users.username, username), eq(users.active, true)))
             .limit(1);
 
         return user || null;
