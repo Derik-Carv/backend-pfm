@@ -136,7 +136,7 @@ export const nf = pgTable("nf", {
         .references(() => type.id)
         .notNull(),
     numberNf: text("number_nf"),
-    acessKey: varchar("access_key", { length: 44 }).unique(),
+    acessKey: varchar("access_key", { length: 50 }).unique(),
     thirdPartyClientId: uuid("third_party_client_id")
         .references(() => clients.id)
         .notNull(),

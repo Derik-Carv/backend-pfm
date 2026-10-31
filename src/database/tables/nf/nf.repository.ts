@@ -27,7 +27,7 @@ export class NfRepository implements INF {
         const [returnKey] = await db
             .select()
             .from(nf)
-            .where(eq(nf.numberNf, acessKey))
+            .where(eq(nf.acessKey, acessKey))
             .limit(1);
 
         return returnKey || null;

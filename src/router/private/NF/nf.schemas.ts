@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const nfAccessKeySchema = z.union([
+    z.string().regex(/^\d{44}$/, "A chave deve conter 44 dígitos"),
+    z.string().regex(/^\d{50}$/, "A chave deve conter 50 dígitos"),
+]);
+
 const nfMultipartExample = JSON.stringify(
     {
         typeId: "uuid-do-tipo",
@@ -18,7 +23,7 @@ const nfMultipartExample = JSON.stringify(
 export const nfCreateBaseSchema = z.object({
     typeId: z.string(),
     numberNf: z.string(),
-    acessKey: z.string().length(44),
+    acessKey: nfAccessKeySchema,
     thirdPartyClientId: z.string(),
     emissionDate: z.string(),
     cancelDate: z.string().nullable().optional(),
@@ -55,7 +60,7 @@ export const nfCreateResponseSchema = z.object({
         id: z.string(),
         typeId: z.string(),
         numberNf: z.string(),
-        acessKey: z.string().length(44),
+        acessKey: nfAccessKeySchema,
         thirdPartyClientId: z.string(),
         emissionDate: z.string(),
         cancelDate: z.string().nullable().optional(),
@@ -67,6 +72,22 @@ export const nfCreateResponseSchema = z.object({
         createdAt: z.date(),
         updatedAt: z.date(),
     }),
+});
+
+export const nfPdfInconsistencyResponseSchema = z.object({
+    message: z.string(),
+    inconsistencies: z.array(
+        z.object({
+            field: z.enum([
+                "numberNf",
+                "acessKey",
+                "emissionDate",
+                "totalValue",
+            ]),
+            sentValue: z.union([z.string(), z.number()]),
+            pdfValue: z.union([z.string(), z.number()]).nullable(),
+        }),
+    ),
 });
 
 export const getNfListResponseSchema = z.object({

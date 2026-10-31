@@ -7,6 +7,7 @@ import { injejctCreateNf } from "./createNf.usecase";
 import { TypeRepository } from "@/database/tables/type/type.repository,";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 import { NfRepository } from "@/database/tables/nf/nf.repository";
+import { NfPdfInconsistencyError } from "./createNf.pdf";
 
 const usecaseCreateNf = injejctCreateNf({
     nf: new NfRepository(),
@@ -96,6 +97,26 @@ export const createNfServicesController = async (
         if (error.message === "EMPTY_FILE") {
             return reply.status(400).send({
                 message: "PDF file cannot be empty",
+            });
+        }
+
+        if (error.message === "PDF_TEXT_NOT_FOUND") {
+            return reply.status(400).send({
+                message:
+                    "Only digitally generated PDFs with selectable text are accepted. Scanned or image-only PDFs are not allowed.",
+            });
+        }
+
+        if (error instanceof NfPdfInconsistencyError) {
+            return reply.status(400).send({
+                message: "NF data is inconsistent with the submitted PDF",
+                inconsistencies: error.inconsistencies,
+            });
+        }
+
+        if (error.message === "PDF_READ_ERROR") {
+            return reply.status(400).send({
+                message: "The submitted PDF could not be read",
             });
         }
 

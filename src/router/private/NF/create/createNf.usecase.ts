@@ -1,6 +1,6 @@
 import type { CreateNfDependencies } from "@/database/tables/nf/nf.interface";
 import type { NfCreateInput } from "../nf.schemas";
-import { updateNfPdf } from "./createNf.pdf";
+import { updateNfPdf, validateNfPdf } from "./createNf.pdf";
 
 export function injejctCreateNf({
     nf,
@@ -53,6 +53,20 @@ export function injejctCreateNf({
 
         if (file.size === 0) {
             throw new Error("EMPTY_FILE");
+        }
+
+        try {
+            await validateNfPdf(file, data);
+        } catch (error) {
+            if (
+                error instanceof Error &&
+                (error.message === "PDF_TEXT_NOT_FOUND" ||
+                    error.message === "NF_PDF_INCONSISTENT")
+            ) {
+                throw error;
+            }
+
+            throw new Error("PDF_READ_ERROR");
         }
 
         let pdf: string;
