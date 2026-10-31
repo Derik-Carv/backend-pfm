@@ -16,6 +16,8 @@ import {
 } from "fastify-type-provider-zod";
 import fastifyJwt from "@fastify/jwt";
 import { loggerConfig, loggerProd } from "./config/logger";
+import fastifyMultipart from "@fastify/multipart";
+import { bodySchemaCreateNf } from "./router/private/NF/nf.schemas";
 
 const isDev = process.env.NODE_ENV !== "production";
 const jwtSecret = process.env.JWT_SECRET as string;
@@ -38,7 +40,8 @@ await app.register(fastifyJwt, {
     secret: jwtSecret,
 });
 
-// configuration of swagger and swagger-ui for API documentation
+app.register(fastifyMultipart);
+
 app.register(fasfitySwagger, {
     openapi: {
         info: {
@@ -47,7 +50,21 @@ app.register(fasfitySwagger, {
             version: "1.0.0",
         },
     },
-    transform: jsonSchemaTransform,
+    transform: (document) => {
+        const transformed = jsonSchemaTransform(document);
+
+        if (document.url === "/nf" && transformed.schema) {
+            return {
+                ...transformed,
+                schema: {
+                    ...transformed.schema,
+                    body: bodySchemaCreateNf,
+                },
+            };
+        }
+
+        return transformed;
+    },
 });
 
 app.register(fasfitySwaggerUi, {

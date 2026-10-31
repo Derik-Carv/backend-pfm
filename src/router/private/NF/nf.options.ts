@@ -1,14 +1,16 @@
 import { rateLimitProfiles } from "@/policies/rateLimit";
 import { errorResponseSchema } from "@/router/error.schema";
-import { nfCreateBaseSchema, nfCreateResponseSchema } from "./nf.schemas";
+import { z } from "zod";
+import { nfCreateResponseSchema } from "./nf.schemas";
 
 export const createNfRouteOptions = {
     config: {
         rateLimit: rateLimitProfiles.standard,
     },
     schema: {
+        consumes: ["multipart/form-data"],
         tags: ["NF Menu"],
-        body: nfCreateBaseSchema,
+        body: z.any(),
         summary: "Create a new nf",
         description: "Created service with details",
         response: {

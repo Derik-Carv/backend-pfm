@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+export const bodySchemaCreateNf = {
+    type: "object",
+    properties: {
+        file: {
+            type: "string",
+            format: "binary",
+        },
+        nf: {
+            type: "string",
+            description: "JSON com os dados da NF",
+        },
+    },
+    required: ["file", "nf"],
+};
+
 export const nfCreateBaseSchema = z.object({
     typeId: z.string(),
     numberNf: z.string(),
