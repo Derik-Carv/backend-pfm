@@ -83,6 +83,11 @@ foi feita na VM.
   continua respondendo e que `http://137.131.254.117:3336` não é acessível
   externamente.
 
+**Status:** corrigido na VM. O Compose de produção agora vincula a porta
+`3336` somente a `127.0.0.1`; o container foi recriado e ficou saudável. O
+endpoint HTTPS continuou respondendo, e o acesso externo direto à porta foi
+bloqueado.
+
 ### Verificações concluídas
 
 - Certificado HTTPS válido e renovação automática configurada.
