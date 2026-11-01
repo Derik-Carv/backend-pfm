@@ -5,7 +5,7 @@
 | # | Severidade | Arquivo | Linhas | Vulnerabilidade | Confiança |
 |---|---|---|---|---|---|
 | 1 | 🟠 HIGH | `src/middlewares/auth.middleware.ts`, `src/middlewares/role.middleware.ts`, `src/lib/jwt/jwt.ts` | 5-18 | Tokens JWT continuam autorizando requisições por até 30 minutos após a desativação do usuário ou alteração de sua função, porque a autorização usa apenas os dados presentes no token e não valida o estado atual no banco. | 9/10 |
-| 2 | 🟡 MEDIUM | `archives/Serviço_Prestado/*.pdf` | Histórico anterior ao commit `c17a8e0` | PDFs removidos do snapshot atual continuam recuperáveis no histórico Git e podem expor dados fiscais e pessoais. | 10/10 |
+| 2 | 🟡 MEDIUM | `archives/Serviço_Prestado/*.pdf` | Histórico anterior ao commit `c17a8e0` | PDFs de notas fiscais foram expostos em commits antigos e exigiram limpeza do histórico Git. | 10/10 |
 
 ### Revogação imediata de tokens após desativação
 
@@ -16,7 +16,7 @@
 
 ### Limpeza dos PDFs no histórico Git
 
-Os PDFs foram removidos do estado atual do repositório e novos PDFs são ignorados por `.gitignore` e `.dockerignore`. Entretanto, os arquivos continuam recuperáveis no histórico anterior ao commit `c17a8e0`.
+Os PDFs foram removidos do estado atual e do histórico remoto de `main` e `dev`. Novos PDFs são ignorados por `.gitignore` e `.dockerignore`.
 
 Para tratar a exposição:
 
@@ -27,4 +27,24 @@ Para tratar a exposição:
 5. verifique os objetos remanescentes;
 6. considere os dados pessoais expostos como comprometidos.
 
-**Status:** correção de autenticação aplicada. A reescrita do histórico foi executada localmente; o push forçado para o remoto ainda requer validação e coordenação.
+**Status:** correção de autenticação aplicada. O histórico remoto foi reescrito e verificado sem PDFs alcançáveis.
+
+## Deploy atual em produção
+
+**Ambiente:** Oracle Cloud VM
+**Endpoint temporário:** `http://137.131.254.117:3336`
+**Estado verificado:** backend e PostgreSQL saudáveis; `GET /public/health` retornando HTTP 200.
+
+Para testes iniciais, a API está acessível diretamente por HTTP e a porta `3336`
+está publicada. O PostgreSQL permanece privado no Docker e não publica a porta
+`5432` no host.
+
+### Riscos aceitos temporariamente para testes
+
+- A API ainda não usa HTTPS.
+- A porta `3336` está exposta diretamente.
+- O CORS está permissivo no ambiente de testes.
+
+Antes de liberar o frontend em produção, configurar HTTPS com proxy reverso,
+restringir `CORS_ORIGIN` ao domínio real do frontend e fechar o acesso externo
+direto à porta `3336`.
