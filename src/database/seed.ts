@@ -3,7 +3,6 @@ import { roles, users, statusService, type } from "@/database/schema/schema";
 import { cpfClean } from "@/utils/checkCpf";
 import { hashPassword } from "@/lib/hash";
 import { eq } from "drizzle-orm";
-import { seedDemoData } from "@/database/demoSeed";
 
 export async function startSeed() {
     console.log(
@@ -18,8 +17,6 @@ export async function startSeed() {
         "colaborator",
     ];
 
-    const roleMap: Record<string, string> = {};
-
     for (const roleName of targetRoles) {
         const [existingRole] = await db
             .select()
@@ -32,14 +29,30 @@ export async function startSeed() {
                 .insert(roles)
                 .values({ name: roleName })
                 .returning({ id: roles.id });
-            roleMap[roleName] = newRole.id;
             console.log(`✅ Role '${roleName}' criada.`);
-        } else {
-            roleMap[roleName] = existingRole.id;
         }
     }
 
     const adminUsername = "administrator.system";
+    const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+    const adminCpf = process.env.CPFADMIN;
+
+    if (!adminPassword || !adminCpf) {
+        throw new Error(
+            "ADMIN_DEFAULT_PASSWORD and CPFADMIN are required to seed the administrator",
+        );
+    }
+
+    const [administratorRole] = await db
+        .select({ id: roles.id })
+        .from(roles)
+        .where(eq(roles.name, "administrator"))
+        .limit(1);
+
+    if (!administratorRole) {
+        throw new Error("ADMINISTRATOR_ROLE_SEED_FAILED");
+    }
+
     const [existingUser] = await db
         .select()
         .from(users)
@@ -48,16 +61,15 @@ export async function startSeed() {
 
     if (!existingUser) {
         console.log("👤 Criando usuário admin padrão...");
-        const cpf = await cpfClean(process.env.CPFADMIN as string);
-        const rawPassword = process.env.ADMIN_DEFAULT_PASSWORD as string;
-        const hashedPassword = await hashPassword(rawPassword);
+        const cpf = await cpfClean(adminCpf);
+        const hashedPassword = await hashPassword(adminPassword);
 
         await db.insert(users).values({
             name: "administrator",
             surname: "system",
             username: adminUsername,
             password: hashedPassword,
-            roleId: roleMap["administrator"],
+            roleId: administratorRole.id,
             cpf: cpf,
             active: true,
         });
@@ -94,11 +106,7 @@ export async function startSeed() {
         }
     }
 
-    if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-        await seedDemoData(roleMap);
-    } else {
-        console.log("ℹ️ Dados de demonstração ignorados fora de development/test.");
-    }
-
-    console.log("✅ Seed essencial finalizado com sucesso!");
+    console.log(
+        "✅ Seed essencial finalizado: roles, administrador, status de serviço e tipos de NF.",
+    );
 }

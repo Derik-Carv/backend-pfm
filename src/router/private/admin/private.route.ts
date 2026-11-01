@@ -1,32 +1,13 @@
-import { getUserController } from "@/router/private/admin/users/get/getUser.controller";
-import { getUserRouteOptions } from "@/router/private/admin/users/user.options";
 import { type FastifyInstance } from "fastify";
-import {
-    createRoleRouteOptions,
-    getRoleRouteOptions,
-} from "@/router/private/admin/role/role.options";
-import { createRoleController } from "@/router/private/admin/role/create/createRole.controller";
-import { getRolesController } from "@/router/private/admin/role/get/getRole.controller";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { inspectRole } from "@/middlewares/role.middleware";
 import { allRoles } from "@/lib/roles.list";
-import { getAllServicesAdminRouteOptions } from "./services/services.options";
-import { getAllServicesController } from "./services/get/getAllServices.controller";
+import { adminDataRoutes } from "./data/adminData.route";
 
 export async function adminRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
 
     app.addHook("preHandler", inspectRole([allRoles.administrator]));
 
-    app.get("/users", getUserRouteOptions, getUserController);
-
-    app.post("/roles", createRoleRouteOptions, createRoleController);
-
-    app.get("/roles", getRoleRouteOptions, getRolesController);
-
-    app.get(
-        "/services",
-        getAllServicesAdminRouteOptions,
-        getAllServicesController,
-    );
+    app.register(adminDataRoutes, { prefix: "/data" });
 }
