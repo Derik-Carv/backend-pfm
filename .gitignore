@@ -15,6 +15,9 @@ out
 dist
 *.tgz
 
+# Uploaded NF documents
+archives/**/*.pdf
+
 # code coverage
 coverage
 *.lcov
