@@ -12,14 +12,10 @@ services:
             target: production
         restart: always
         ports: !override
-            - "${PORT:?PORT is required}:${PORT:?PORT is required}"
+            - "127.0.0.1:${PORT:?PORT is required}:${PORT:?PORT is required}"
         volumes: !override []
         command:
-            [
-                "sh",
-                "-c",
-                "bunx drizzle-kit push --config=drizzle.config.ts && bun run preview",
-            ]
+            ["bun", "run", "dist/server.js"]
         healthcheck:
             test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/public/health'); if (!r.ok) process.exit(1)"]
             interval: 30s
