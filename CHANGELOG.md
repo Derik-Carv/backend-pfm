@@ -38,6 +38,11 @@ permissão, banco, produção ou auditoria deve ser adicionada aqui.
 - Adicionado filtro de serviços por `clientId`.
 - Adicionadas rotas de tipos e movimentações com permissões específicas.
 
+### Correções
+
+- Corrigido o healthcheck do PostgreSQL para usar `POSTGRES_USER` e
+  `POSTGRES_DB` configurados no ambiente, inclusive em produção.
+
 ## Como registrar uma nova alteração
 
 Inclua uma entrada na data correspondente contendo:
