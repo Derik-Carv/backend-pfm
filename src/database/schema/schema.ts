@@ -149,8 +149,7 @@ export const nf = pgTable("nf", {
         .references(() => services.id)
         .notNull(),
     movimentationId: uuid("movimentation_id")
-        .references(() => movimentation.id)
-        .notNull(),
+        .references(() => movimentation.id),
     active: boolean("active").default(true).notNull(),
     deactivationReason: text("deactivation_reason"),
     deactivatedAt: timestamp("deactivated_at"),

@@ -37,7 +37,7 @@ export const createNfRouteOptions = {
     emissionDate: "2026-10-31",
     totalValue: 5000,
     servicesId: "uuid-do-servico",
-    movimentationId: "uuid-da-movimentacao"
+    // movimentationId: "uuid-da-movimentacao" (opcional)
     }));
 
     fetch("/nf", {

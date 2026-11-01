@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { usecaseMyServicesList } from "./myServicesList.usecase";
+import { servicesListQuerySchema } from "../myServicesList.schemas";
 
 export const getMyServicesListController = async (
     request: FastifyRequest,
@@ -8,7 +9,8 @@ export const getMyServicesListController = async (
     try {
         const userId = request.user.id;
 
-        const serviceList = await usecaseMyServicesList(userId);
+        const { clientId } = servicesListQuerySchema.parse(request.query);
+        const serviceList = await usecaseMyServicesList(userId, clientId);
 
         return reply.status(200).send({
             message: "Get find services list with success",

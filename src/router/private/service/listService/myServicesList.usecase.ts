@@ -4,7 +4,10 @@ import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
 import { BundledRepository } from "@/database/tables/bundled/bundled.repository";
 
-export async function usecaseMyServicesList(userId: string) {
+export async function usecaseMyServicesList(
+    userId: string,
+    clientId?: string,
+) {
     const userData = new UsersRepository();
     const roleData = new RoleRepository();
     const servicesData = new ServicesRepository();
@@ -40,7 +43,9 @@ export async function usecaseMyServicesList(userId: string) {
     }
 
     if (userRole.name != allRoles.colaborator) {
-        const services = await servicesData.findActives();
+        const services = clientId
+            ? await servicesData.findActiveByClient(clientId)
+            : await servicesData.findActives();
 
         if (!services || services.length === 0)
             throw new Error("SERVICE_NOT_FOUND");

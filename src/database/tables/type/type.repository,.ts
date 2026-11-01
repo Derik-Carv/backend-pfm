@@ -37,15 +37,23 @@ export class TypeRepository implements IType {
         return await db
             .select()
             .from(type)
-            .where(eq(type.active, true))
-            .limit(1);
+            .where(eq(type.active, true));
     }
 
     async findInactives(): Promise<Type[]> {
         return await db
             .select()
             .from(type)
-            .where(eq(type.active, false))
-            .limit(1);
+            .where(eq(type.active, false));
+    }
+
+    async deactivate(id: string): Promise<Type | null> {
+        const [deactivated] = await db
+            .update(type)
+            .set({ active: false })
+            .where(eq(type.id, id))
+            .returning();
+
+        return deactivated || null;
     }
 }

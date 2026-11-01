@@ -82,6 +82,16 @@ export class ServicesRepository implements IServices {
         };
     }
 
+    async findActiveByClient(clientId: string): Promise<Services[]> {
+        return db
+            .select()
+            .from(services)
+            .where(
+                and(eq(services.active, true), eq(services.clientId, clientId)),
+            )
+            .orderBy(desc(services.createdAt));
+    }
+
     async findFinderPage(
         type: ServiceFinderType,
         value: string,

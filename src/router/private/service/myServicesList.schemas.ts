@@ -32,6 +32,10 @@ export const getMyServicesListResponseSchema = z.object({
     }),
 });
 
+export const servicesListQuerySchema = z.object({
+    clientId: z.string().uuid().optional(),
+});
+
 export const serviceEditBaseSchema = z.object({
     serviceName: z.string().nullable().optional(),
     price: z.string().nullable().optional(),

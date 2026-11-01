@@ -14,7 +14,7 @@ const nfMultipartExample = JSON.stringify(
         emissionDate: "2026-10-31",
         totalValue: 5000,
         servicesId: "uuid-do-servico",
-        movimentationId: "uuid-da-movimentacao",
+        movimentationId: "uuid-da-movimentacao (opcional)",
     },
     null,
     2,
@@ -30,7 +30,7 @@ export const nfCreateBaseSchema = z.object({
     totalValue: z.number().nonnegative(),
     pathFile: z.string().nullable().optional(),
     servicesId: z.string(),
-    movimentationId: z.string(),
+    movimentationId: z.string().uuid().nullable().optional(),
     active: z.boolean().optional(),
 });
 
@@ -65,7 +65,7 @@ export const nfItemResponseSchema = z.object({
     totalValue: z.string(),
     pathFile: z.string().nullable(),
     servicesId: z.string().uuid(),
-    movimentationId: z.string().uuid(),
+    movimentationId: z.string().uuid().nullable(),
     active: z.boolean(),
     deactivationReason: z.string().nullable(),
     deactivatedAt: z.date().nullable(),

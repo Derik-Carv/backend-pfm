@@ -10,4 +10,5 @@ export interface IType {
     findAll(): Promise<Type[]>;
     findActives(): Promise<Type[]>;
     findInactives(): Promise<Type[]>;
+    deactivate(id: string): Promise<Type | null>;
 }

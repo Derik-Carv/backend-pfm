@@ -1,0 +1,1 @@
+ALTER TABLE "nf" ALTER COLUMN "movimentation_id" DROP NOT NULL;

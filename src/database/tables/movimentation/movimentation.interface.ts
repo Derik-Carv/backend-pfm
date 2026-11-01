@@ -31,4 +31,5 @@ export interface IMovimentation {
     findAll(): Promise<Movimentation[]>;
     findActives(): Promise<Movimentation[]>;
     findInactives(): Promise<Movimentation[]>;
+    deactivate(id: string): Promise<Movimentation | null>;
 }

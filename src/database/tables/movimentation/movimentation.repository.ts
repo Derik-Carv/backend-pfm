@@ -109,4 +109,14 @@ export class MovimentationRepository implements IMovimentation {
             .from(movimentation)
             .where(eq(movimentation.active, false));
     }
+
+    async deactivate(id: string): Promise<Movimentation | null> {
+        const [deactivated] = await db
+            .update(movimentation)
+            .set({ active: false })
+            .where(eq(movimentation.id, id))
+            .returning();
+
+        return deactivated || null;
+    }
 }

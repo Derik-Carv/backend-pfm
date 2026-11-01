@@ -6,6 +6,7 @@ import {
     getServicesCreateResponseSchema,
     serviceEditBaseSchema,
     serviceEditResponseSchema,
+    servicesListQuerySchema,
 } from "./myServicesList.schemas";
 
 export const getMyServicesListRouteOptions = {
@@ -16,6 +17,7 @@ export const getMyServicesListRouteOptions = {
         tags: ["Services Menu"],
         summary: "Menu my services",
         description: "List services",
+        querystring: servicesListQuerySchema,
         response: {
             200: getMyServicesListResponseSchema,
             400: errorResponseSchema,
