@@ -3,6 +3,7 @@
     "module": "src/server.ts",
     "type": "module",
     "private": true,
+    "author": "Derik-Carv (https://github.com/Derik-Carv)",
     "scripts": {
         "dev": "bun --watch src/server.ts",
         "dc": "docker compose up --build",

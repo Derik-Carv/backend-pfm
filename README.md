@@ -3,6 +3,15 @@
 API do sistema PFM, construída com Bun, Fastify, TypeScript, PostgreSQL e
 Drizzle ORM.
 
+## Autoria e projetos relacionados
+
+Este backend é mantido por [Derik-Carv](https://github.com/Derik-Carv).
+
+O frontend oficial do sistema está em
+[Derik-Carv/frontend-pfm](https://github.com/Derik-Carv/frontend-pfm). O frontend
+é de autoria de [Renan Miranda](https://github.com/renanbmiranda), com
+autorização para integração, containerização e publicação neste projeto.
+
 > Documentação completa para consulta no navegador:
 > [`docs/index.html`](./docs/index.html)
 
