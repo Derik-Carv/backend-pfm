@@ -12,7 +12,7 @@
 - **Arquivo:** middleware de autenticação
 - **Categoria:** gerenciamento de sessão
 - **Problema:** tokens emitidos antes da desativação de um usuário continuam válidos até expirarem.
-- **Melhoria recomendada:** consultar o status atual do usuário durante a validação do JWT e rejeitar usuários inativos. A função atual também deve ser validada para impedir que alterações de permissão sejam ignoradas até a expiração do token.
+- **Correção aplicada:** o middleware agora consulta o usuário e sua função atuais no banco em cada requisição protegida, rejeitando usuários ou funções inativos e atualizando a função usada na autorização.
 
 ### Limpeza dos PDFs no histórico Git
 
@@ -27,4 +27,4 @@ Para tratar a exposição:
 5. verifique os objetos remanescentes;
 6. considere os dados pessoais expostos como comprometidos.
 
-Esta documentação não executa a reescrita do histórico nem altera a autenticação.
+**Status:** correção de autenticação aplicada. A reescrita do histórico foi executada localmente; o push forçado para o remoto ainda requer validação e coordenação.
