@@ -1,7 +1,7 @@
 services:
     postgres:
         restart: always
-        ports: []
+        ports: !reset []
         environment:
             POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -11,9 +11,9 @@ services:
         build:
             target: production
         restart: always
-        ports:
+        ports: !reset
             - "${PORT:?PORT is required}:${PORT:?PORT is required}"
-        volumes: []
+        volumes: !reset []
         command:
             [
                 "sh",
