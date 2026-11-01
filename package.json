@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "bun --watch src/server.ts",
         "dc": "docker compose up --build",
+        "dc:prod": "docker compose -f compose.yaml -f compose.production.yaml up -d --build",
         "dcreset": "docker compose down && docker compose up --build",
         "start": "bun run src/server.ts",
         "build": "bun build ./src/server.ts --outdir ./dist --target bun",
@@ -13,11 +14,11 @@
         "preview": "bun run dist/server.js",
         "update": "docker exec bun_backend_dev bun update",
         "security:update": "docker exec bun_backend_dev sh -c 'bun audit fix --latest && bun audit'",
-        "db:generate": "docker exec -it bun_backend_dev bunx drizzle-kit generate --config=drizzle.config.ts",
-        "db:push": "docker exec -it bun_backend_dev bunx drizzle-kit push --config=drizzle.config.ts",
-        "db:studio": "docker exec -it bun_backend_dev bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0",
-        "db:seed": "docker exec -it bun_backend_dev bun run src/database/seed.ts",
-        "db-reset-and-seed": "docker compose down -v && docker compose up -d --build && sleep 3 && bun run db:push && bun run db:seed"
+        "db:generate": "docker exec bun_backend_dev bunx drizzle-kit generate --config=drizzle.config.ts",
+        "db:push": "docker exec bun_backend_dev bunx drizzle-kit push --config=drizzle.config.ts",
+        "db:studio": "docker exec bun_backend_dev bunx drizzle-kit studio --config=drizzle.config.ts --host 0.0.0.0",
+        "db:seed": "docker exec bun_backend_dev bun run src/database/seed.ts",
+        "db-reset-and-seed": "docker compose down -v && docker compose up -d --build"
     },
     "devDependencies": {
         "@types/bun": "latest",

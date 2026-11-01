@@ -72,6 +72,7 @@ export async function startSeed() {
             roleId: administratorRole.id,
             cpf: cpf,
             active: true,
+            passwordChangeRequired: true,
         });
         console.log("✅ Usuário admin criado.");
     }

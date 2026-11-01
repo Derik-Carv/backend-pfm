@@ -19,6 +19,7 @@ export const loginResponseOkSchema = z
     .object({
         message: z.string(),
         token: z.string(),
+        passwordChangeRequired: z.boolean(),
     })
     .strict();
 

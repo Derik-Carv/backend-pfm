@@ -1,27 +1,18 @@
-# Configurações do Servidor
+# Modelo de ambiente de desenvolvimento
 PORT=3336
 HOST=0.0.0.0
-
-# Ambiente
 NODE_ENV=development
-
-# CORS
-CORS_ORIGIN="localhost"
-
-# Credenciais / Banco de Dados (Exemplo)
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=password
-
-# Create role and admin user
-ADMIN_DEFAULT_PASSWORD="Admin@123456"
-CPFADMIN="167.030.850-21"
-DEMO_SEED_PASSWORD="Demo@123456"
-
-DATABASE_URL="postgres://root:password@postgres:5432/user_db"
-
-JWT_SECRET="your_secret_here"
-
-# Betterstack token
-LOGTOKEN=seu_token_copiado_aqui
+CORS_ORIGIN=http://localhost:3000
+POSTGRES_USER=app_user
+POSTGRES_PASSWORD=change-me
+POSTGRES_DB=backend
+POSTGRES_PORT=5432
+DATABASE_URL="postgres://app_user:change-me@postgres:5432/backend"
+ADMIN_DEFAULT_PASSWORD="change-me"
+# CPF fictício apenas para desenvolvimento
+CPFADMIN="00000000000"
+JWT_SECRET="change-me"
+AXIOM_TOKEN=
+AXIOM_DATASET=backend-pfm
+AUDIT_LOG_ENABLED=true
+LOG_LEVEL=info

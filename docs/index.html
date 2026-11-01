@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backend PFM | Documentação</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1220; --panel:#111b2e; --text:#e7edf7; --muted:#9aacbf; --accent:#60a5fa; --line:#263752; }
+    * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,sans-serif; }
+    header { padding:56px max(24px,calc((100% - 1120px)/2)); background:linear-gradient(135deg,#142746,#0b1220); border-bottom:1px solid var(--line); }
+    main { max-width:1120px; margin:auto; padding:32px 24px 80px; } nav { position:sticky; top:0; z-index:2; padding:12px 24px; background:#0b1220ee; backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+    nav a { color:var(--accent); margin-right:18px; text-decoration:none; } h1 { font-size:clamp(2rem,5vw,4rem); margin:0 0 8px; } h2 { margin-top:48px; border-bottom:1px solid var(--line); padding-bottom:8px; } h3 { color:var(--accent); margin-top:30px; }
+    p,li { color:var(--muted); } code,pre { background:#09101d; border:1px solid var(--line); border-radius:8px; } code { padding:2px 6px; color:#c4e1ff; } pre { padding:16px; overflow:auto; color:#c4e1ff; }
+    table { width:100%; border-collapse:collapse; margin:16px 0 28px; } th,td { text-align:left; padding:10px; border-bottom:1px solid var(--line); } th { color:#fff; } .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; margin:16px 0; } .badge { display:inline-block; padding:4px 9px; border-radius:999px; background:#19365d; color:#a9d2ff; margin:3px; }
+  </style>
+</head>
+<body>
+  <header><h1>Backend PFM</h1><p>Documentação técnica, operacional e de integração da API.</p><span class="badge">Bun</span><span class="badge">Fastify</span><span class="badge">PostgreSQL</span><span class="badge">Drizzle</span><span class="badge">Axiom</span></header>
+  <nav><a href="#inicio">Início</a><a href="#setup">Setup</a><a href="#api">API</a><a href="#admin">Admin</a><a href="#auditoria">Auditoria</a><a href="#producao">Produção</a><a href="#mudancas">Mudanças</a></nav>
+  <main>
+    <section id="inicio"><h2>Objetivo</h2><p>API do sistema PFM. O Swagger em <code>/docs</code> é a referência dos schemas executáveis; esta página explica arquitetura, operação, integração e regras do sistema.</p></section>
+    <section id="setup"><h2>Configuração rápida</h2><pre><code>cp .env.example .env
+bun install
+bun run dc</code></pre><p>A API local usa a porta configurada em <code>PORT</code>, normalmente <code>3336</code>. Health check: <code>GET /public/health</code>.</p><h3>Seed essencial</h3><p>O startup cria roles, o administrador, status de serviço e tipos de NF. Clientes, serviços, movimentações e NFs são criados pelas APIs. Não há dados demonstrativos automáticos.</p></section>
+    <section id="api"><h2>Autenticação e API</h2><p>Faça <code>POST /public/login</code>. A resposta inclui o token e <code>passwordChangeRequired</code>. Envie o token como <code>Authorization: Bearer TOKEN</code>. Rotas públicas: login, register e health. Se <code>passwordChangeRequired</code> for <code>true</code>, use <code>PATCH /account/password</code> com a senha temporária e a nova senha antes de liberar a aplicação.</p><h3>Fluxo de NF</h3><ol><li>Busque <code>GET /types</code>.</li><li>Busque clientes em <code>GET /clients?page=1&amp;limit=10</code>.</li><li>Busque serviços em <code>GET /services/list?clientId=UUID</code>.</li><li>Envie <code>POST /nf/</code> como multipart com <code>file</code> PDF e <code>nf</code> JSON.</li></ol><p><code>movimentationId</code> é opcional. NFs podem ser listadas e desativadas em <code>/notes</code>.</p><h3>Rotas privadas</h3><table><tr><th>Área</th><th>Operações</th><th>Permissão</th></tr><tr><td>Clientes</td><td>GET, POST, PATCH em <code>/clients</code></td><td>admin, manager, finance, colaborator</td></tr><tr><td>Dashboard</td><td>GET <code>/home/services</code>, <code>/home/services/index</code> e busca</td><td>todos os papéis</td></tr><tr><td>Gestão</td><td>GET status e POST <code>/manager/services</code></td><td>admin, manager</td></tr><tr><td>Serviços</td><td>GET, POST, PATCH em <code>/services</code></td><td>admin, manager, finance</td></tr><tr><td>Tipos</td><td>GET, POST, PATCH deactivate em <code>/types</code></td><td>admin, manager, finance</td></tr><tr><td>Movimentações</td><td>GET, POST, PATCH deactivate em <code>/movimentations</code></td><td>admin, manager, finance</td></tr><tr><td>NFs</td><td>POST <code>/nf</code>, GET/PATCH em <code>/notes</code></td><td>criação: admin/finance; consulta: admin/manager/finance</td></tr></table></section>
+    <section id="admin"><h2>Administração</h2><p>A API administrativa é exclusiva para o papel <code>administrator</code> e usa uma superfície única:</p><pre><code>GET   /admin/data/:table?page=1&amp;limit=20&amp;status=all
+GET   /admin/data/:table/:id
+POST  /admin/data/:table
+PATCH /admin/data/:table/:id</code></pre><p>Tabelas: <code>roles</code>, <code>users</code>, <code>clients</code>, <code>movimentations</code>, <code>types</code>, <code>status-services</code>, <code>services</code>, <code>notes</code> e <code>bundled</code>. GET usa paginação; status pode ser <code>all</code>, <code>active</code> ou <code>inactive</code>. Senhas nunca são retornadas.</p></section>
+    <section id="auditoria"><h2>Logs e auditoria</h2><p>Defina <code>AUDIT_LOG_ENABLED=true</code>. POST, PUT, PATCH e DELETE geram eventos estruturados no logger e, em produção, no Axiom. O evento contém ator, papel, rota, método, status, sucesso e request ID.</p><pre><code>AXIOM_TOKEN=...
+AXIOM_DATASET=backend-pfm
+AUDIT_LOG_ENABLED=true
+LOG_LEVEL=info</code></pre><p>No Axiom, pesquise <code>audit:true</code>. Authorization, tokens, senhas e CPF são redigidos.</p></section>
+    <section id="producao"><h2>Produção</h2><pre><code>bun run dc:prod
+docker compose -f compose.yaml -f compose.production.yaml logs -f backend</code></pre><p>O compose de produção usa a imagem compilada, reinicia serviços, executa o schema e verifica o health check. Use segredos reais somente por variáveis de ambiente ou secret manager.</p></section>
+    <section id="mudancas"><h2>Política de mudanças</h2><p>Nova rota, alteração de schema, permissão, migration, configuração ou evento de auditoria deve atualizar o Swagger, esta página, o README quando afetar integração e <code>CHANGELOG.md</code> com data e impacto.</p><p>Valide antes de publicar: <code>bun run typecheck</code>, <code>bun run build</code> e <code>git diff --check</code>.</p></section>
+  </main>
+</body>
+</html>

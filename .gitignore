@@ -3,6 +3,7 @@ node_modules
 drizzle/*
 !drizzle/0010_blushing_juggernaut.sql
 !drizzle/0011_daffy_bloodstorm.sql
+!drizzle/0012_password_change_required.sql
 !drizzle/meta/
 drizzle/meta/*
 !drizzle/meta/0010_snapshot.json

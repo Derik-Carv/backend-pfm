@@ -4,11 +4,11 @@ services:
         container_name: bun_postgres_db
         restart: always
         environment:
-            POSTGRES_USER: root
-            POSTGRES_PASSWORD: rootpassword
-            POSTGRES_DB: dev_db
+            POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+            POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
         ports:
-            - "5432:5432"
+            - "${POSTGRES_PORT:-5432}:5432"
         volumes:
             - postgres_data:/var/lib/postgresql/data
         # Adicionado: O Docker agora testa se o banco está pronto
@@ -34,6 +34,12 @@ services:
             - /usr/src/app/node_modules
         env_file:
             - .env
+        command:
+            [
+                "sh",
+                "-c",
+                "bunx drizzle-kit push --config=drizzle.config.ts && bun run dev",
+            ]
 
 volumes:
     postgres_data:

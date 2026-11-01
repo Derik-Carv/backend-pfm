@@ -131,4 +131,14 @@ export class UsersRepository implements IUsers {
             .where(eq(users.active, false))
             .limit(1);
     }
+
+    async updatePassword(id: string, password: string): Promise<Users | null> {
+        const [user] = await db
+            .update(users)
+            .set({ password, passwordChangeRequired: false })
+            .where(eq(users.id, id))
+            .returning();
+
+        return user || null;
+    }
 }

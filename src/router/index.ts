@@ -8,6 +8,7 @@ import { menuClientRoutes } from "./private/client/myClient.route";
 import { nfQueryRoutes, nfServicesRoutes } from "./private/NF/nf.route";
 import { typeRoutes } from "./private/type/type.route";
 import { movimentationRoutes } from "./private/movimentation/movimentation.route";
+import { accountRoutes } from "./private/account/account.route";
 
 export async function appRoutes(app: FastifyInstance) {
     app.register(publicRoutes, { prefix: "/public" });
@@ -20,4 +21,5 @@ export async function appRoutes(app: FastifyInstance) {
     app.register(nfQueryRoutes, { prefix: "/notes" });
     app.register(typeRoutes, { prefix: "/types" });
     app.register(movimentationRoutes, { prefix: "/movimentations" });
+    app.register(accountRoutes, { prefix: "/account" });
 }

@@ -21,7 +21,11 @@ export const loginController = async (
             cpf: userloged.user.cpf,
         });
 
-        return reply.status(200).send({ message: "login sucess", token });
+        return reply.status(200).send({
+            message: "login sucess",
+            token,
+            passwordChangeRequired: userloged.user.passwordChangeRequired,
+        });
     } catch (error: unknown) {
         if (error instanceof Error && error.name === "ZodError") {
             return reply.status(400).send({

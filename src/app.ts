@@ -30,6 +30,33 @@ export const app = fastify({
     .setValidatorCompiler(validatorCompiler)
     .setSerializerCompiler(serializerCompiler);
 
+const auditEnabled = process.env.AUDIT_LOG_ENABLED === "true";
+
+app.addHook("onResponse", async (request, reply) => {
+    if (
+        !auditEnabled ||
+        !["POST", "PUT", "PATCH", "DELETE"].includes(request.method) ||
+        request.url.startsWith("/public/login")
+    ) {
+        return;
+    }
+
+    request.log.info(
+        {
+            audit: true,
+            auditAction: request.method.toLowerCase(),
+            actorId: request.user?.id ?? null,
+            actorRole: request.user?.role ?? null,
+            method: request.method,
+            route: request.routeOptions.url,
+            statusCode: reply.statusCode,
+            success: reply.statusCode < 400,
+            requestId: request.id,
+        },
+        "Audit action",
+    );
+});
+
 await app.register(cors, corsOptions);
 
 await app.register(helmet, helmetOptions);

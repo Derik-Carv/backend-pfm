@@ -32,6 +32,7 @@ export async function usecaseLogin(data: LoginUserInput) {
             cpf: validUsername.cpf,
             username: validUsername.username,
             role: role.name,
+            passwordChangeRequired: validUsername.passwordChangeRequired,
         },
     };
 }

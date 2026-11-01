@@ -25,4 +25,8 @@ export interface IUsers {
     findAll(): Promise<Users[]>;
     findActives(): Promise<Users[]>;
     findInactives(): Promise<Users[]>;
+    updatePassword(
+        id: string,
+        password: string,
+    ): Promise<Users | null>;
 }
