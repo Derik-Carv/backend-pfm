@@ -45,24 +45,15 @@ Para tratar a exposição:
 ## Deploy atual em produção
 
 **Ambiente:** Oracle Cloud VM
-**Endpoint temporário:** `http://137.131.254.117:3336`
-**Estado verificado:** backend e PostgreSQL saudáveis; `GET /public/health` retornando HTTP 200.
+**Endpoint público:** `https://api.derikdev.cloud`
+**Estado verificado:** backend e PostgreSQL saudáveis; `GET /public/health`
+retornando HTTP 200.
 
-Para testes iniciais, a API está acessível diretamente por HTTP e a porta `3336`
-está publicada. O PostgreSQL permanece privado no Docker e não publica a porta
-`5432` no host.
+A API pública passa pelo Nginx com HTTPS. O backend escuta na porta `3336`
+somente em `127.0.0.1`, e o PostgreSQL permanece privado no Docker sem publicar
+a porta `5432` no host.
 
-### Riscos aceitos temporariamente para testes
-
-- A API ainda não usa HTTPS.
-- A porta `3336` está exposta diretamente.
-- O CORS está permissivo no ambiente de testes.
-
-Antes de liberar o frontend em produção, configurar HTTPS com proxy reverso,
-restringir `CORS_ORIGIN` ao domínio real do frontend e fechar o acesso externo
-direto à porta `3336`.
-
-## Auditoria somente leitura da VM — 2026-11-01
+## Auditoria somente leitura da VM — 2026-11-01 (verificação adicional)
 
 A auditoria foi executada por SSH com acesso somente leitura. Nenhuma alteração
 foi feita na VM.
@@ -83,10 +74,9 @@ foi feita na VM.
   continua respondendo e que `http://137.131.254.117:3336` não é acessível
   externamente.
 
-**Status:** corrigido na VM. O Compose de produção agora vincula a porta
-`3336` somente a `127.0.0.1`; o container foi recriado e ficou saudável. O
-endpoint HTTPS continuou respondendo, e o acesso externo direto à porta foi
-bloqueado.
+**Status:** corrigido e confirmado novamente. O Compose de produção vincula a
+porta `3336` somente a `127.0.0.1`; o backend está saudável, o endpoint HTTPS
+retornou HTTP 200 e o acesso externo direto à porta falhou.
 
 ### Verificações concluídas
 
