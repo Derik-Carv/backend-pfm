@@ -174,6 +174,22 @@ export class NfRepository implements INF {
         return deactivated || null;
     }
 
+    async activate(id: string) {
+        const [activated] = await db
+            .update(nf)
+            .set({
+                active: true,
+                cancelDate: null,
+                deactivationReason: null,
+                deactivatedAt: null,
+                deactivatedBy: null,
+            })
+            .where(and(eq(nf.id, id), eq(nf.active, false)))
+            .returning();
+
+        return activated || null;
+    }
+
     async updatePathFile(id: string, pathFile: string) {
         const [updated] = await db
             .update(nf)
