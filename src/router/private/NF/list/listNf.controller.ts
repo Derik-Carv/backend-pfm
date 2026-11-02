@@ -13,9 +13,24 @@ export async function listNfController(
         const query = nfListQuerySchema.parse(request.query);
         const result = await listNf(query);
 
+        const archiveRoot = path.resolve(process.cwd(), "archives");
+        const notes = await Promise.all(result.list.map(async (note) => {
+            if (!note.pathFile) return { ...note, hasFile: false };
+            const filePath = path.resolve(process.cwd(), note.pathFile);
+            if (!filePath.startsWith(`${archiveRoot}${path.sep}`)) {
+                return { ...note, hasFile: false };
+            }
+            try {
+                await fs.access(filePath);
+                return { ...note, hasFile: true };
+            } catch {
+                return { ...note, hasFile: false };
+            }
+        }));
+
         return reply.status(200).send({
             message: "Fiscal notes retrieved successfully",
-            notes: result.list,
+            notes,
             pagination: result.pagination,
         });
     } catch (error) {
@@ -35,3 +50,5 @@ export async function listNfController(
         });
     }
 }
+import fs from "node:fs/promises";
+import path from "node:path";

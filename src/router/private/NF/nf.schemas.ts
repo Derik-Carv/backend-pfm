@@ -64,6 +64,7 @@ export const nfItemResponseSchema = z.object({
     cancelDate: z.string().nullable(),
     totalValue: z.string(),
     pathFile: z.string().nullable(),
+    hasFile: z.boolean().optional(),
     servicesId: z.string().uuid(),
     movimentationId: z.string().uuid().nullable(),
     active: z.boolean(),
