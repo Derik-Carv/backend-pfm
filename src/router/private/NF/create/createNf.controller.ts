@@ -61,7 +61,20 @@ export const createNfServicesController = async (
             nf: newNf,
         });
     } catch (error: any) {
-        request.log.error({ err: error }, "Error while creating NF");
+        request.log.error(
+            {
+                err: error,
+                pdfError:
+                    error instanceof Error && error.cause instanceof Error
+                        ? {
+                              name: error.cause.name,
+                              message: error.cause.message,
+                              stack: error.cause.stack,
+                          }
+                        : undefined,
+            },
+            "Error while creating NF",
+        );
 
         if (error.name === "ZodError") {
             return reply.status(400).send({
