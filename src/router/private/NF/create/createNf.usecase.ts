@@ -66,7 +66,7 @@ export function injejctCreateNf({
                 throw error;
             }
 
-            throw new Error("PDF_READ_ERROR");
+            throw new Error("PDF_READ_ERROR", { cause: error });
         }
 
         let pdf: string;
