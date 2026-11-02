@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { NfCreateInput } from "../nf.schemas";
 
@@ -34,6 +35,12 @@ function normalizePdfMoney(value: string) {
 }
 
 export async function validateNfPdf(file: File, data: NfCreateInput) {
+    pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
+        path.join(
+            process.cwd(),
+            "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+        ),
+    ).href;
     const loadingTask = pdfjs.getDocument({
         data: new Uint8Array(await file.arrayBuffer()),
         useWorkerFetch: false,
