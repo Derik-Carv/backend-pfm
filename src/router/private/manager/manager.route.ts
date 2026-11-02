@@ -7,18 +7,38 @@ import { getStatusServiceController } from "@/router/private/manager/services/st
 import { createServicesRouteOptions } from "@/router/private/manager/services/services.options";
 import { createServicesController } from "@/router/private/manager/services/create/createServices.controller";
 
-const allowedRoles = [allRoles.administrator, allRoles.manager];
+const serviceManagementRoles = [
+    allRoles.administrator,
+    allRoles.manager,
+];
+
+const statusReadRoles = [
+    allRoles.administrator,
+    allRoles.manager,
+    allRoles.finance,
+];
 
 export async function managerRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
 
-    app.addHook("preHandler", inspectRole(allowedRoles));
+    app.register(async (serviceManagementRoutes) => {
+        serviceManagementRoutes.addHook(
+            "preHandler",
+            inspectRole(serviceManagementRoles),
+        );
+        serviceManagementRoutes.post(
+            "/services",
+            createServicesRouteOptions,
+            createServicesController,
+        );
+    });
 
-    app.get(
-        "/services/status",
-        getStatusServicesRouteOptions,
-        getStatusServiceController,
-    );
-
-    app.post("/services", createServicesRouteOptions, createServicesController);
+    app.register(async (statusRoutes) => {
+        statusRoutes.addHook("preHandler", inspectRole(statusReadRoles));
+        statusRoutes.get(
+            "/services/status",
+            getStatusServicesRouteOptions,
+            getStatusServiceController,
+        );
+    });
 }
