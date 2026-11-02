@@ -173,4 +173,14 @@ export class NfRepository implements INF {
 
         return deactivated || null;
     }
+
+    async updatePathFile(id: string, pathFile: string) {
+        const [updated] = await db
+            .update(nf)
+            .set({ pathFile })
+            .where(eq(nf.id, id))
+            .returning();
+
+        return updated || null;
+    }
 }

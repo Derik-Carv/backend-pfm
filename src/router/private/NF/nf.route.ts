@@ -8,6 +8,7 @@ import { deactivateNfRouteOptions, listNfRouteOptions } from "./nf.options";
 import { listNfController } from "./list/listNf.controller";
 import { deactivateNfController } from "./deactivate/deactivateNf.controller";
 import { getNfFileController } from "./file/getNfFile.controller";
+import { replaceNfFileController } from "./file/replaceNfFile.controller";
 
 const allowedRolesFinance = [allRoles.administrator, allRoles.finance];
 
@@ -31,6 +32,7 @@ export async function nfQueryRoutes(app: FastifyInstance) {
 
     app.get("/", listNfRouteOptions, listNfController);
     app.get("/:id/file", getNfFileController);
+    app.post("/:id/file", replaceNfFileController);
     app.patch(
         "/:id/deactivate",
         deactivateNfRouteOptions,
