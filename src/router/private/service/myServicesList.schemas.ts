@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const serviceCreateBaseSchema = z.object({
-    id: z.string(),
+    id: z.string().uuid().optional(),
     serviceName: z.string(),
     price: z.string(),
     initialDate: z.string(),
