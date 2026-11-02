@@ -56,4 +56,5 @@ export interface INF {
         reason: string,
         userId: string,
     ): Promise<NF | null>;
+    updatePathFile(id: string, pathFile: string): Promise<NF | null>;
 }
