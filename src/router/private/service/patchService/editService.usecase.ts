@@ -36,15 +36,11 @@ export async function usecaseEditService(
             data.serviceName,
         );
         if (!newName) throw new Error("SERVICE_NOT_FOUND");
-
-        return newName;
     }
 
     if (data.price) {
         const newPrice = await servicesData.editPrice(receivedId, data.price);
         if (!newPrice) throw new Error("SERVICE_NOT_FOUND");
-
-        return newPrice;
     }
 
     if (data.initialDate) {
@@ -53,8 +49,6 @@ export async function usecaseEditService(
             data.initialDate,
         );
         if (!newDate) throw new Error("SERVICE_NOT_FOUND");
-
-        return newDate;
     }
 
     if (data.finishDate) {
@@ -63,8 +57,6 @@ export async function usecaseEditService(
             data.finishDate,
         );
         if (!newDate) throw new Error("SERVICE_NOT_FOUND");
-
-        return newDate;
     }
 
     if (data.clientId) {
@@ -77,8 +69,6 @@ export async function usecaseEditService(
             data.clientId,
         );
         if (!newClient) throw new Error("SERVICE_NOT_FOUND");
-
-        return newClient;
     }
 
     if (data.details) {
@@ -90,8 +80,6 @@ export async function usecaseEditService(
             data.details,
         );
         if (!newDetails) throw new Error("SERVICE_NOT_FOUND");
-
-        return newDetails;
     }
 
     if (data.statusServiceId) {
@@ -104,7 +92,10 @@ export async function usecaseEditService(
             data.statusServiceId,
         );
         if (!newStatus) throw new Error("SERVICE_NOT_FOUND");
-
-        return newStatus;
     }
+
+    const updatedService = await servicesData.findId(receivedId);
+    if (!updatedService) throw new Error("SERVICE_NOT_FOUND");
+
+    return updatedService;
 }
