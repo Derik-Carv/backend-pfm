@@ -156,6 +156,11 @@ export const nfDeactivateResponseSchema = z.object({
     note: nfItemResponseSchema,
 });
 
+export const nfActivateResponseSchema = z.object({
+    message: z.string(),
+    note: nfItemResponseSchema,
+});
+
 // export const serviceEditBaseSchema = z.object({
 //     serviceName: z.string().nullable().optional(),
 //     price: z.string().nullable().optional(),

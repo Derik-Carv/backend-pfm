@@ -3,6 +3,7 @@ import { errorResponseSchema } from "@/router/error.schema";
 import { z } from "zod";
 import {
     nfCreateResponseSchema,
+    nfActivateResponseSchema,
     nfDeactivateBodySchema,
     nfDeactivateParamsSchema,
     nfDeactivateResponseSchema,
@@ -92,6 +93,25 @@ export const deactivateNfRouteOptions = {
         response: {
             200: nfDeactivateResponseSchema,
             400: errorResponseSchema,
+            404: errorResponseSchema,
+            409: errorResponseSchema,
+            422: errorResponseSchema,
+            500: errorResponseSchema,
+        },
+    },
+};
+
+export const activateNfRouteOptions = {
+    config: {
+        rateLimit: rateLimitProfiles.standard,
+    },
+    schema: {
+        tags: ["NF Menu"],
+        summary: "Activate a fiscal note",
+        description: "Reactivates an inactive fiscal note and clears its deactivation data.",
+        params: nfDeactivateParamsSchema,
+        response: {
+            200: nfActivateResponseSchema,
             404: errorResponseSchema,
             409: errorResponseSchema,
             422: errorResponseSchema,
