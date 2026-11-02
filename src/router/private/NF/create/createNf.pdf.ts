@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { PDFParse } from "pdf-parse";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { NfCreateInput } from "../nf.schemas";
 
 type NfPdfField = "numberNf" | "acessKey" | "emissionDate" | "totalValue";
@@ -34,13 +34,31 @@ function normalizePdfMoney(value: string) {
 }
 
 export async function validateNfPdf(file: File, data: NfCreateInput) {
-    const parser = new PDFParse({
-        data: await file.arrayBuffer(),
+    const loadingTask = pdfjs.getDocument({
+        data: new Uint8Array(await file.arrayBuffer()),
+        useWorkerFetch: false,
     });
 
     try {
-        const result = await parser.getText();
-        const text = result.text.replace(/\s+/g, " ").trim();
+        const pdf = await loadingTask.promise;
+        const pageTexts: string[] = [];
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+            const page = await pdf.getPage(pageNumber);
+            const content = await page.getTextContent();
+            pageTexts.push(
+                content.items
+                    .map((item) =>
+                        "str" in item && typeof item.str === "string"
+                            ? item.str
+                            : "",
+                    )
+                    .filter(Boolean)
+                    .join(" "),
+            );
+        }
+
+        const text = pageTexts.join(" ").replace(/\s+/g, " ").trim();
 
         if (!text) {
             throw new Error("PDF_TEXT_NOT_FOUND");
@@ -94,7 +112,7 @@ export async function validateNfPdf(file: File, data: NfCreateInput) {
             throw new NfPdfInconsistencyError(inconsistencies);
         }
     } finally {
-        await parser.destroy();
+        await loadingTask.destroy();
     }
 }
 
