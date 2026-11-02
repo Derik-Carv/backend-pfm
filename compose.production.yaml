@@ -13,7 +13,8 @@ services:
         restart: always
         ports: !override
             - "127.0.0.1:${PORT:?PORT is required}:${PORT:?PORT is required}"
-        volumes: !override []
+        volumes:
+            - nf_archives:/usr/src/app/archives
         command:
             ["bun", "run", "dist/server.js"]
         healthcheck:
@@ -22,3 +23,6 @@ services:
             timeout: 5s
             retries: 3
             start_period: 20s
+
+volumes:
+    nf_archives:
