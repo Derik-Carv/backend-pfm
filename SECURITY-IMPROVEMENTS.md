@@ -4,11 +4,43 @@
 ssh -i ~/.ssh/oracle-key.key ubuntu@137.131.254.117
 ```
 
+# DEPLOY NEW DEPENDENCIES
+
+```
+    cd /opt/backend-pfm
+    git pull --ff-only origin main
+    docker compose -f compose.yaml -f compose.production.yaml build --no-cache backend
+    docker compose -f compose.yaml -f compose.production.yaml up -d --force-recreate backend
+```
+
+# DEPLOY FAST
+
+```
+    cd /opt/backend-pfm
+    git pull --ff-only origin main
+
+    docker compose -f compose.yaml -f compose.production.yaml up -d --build backend
+```
+
+# CHECK DEPLOY
+
+```
+    docker compose -f compose.yaml -f compose.production.yaml ps
+    curl -i https://api.derikdev.cloud/public/health
+```
+
 # ENV
 
 ```
 cd /opt/backend-pfm
 sudo nano .env
+```
+
+# DEPLOY ENV
+
+```
+    cd /opt/backend-pfm
+    docker compose -f compose.yaml -f compose.production.yaml up -d --force-recreate backend
 ```
 
 # Melhorias de segurança
@@ -58,9 +90,9 @@ a porta `5432` no host.
 A auditoria foi executada por SSH com acesso somente leitura. Nenhuma alteração
 foi feita na VM.
 
-| # | Severidade | Evidência | Problema | Confiança |
-|---|---|---|---|---|
-| 1 | 🟠 HIGH | Docker/host, porta TCP `3336` | A API está publicada em `0.0.0.0:3336` e aceita HTTP direto, contornando o Nginx e o HTTPS. Isso pode expor credenciais, tokens JWT e demais requisições em texto claro. | 9/10 |
+| #   | Severidade | Evidência                     | Problema                                                                                                                                                                 | Confiança |
+| --- | ---------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| 1   | 🟠 HIGH    | Docker/host, porta TCP `3336` | A API está publicada em `0.0.0.0:3336` e aceita HTTP direto, contornando o Nginx e o HTTPS. Isso pode expor credenciais, tokens JWT e demais requisições em texto claro. | 9/10      |
 
 ### Ações recomendadas
 
