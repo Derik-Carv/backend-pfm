@@ -6,6 +6,7 @@ import {
     changePasswordSchema,
 } from "./account.schemas";
 import { hashPassword, verifyPassword } from "@/lib/hash";
+import { errorResponseSchema } from "@/router/error.schema";
 
 export async function accountRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
@@ -17,9 +18,9 @@ export async function accountRoutes(app: FastifyInstance) {
             body: changePasswordSchema,
             response: {
                 200: changePasswordResponseSchema,
-                400: { type: "object" },
-                401: { type: "object" },
-                500: { type: "object" },
+                400: errorResponseSchema,
+                401: errorResponseSchema,
+                500: errorResponseSchema,
             },
         },
     }, async (request: FastifyRequest, reply: FastifyReply) => {
