@@ -70,6 +70,10 @@ export const createClientController = async (
             return reply.status(409).send({ message: "CNPJ already in use" });
         }
 
+        if (error.message === "EMAIL_ALREADY_EXISTS") {
+            return reply.status(409).send({ message: "Email already in use" });
+        }
+
         return reply.status(500).send({
             message: "Internal server error while registering client",
         });

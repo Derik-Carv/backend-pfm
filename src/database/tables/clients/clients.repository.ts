@@ -58,6 +58,15 @@ export class ClientRepository implements IClient {
         return client || null;
     }
 
+    async findByEmail(email: string): Promise<Client | null> {
+        const [client] = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.email, email))
+            .limit(1);
+        return client || null;
+    }
+
     async editByCompanyName(id: string, name: string): Promise<Client | null> {
         const [client] = await db
             .update(clients)
@@ -92,6 +101,16 @@ export class ClientRepository implements IClient {
         const [client] = await db
             .update(clients)
             .set({ cpf: cpf })
+            .where(eq(clients.id, id))
+            .returning();
+
+        return client || null;
+    }
+
+    async editByEmail(id: string, email: string): Promise<Client | null> {
+        const [client] = await db
+            .update(clients)
+            .set({ email: email })
             .where(eq(clients.id, id))
             .returning();
 

@@ -31,7 +31,12 @@ export const createClientSchema = z
             .max(100, { message: "Trade Name can have at most 100 characters" })
             .toLowerCase()
             .optional(),
-
+        email: z
+            .email({ message: "Invalid email address" })
+            .trim()
+            .max(100, { message: "Email can have at most 100 characters" })
+            .toLowerCase()
+            .optional(),
         active: z.boolean().default(true),
     })
     .strict();
@@ -42,6 +47,7 @@ const clientItemSchema = z.object({
     tradeName: z.string(),
     cnpj: z.string().nullable().optional(),
     cpf: z.string().nullable().optional(),
+    email: z.email().nullable().optional(),
     active: z.boolean(),
     createdAt: z.date(),
     updatedAt: z.date(),
@@ -70,6 +76,12 @@ export const editClientSchema = z.object({
     tradeName: z.string().nullable().optional(),
     cnpj: z.string().nullable().optional(),
     cpf: z.string().nullable().optional(),
+    email: z
+        .email({ message: "Invalid email address" })
+        .trim()
+        .max(100, { message: "Email can have at most 100 characters" })
+        .toLowerCase()
+        .optional(),
     active: z.boolean().nullable().optional(),
 });
 

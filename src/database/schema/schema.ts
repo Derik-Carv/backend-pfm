@@ -56,6 +56,7 @@ export const clients = pgTable("clients", {
     tradeName: text("trade_name").notNull().unique(),
     cnpj: text("cnpj").unique(),
     cpf: text("cpf").unique(),
+    email: text("email").unique(),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -132,42 +133,53 @@ export const services = pgTable("services", {
         .$onUpdateFn(() => new Date()),
 });
 
-export const nf = pgTable("nf", {
-    id: uuid("id")
-        .primaryKey()
-        .$defaultFn(() => uuidv7()),
-    typeId: uuid("type_id")
-        .references(() => type.id)
-        .notNull(),
-    numberNf: text("number_nf"),
-    acessKey: varchar("access_key", { length: 50 }).unique(),
-    thirdPartyClientId: uuid("third_party_client_id")
-        .references(() => clients.id)
-        .notNull(),
-    emissionDate: date("emission_date", { mode: "string" }).notNull(),
-    cancelDate: date("cancel_date", { mode: "string" }),
-    totalValue: numeric("total_value", { precision: 10, scale: 2 }).notNull(),
-    pathFile: text("path_file"),
-    servicesId: uuid("services_id")
-        .references(() => services.id)
-        .notNull(),
-    movimentationId: uuid("movimentation_id")
-        .references(() => movimentation.id),
-    active: boolean("active").default(true).notNull(),
-    deactivationReason: text("deactivation_reason"),
-    deactivatedAt: timestamp("deactivated_at"),
-    deactivatedBy: uuid("deactivated_by").references(() => users.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-        .defaultNow()
-        .notNull()
-        .$onUpdateFn(() => new Date()),
-}, (table) => [
-    index("nf_access_key_idx").on(table.acessKey),
-    index("nf_number_idx").on(table.numberNf),
-    index("nf_emission_date_idx").on(table.emissionDate),
-    index("nf_active_emission_date_idx").on(table.active, table.emissionDate),
-]);
+export const nf = pgTable(
+    "nf",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        typeId: uuid("type_id")
+            .references(() => type.id)
+            .notNull(),
+        numberNf: text("number_nf"),
+        acessKey: varchar("access_key", { length: 50 }).unique(),
+        thirdPartyClientId: uuid("third_party_client_id")
+            .references(() => clients.id)
+            .notNull(),
+        emissionDate: date("emission_date", { mode: "string" }).notNull(),
+        cancelDate: date("cancel_date", { mode: "string" }),
+        totalValue: numeric("total_value", {
+            precision: 10,
+            scale: 2,
+        }).notNull(),
+        pathFile: text("path_file"),
+        servicesId: uuid("services_id")
+            .references(() => services.id)
+            .notNull(),
+        movimentationId: uuid("movimentation_id").references(
+            () => movimentation.id,
+        ),
+        active: boolean("active").default(true).notNull(),
+        deactivationReason: text("deactivation_reason"),
+        deactivatedAt: timestamp("deactivated_at"),
+        deactivatedBy: uuid("deactivated_by").references(() => users.id),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("nf_access_key_idx").on(table.acessKey),
+        index("nf_number_idx").on(table.numberNf),
+        index("nf_emission_date_idx").on(table.emissionDate),
+        index("nf_active_emission_date_idx").on(
+            table.active,
+            table.emissionDate,
+        ),
+    ],
+);
 
 export const bundled = pgTable("bundled", {
     id: uuid("id")

@@ -77,6 +77,17 @@ export function createEditClientUseCase({
             await clientsDb.editByCpf(data.id, data.cpf);
         }
 
+        if (data.email) {
+            const emailExists = await clientsDb.findByEmail(data.email);
+            if (emailExists && emailExists.id !== data.id) {
+                throw new Error("EMAIL_ALREADY_EXISTS");
+            }
+        }
+
+        if (data.email != null) {
+            await clientsDb.editByEmail(data.id, data.email);
+        }
+
         if (data.registeredCompanyName != null)
             await clientsDb.editByCompanyName(
                 data.id,

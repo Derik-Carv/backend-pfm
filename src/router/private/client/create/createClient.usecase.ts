@@ -49,6 +49,11 @@ export function injectUseCaseCreateClient({
             if (cnpjExists) throw new Error("CNPJ_ALREADY_EXISTS");
         }
 
+        if (data.email) {
+            const emailExists = await clientsDb.findByEmail(data.email);
+            if (emailExists) throw new Error("EMAIL_ALREADY_EXISTS");
+        }
+
         data.active = true;
 
         return await clientsDb.create(data);

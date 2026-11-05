@@ -17,6 +17,7 @@ export type CreateClientDependencies = {
         | "findByTradeName"
         | "findByCpf"
         | "findByCnpj"
+        | "findByEmail"
     >;
     findUser: Pick<IUsers, "findId">;
     findRole: Pick<IRoles, "findById">;
@@ -29,10 +30,12 @@ export type EditClientDependencies = {
         | "findByTradeName"
         | "findByCpf"
         | "findByCnpj"
+        | "findByEmail"
         | "editByCompanyName"
         | "editByTradeName"
         | "editByCpf"
         | "editByCnpj"
+        | "editByEmail"
         | "findById"
     >;
     findUser: {
@@ -48,10 +51,12 @@ export interface IClient {
     findByTradeName(name: string): Promise<Client | null>;
     findByCpf(cpf: string): Promise<Client | null>;
     findByCnpj(cnpj: string): Promise<Client | null>;
+    findByEmail(email: string): Promise<Client | null>;
     editByCompanyName(id: string, name: string): Promise<Client | null>;
     editByTradeName(id: string, name: string): Promise<Client | null>;
     editByCnpj(id: string, cnpj: string): Promise<Client | null>;
     editByCpf(id: string, cpf: string): Promise<Client | null>;
+    editByEmail(id: string, email: string): Promise<Client | null>;
     editByActive(id: string, active: boolean): Promise<Client | null>;
     findPage(
         limit: number,
