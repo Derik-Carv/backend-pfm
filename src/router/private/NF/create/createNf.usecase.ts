@@ -71,7 +71,7 @@ export function injejctCreateNf({
 
         let pdf: string;
         try {
-            pdf = await updateNfPdf(file, validType.name);
+            pdf = await updateNfPdf(file, validType.name, data.acessKey);
         } catch {
             throw new Error("ERROR_UPDATE_FILE");
         }

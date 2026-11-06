@@ -72,11 +72,7 @@ export async function validateNfPdf(file: File, data: NfCreateInput) {
         }
 
         const pdfValues = {
-            numberNf: extractTextValue(
-                text,
-                "NÚMERO DA NFS-e",
-                /\s*(\d+)/,
-            ),
+            numberNf: extractTextValue(text, "NÚMERO DA NFS-e", /\s*(\d+)/),
             acessKey: extractTextValue(
                 text,
                 "CHAVE DE ACESSO DA NFS-e",
@@ -123,24 +119,25 @@ export async function validateNfPdf(file: File, data: NfCreateInput) {
     }
 }
 
-export async function updateNfPdf(file: File, typeName: string) {
+export async function updateNfPdf(
+    file: File,
+    typeName: string,
+    acessKey: string,
+) {
     const folderName = typeName
         .trim()
         .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
         .replace(/\s+/g, "_");
-
-    const fileRepository = path.join(
-        process.cwd(),
-        "archives",
-        folderName,
-    );
+    const fileRepository = path.join(process.cwd(), "archives", folderName);
 
     await fs.mkdir(fileRepository, { recursive: true });
 
-    const fileName = `${crypto.randomUUID()}.pdf`;
+    const sanitizedKey = acessKey
+        .trim()
+        .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_");
+    const fileName = `${sanitizedKey}.pdf`;
     const filePath = path.join(fileRepository, fileName);
 
     await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
-
     return path.join("archives", folderName, fileName);
 }
