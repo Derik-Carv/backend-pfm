@@ -16,7 +16,8 @@ dist
 *.tgz
 
 # Uploaded NF documents
-archives/**/*.pdf
+archives/
+archives/*
 
 # code coverage
 coverage
