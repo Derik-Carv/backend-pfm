@@ -1,7 +1,9 @@
 import nodemailer from "nodemailer";
+import path from "node:path";
 
 type NfInfo = {
     numberNf: string;
+    type: string;
     value: string;
     emissionDate: string;
     acessKey: string;
@@ -53,7 +55,12 @@ export async function sendEmailNf(nfData: NfInfo, destinationEmail: string) {
             attachments: [
                 {
                     filename: `Nota_Fiscal_${nfData.numberNf}.pdf`,
-                    path: `../../../archives/`,
+                    path: path.join(
+                        process.cwd(),
+                        "archives",
+                        nfData.type,
+                        `${nfData.acessKey}.pdf`,
+                    ),
                 },
             ],
             html: `
