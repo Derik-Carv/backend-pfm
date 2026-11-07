@@ -10,6 +10,8 @@ import {
     nfListQuerySchema,
     getNfListResponseSchema,
     nfPdfInconsistencyResponseSchema,
+    sendEmailNfSchema,
+    sendEmailNfResponseSchema,
 } from "./nf.schemas";
 
 export const createNfRouteOptions = {
@@ -108,7 +110,8 @@ export const activateNfRouteOptions = {
     schema: {
         tags: ["NF Menu"],
         summary: "Activate a fiscal note",
-        description: "Reactivates an inactive fiscal note and clears its deactivation data.",
+        description:
+            "Reactivates an inactive fiscal note and clears its deactivation data.",
         params: nfDeactivateParamsSchema,
         response: {
             200: nfActivateResponseSchema,
@@ -120,39 +123,22 @@ export const activateNfRouteOptions = {
     },
 };
 
-// export const getMyServicesListRouteOptions = {
-//     config: {
-//         rateLimit: rateLimitProfiles.standard,
-//     },
-//     schema: {
-//         tags: ["Services Menu"],
-//         summary: "Menu my services",
-//         description: "List services",
-//         response: {
-//             200: getMyServicesListResponseSchema,
-//             400: errorResponseSchema,
-//             404: errorResponseSchema,
-//             409: errorResponseSchema,
-//             500: errorResponseSchema,
-//         },
-//     },
-// };
-
-// export const editServicesRouteOptions = {
-//     config: {
-//         rateLimit: rateLimitProfiles.standard,
-//     },
-//     schema: {
-//         tags: ["Services Menu"],
-//         body: serviceEditBaseSchema,
-//         summary: "Edit a service",
-//         description: "Returns the edited service with all its details",
-//         response: {
-//             201: serviceEditResponseSchema,
-//             400: errorResponseSchema,
-//             404: errorResponseSchema,
-//             409: errorResponseSchema,
-//             500: errorResponseSchema,
-//         },
-//     },
-// };
+export const sendEmailNfRouteOptions = {
+    config: {
+        rateLimit: rateLimitProfiles.standard,
+    },
+    schema: {
+        tags: ["NF Menu"],
+        summary: "Send email with fiscal note",
+        description: "Sends an email with the fiscal note attached.",
+        body: sendEmailNfSchema,
+        response: {
+            201: sendEmailNfResponseSchema,
+            400: errorResponseSchema,
+            404: errorResponseSchema,
+            409: errorResponseSchema,
+            422: errorResponseSchema,
+            500: errorResponseSchema,
+        },
+    },
+};

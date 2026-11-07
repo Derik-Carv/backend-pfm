@@ -108,41 +108,43 @@ export const getNfListResponseSchema = z.object({
     }),
 });
 
-export const nfListQuerySchema = z.object({
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
-    note_number: z.string().trim().min(1).optional(),
-    access_key: z.string().trim().min(1).max(50).optional(),
-    min_value: z.coerce.number().nonnegative().optional(),
-    max_value: z.coerce.number().nonnegative().optional(),
-    start_date: z.string().date().optional(),
-    end_date: z.string().date().optional(),
-    status: z.enum(["active", "inactive", "cancelled"]).default("active"),
-}).superRefine((query, context) => {
-    if (
-        query.min_value !== undefined &&
-        query.max_value !== undefined &&
-        query.min_value > query.max_value
-    ) {
-        context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["min_value"],
-            message: "min_value must be less than or equal to max_value",
-        });
-    }
+export const nfListQuerySchema = z
+    .object({
+        page: z.coerce.number().int().min(1).default(1),
+        limit: z.coerce.number().int().min(1).max(100).default(20),
+        note_number: z.string().trim().min(1).optional(),
+        access_key: z.string().trim().min(1).max(50).optional(),
+        min_value: z.coerce.number().nonnegative().optional(),
+        max_value: z.coerce.number().nonnegative().optional(),
+        start_date: z.string().date().optional(),
+        end_date: z.string().date().optional(),
+        status: z.enum(["active", "inactive", "cancelled"]).default("active"),
+    })
+    .superRefine((query, context) => {
+        if (
+            query.min_value !== undefined &&
+            query.max_value !== undefined &&
+            query.min_value > query.max_value
+        ) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["min_value"],
+                message: "min_value must be less than or equal to max_value",
+            });
+        }
 
-    if (
-        query.start_date !== undefined &&
-        query.end_date !== undefined &&
-        query.start_date > query.end_date
-    ) {
-        context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["start_date"],
-            message: "start_date must be less than or equal to end_date",
-        });
-    }
-});
+        if (
+            query.start_date !== undefined &&
+            query.end_date !== undefined &&
+            query.start_date > query.end_date
+        ) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["start_date"],
+                message: "start_date must be less than or equal to end_date",
+            });
+        }
+    });
 
 export const nfDeactivateParamsSchema = z.object({
     id: z.string().uuid(),
@@ -162,32 +164,37 @@ export const nfActivateResponseSchema = z.object({
     note: nfItemResponseSchema,
 });
 
-// export const serviceEditBaseSchema = z.object({
-//     serviceName: z.string().nullable().optional(),
-//     price: z.string().nullable().optional(),
-//     initialDate: z.string().nullable().optional(),
-//     finishDate: z.string().nullable().optional(),
-//     clientId: z.string().nullable().optional(),
-//     details: z.string().nullable().optional(),
-//     statusServiceId: z.string().nullable().optional(),
-// });
+export const sendEmailNfSchema = z.object({
+    numberNf: z.string(),
+    type: z.string(),
+    value: z.string(),
+    emissionDate: z.string(),
+    acessKey: z.string(),
+    clientName: z.string(),
+    details: z.string().optional(),
+    destinationEmail: z.email(),
+});
 
-// export const serviceEditResponseSchema = z.object({
-//     message: z.string(),
-//     service: z.object({
-//         id: z.string(),
-//         serviceName: z.string(),
-//         price: z.string(),
-//         initialDate: z.string(),
-//         finishDate: z.string().nullable().optional(),
-//         clientId: z.string(),
-//         details: z.string(),
-//         statusServiceId: z.string().nullable().optional(),
-//     }),
-// });
+export const sendEmailNfResponseSchema = z.object({
+    message: z.string(),
+    response: z.object({
+        accepted: z.array(z.string()),
+        rejected: z.array(z.string()),
+        ehlo: z.array(z.string()).optional(),
+        envelopeTime: z.number().optional(),
+        messageTime: z.number().optional(),
+        messageSize: z.number(),
+        response: z.string(),
+        envelope: z.object({
+            from: z.string(),
+            to: z.array(z.string()),
+        }),
+        messageId: z.string(),
+    }),
+});
 
 export type NfCreateInput = z.infer<typeof nfCreateBaseSchema>;
 export type NfListQuery = z.infer<typeof nfListQuerySchema>;
 export type NfDeactivateParams = z.infer<typeof nfDeactivateParamsSchema>;
 export type NfDeactivateBody = z.infer<typeof nfDeactivateBodySchema>;
-// export type ServiceEditInput = z.infer<typeof serviceEditBaseSchema>;
+export type NfSendEmailInput = z.infer<typeof sendEmailNfSchema>;

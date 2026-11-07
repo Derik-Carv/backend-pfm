@@ -32,6 +32,13 @@ export type NfPageResult = {
     total: number;
 };
 
+export type sendEmailNfDependencies = {
+    findNf: Pick<INF, "findNfNumber">;
+    clientsDb: Pick<IClient, "findByCompanyName">;
+    findType: Pick<IType, "findName">;
+    findUser: Pick<IUsers, "findId">;
+};
+
 export interface INF {
     create(data: CreateNfDatabaseInput): Promise<NF>;
     findId(id: string): Promise<NF>;
@@ -51,11 +58,7 @@ export interface INF {
         limit: number,
         offset: number,
     ): Promise<NfPageResult>;
-    deactivate(
-        id: string,
-        reason: string,
-        userId: string,
-    ): Promise<NF | null>;
+    deactivate(id: string, reason: string, userId: string): Promise<NF | null>;
     activate(id: string): Promise<NF | null>;
     updatePathFile(id: string, pathFile: string): Promise<NF | null>;
 }

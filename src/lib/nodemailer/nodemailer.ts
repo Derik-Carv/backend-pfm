@@ -8,7 +8,8 @@ type NfInfo = {
     emissionDate: string;
     acessKey: string;
     clientName: string;
-    details: string;
+    details?: string;
+    destinationEmail: string;
 };
 
 const hostSmtp = process.env.SMTP_HOST;
@@ -30,7 +31,7 @@ const transport = nodemailer.createTransport({
     auth: authUserSmtp,
 });
 
-export async function sendEmailNf(nfData: NfInfo, destinationEmail: string) {
+export async function sendEmailNf(nfData: NfInfo) {
     try {
         if (
             !hostSmtp ||
@@ -41,7 +42,7 @@ export async function sendEmailNf(nfData: NfInfo, destinationEmail: string) {
             throw new Error("SMTP configuration is missing.");
         }
 
-        if (!nfData || !destinationEmail) {
+        if (!nfData || !nfData.destinationEmail) {
             throw new Error(
                 "Missing required parameters: nfData or destinationEmail.",
             );
@@ -49,7 +50,7 @@ export async function sendEmailNf(nfData: NfInfo, destinationEmail: string) {
 
         const response = await transport.sendMail({
             from: authUserSmtp.user,
-            to: destinationEmail,
+            to: nfData.destinationEmail,
             bcc: process.env.BCC_LIST,
             subject: `Nota Fiscal Eletrônica Nº ${nfData.numberNf} – ${nfData.clientName}`,
             attachments: [

@@ -27,7 +27,10 @@ export async function deactivateNfController(
             note,
         });
     } catch (error) {
-        request.log.error({ err: error }, "Error while deactivating fiscal note");
+        request.log.error(
+            { err: error },
+            "Error while deactivating fiscal note",
+        );
 
         if (error instanceof Error && error.name === "ZodError") {
             return reply.status(400).send({
@@ -36,6 +39,7 @@ export async function deactivateNfController(
                 statusCode: 400,
             });
         }
+
         if (error instanceof Error && error.message === "NF_NOT_FOUND") {
             return reply.status(404).send({
                 message: "Fiscal note not found",
@@ -48,7 +52,10 @@ export async function deactivateNfController(
                 statusCode: 409,
             });
         }
-        if (error instanceof Error && error.message === "NF_ALREADY_CANCELLED") {
+        if (
+            error instanceof Error &&
+            error.message === "NF_ALREADY_CANCELLED"
+        ) {
             return reply.status(409).send({
                 message: "Fiscal note is already cancelled",
                 statusCode: 409,
