@@ -113,10 +113,7 @@ export const createNfServicesController = async (
             "SERVICE_NOT_EXIST",
         ];
 
-        if (
-            businessErrors404.includes(error.message) ||
-            error instanceof NfPdfInconsistencyError
-        ) {
+        if (businessErrors404.includes(error.message)) {
             return reply.status(404).send({
                 message: error.message,
             });
@@ -124,10 +121,7 @@ export const createNfServicesController = async (
 
         const businessErrors500 = ["ERROR_CREATE_NF", "ERROR_UPDATE_FILE"];
 
-        if (
-            businessErrors500.includes(error.message) ||
-            error instanceof NfPdfInconsistencyError
-        ) {
+        if (businessErrors500.includes(error.message)) {
             return reply.status(500).send({
                 message: error.message,
             });
