@@ -42,6 +42,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Local review notes
 /AVALIACAO-ROTAS.md
 /SECURITY-IMPROVEMENTS.md
+/IMPLEMENTACAO_NFSE_ADN.md
 
 # IntelliJ based IDEs
 .idea
