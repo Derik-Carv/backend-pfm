@@ -9,11 +9,13 @@ import { createServicesController } from "@/router/private/manager/services/crea
 
 const serviceManagementRoles = [
     allRoles.administrator,
+    allRoles.company_admin,
     allRoles.manager,
 ];
 
 const statusReadRoles = [
     allRoles.administrator,
+    allRoles.company_admin,
     allRoles.manager,
     allRoles.finance,
 ];

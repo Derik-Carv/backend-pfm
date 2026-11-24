@@ -9,8 +9,13 @@ export const getServicesController = async (
     try {
         const userId = request.user.id;
         const { page, limit } = paginationQuerySchema.parse(request.query);
+        const companyIds = request.tenant?.accessibleCompanyIds;
 
-        const allServices = await usecaseGetService(userId, { page, limit });
+        const allServices = await usecaseGetService(
+            userId,
+            { page, limit },
+            companyIds,
+        );
 
         return reply.status(200).send({
             message: "Get services with sucess",

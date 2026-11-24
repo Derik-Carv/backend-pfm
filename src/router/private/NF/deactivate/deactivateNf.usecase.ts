@@ -9,9 +9,15 @@ export function injectDeactivateNf({
         id: string,
         reason: string,
         userId: string,
+        accessibleCompanyIds?: string[],
     ) {
         const note = await nf.findId(id);
-        if (!note) {
+        if (
+            !note ||
+            (accessibleCompanyIds &&
+                note.companyId &&
+                !accessibleCompanyIds.includes(note.companyId))
+        ) {
             throw new Error("NF_NOT_FOUND");
         }
         if (!note.active) {

@@ -36,28 +36,39 @@ export interface IServices {
     findHighValueByIds(
         ids: string[],
         limitNumber?: number,
+        companyIds?: string[],
     ): Promise<Services[]>;
-    findRecentByIds(ids: string[], limitNumber?: number): Promise<Services[]>;
-    findOldestByIds(ids: string[], limitNumber?: number): Promise<Services[]>;
-    findHighValue(limitNumber?: number): Promise<Services[]>;
-    findRecent(limitNumber?: number): Promise<Services[]>;
-    findOldest(limitNumber?: number): Promise<Services[]>;
-    findAll(): Promise<Services[]>;
-    findActives(): Promise<Services[]>;
+    findRecentByIds(
+        ids: string[],
+        limitNumber?: number,
+        companyIds?: string[],
+    ): Promise<Services[]>;
+    findOldestByIds(
+        ids: string[],
+        limitNumber?: number,
+        companyIds?: string[],
+    ): Promise<Services[]>;
+    findHighValue(limitNumber?: number, companyIds?: string[]): Promise<Services[]>;
+    findRecent(limitNumber?: number, companyIds?: string[]): Promise<Services[]>;
+    findOldest(limitNumber?: number, companyIds?: string[]): Promise<Services[]>;
+    findAll(companyIds?: string[]): Promise<Services[]>;
+    findActives(companyIds?: string[]): Promise<Services[]>;
     findActivePage(
         limit: number,
         offset: number,
         collaboratorId?: string,
+        companyIds?: string[],
     ): Promise<{ list: ServicePageItem[]; total: number }>;
-    findActiveByClient(clientId: string): Promise<Services[]>;
+    findActiveByClient(clientId: string, companyIds?: string[]): Promise<Services[]>;
     findFinderPage(
         type: ServiceFinderType,
         value: string,
         limit: number,
         offset: number,
         collaboratorId?: string,
+        companyIds?: string[],
     ): Promise<{ list: ServicePageItem[]; total: number }>;
-    findInactives(): Promise<Services[]>;
+    findInactives(companyIds?: string[]): Promise<Services[]>;
     editName(id: string, name: string): Promise<Services | null>;
     editPrice(id: string, price: string): Promise<Services | null>;
     editInitialDate(id: string, date: string): Promise<Services | null>;

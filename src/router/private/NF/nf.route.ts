@@ -16,10 +16,15 @@ import { getNfFileController } from "./file/getNfFile.controller";
 import { replaceNfFileController } from "./file/replaceNfFile.controller";
 import { sendEmailNfController } from "./sendEmailNf/sendEmailNf.controller";
 
-const allowedRolesFinance = [allRoles.administrator, allRoles.finance];
+const allowedRolesFinance = [
+    allRoles.administrator,
+    allRoles.company_admin,
+    allRoles.finance,
+];
 
 const allowedRolesManager = [
     allRoles.administrator,
+    allRoles.company_admin,
     allRoles.manager,
     allRoles.finance,
 ];

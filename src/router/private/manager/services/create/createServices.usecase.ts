@@ -10,9 +10,12 @@ import { ClientRepository } from "@/database/tables/clients/clients.repository";
 export async function usecaseCreateService(
     userId: string,
     data: CreateServiceInput,
+    activeCompanyId?: string,
+    accessibleCompanyIds?: string[],
 ) {
     const allowedRoles = [
         allRoles.administrator,
+        allRoles.company_admin,
         allRoles.manager,
         allRoles.finance,
         allRoles.observer,
@@ -44,7 +47,12 @@ export async function usecaseCreateService(
 
     const validClient = await clientData.findById(data.clientId);
 
-    if (!validClient) {
+    if (
+        !validClient ||
+        (accessibleCompanyIds &&
+            validClient.companyId &&
+            !accessibleCompanyIds.includes(validClient.companyId))
+    ) {
         throw new Error("CLIENT_NOT_FOUND");
     }
 
@@ -61,7 +69,11 @@ export async function usecaseCreateService(
         throw new Error("STATUS_SERVICE_NOT_FOUND");
     }
 
-    const newService = await servicesData.create(data);
+    const targetCompanyId = validClient.companyId ?? activeCompanyId;
+    const newService = await servicesData.create({
+        ...data,
+        ...(targetCompanyId ? { companyId: targetCompanyId } : {}),
+    });
 
     if (user) {
         const newBundled = await bundled.create({

@@ -21,9 +21,16 @@ export async function getNfFileController(
     try {
         const { id } = nfFileParamsSchema.parse(request.params);
         const { download } = nfFileQuerySchema.parse(request.query);
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
         const note = await nfRepository.findId(id);
 
-        if (!note || !note.pathFile) {
+        if (
+            !note ||
+            !note.pathFile ||
+            (accessibleCompanyIds &&
+                note.companyId &&
+                !accessibleCompanyIds.includes(note.companyId))
+        ) {
             return reply.status(404).send({ message: "NF file not found" });
         }
 

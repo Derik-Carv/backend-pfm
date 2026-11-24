@@ -13,8 +13,14 @@ export const editServicesController = async (
         const userId = request.user.id;
         const params = request.params;
         const data = serviceEditBaseSchema.parse(request.body);
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
 
-        const editService = await usecaseEditService(userId, params, data);
+        const editService = await usecaseEditService(
+            userId,
+            params,
+            data,
+            accessibleCompanyIds,
+        );
 
         return reply.status(201).send({
             message: "Edited service with sucess",

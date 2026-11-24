@@ -11,7 +11,8 @@ export async function activateNfController(
 ) {
     try {
         const { id } = nfDeactivateParamsSchema.parse(request.params);
-        const note = await activateNf(id);
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
+        const note = await activateNf(id, accessibleCompanyIds);
         return reply.status(200).send({
             message: "Fiscal note activated successfully",
             note,

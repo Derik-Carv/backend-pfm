@@ -2,9 +2,16 @@ import type { ClientDependencies } from "@/database/tables/clients/clients.inter
 import type { Pagination } from "@/router/pagination.schema";
 
 export function injectUseCaseActiveClients({ clientsDb }: ClientDependencies) {
-    return async function usecaseAllCLients(pagination: Pagination) {
+    return async function usecaseAllCLients(
+        pagination: Pagination,
+        companyIds?: string[],
+    ) {
         const offset = (pagination.page - 1) * pagination.limit;
-        const result = await clientsDb.findPage(pagination.limit, offset);
+        const result = await clientsDb.findPage(
+            pagination.limit,
+            offset,
+            companyIds,
+        );
 
         return {
             list: result.list,

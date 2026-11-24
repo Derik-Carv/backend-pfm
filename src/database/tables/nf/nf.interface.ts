@@ -25,6 +25,7 @@ export type NfListFilters = {
     startDate?: string;
     endDate?: string;
     status?: "active" | "inactive" | "cancelled";
+    companyIds?: string[];
 };
 
 export type NfPageResult = {

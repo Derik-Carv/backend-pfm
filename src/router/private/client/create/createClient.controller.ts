@@ -18,8 +18,9 @@ export const createClientController = async (
     try {
         const data = createClientSchema.parse(request.body);
         const userId = request.user.id;
+        const companyId = request.tenant?.activeCompanyId;
 
-        const newClient = await usecaseCreateClient(userId, data);
+        const newClient = await usecaseCreateClient(userId, data, companyId);
 
         return reply.status(201).send({
             message: "Client register with sucess",

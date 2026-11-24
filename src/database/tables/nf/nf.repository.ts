@@ -1,6 +1,6 @@
 import { db } from "@/database/index";
 import { nf } from "@/database/schema/schema";
-import { and, count, desc, eq, gte, ilike, lte, isNotNull } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, lte, isNotNull } from "drizzle-orm";
 import type {
     CreateNfDatabaseInput,
     INF,
@@ -141,6 +141,10 @@ export class NfRepository implements INF {
             conditions.push(eq(nf.active, false));
         } else if (filters.status === "cancelled") {
             conditions.push(isNotNull(nf.cancelDate));
+        }
+
+        if (filters.companyIds && filters.companyIds.length > 0) {
+            conditions.push(inArray(nf.companyId, filters.companyIds));
         }
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;

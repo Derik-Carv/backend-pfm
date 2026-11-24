@@ -47,11 +47,11 @@ export type EditClientDependencies = {
 export interface IClient {
     create(data: CreateClientDatabaseInput): Promise<Client>;
     findById(id: string): Promise<Client | null>;
-    findByCompanyName(name: string): Promise<Client | null>;
-    findByTradeName(name: string): Promise<Client | null>;
-    findByCpf(cpf: string): Promise<Client | null>;
-    findByCnpj(cnpj: string): Promise<Client | null>;
-    findByEmail(email: string): Promise<Client | null>;
+    findByCompanyName(name: string, companyId?: string): Promise<Client | null>;
+    findByTradeName(name: string, companyId?: string): Promise<Client | null>;
+    findByCpf(cpf: string, companyId?: string): Promise<Client | null>;
+    findByCnpj(cnpj: string, companyId?: string): Promise<Client | null>;
+    findByEmail(email: string, companyId?: string): Promise<Client | null>;
     editByCompanyName(id: string, name: string): Promise<Client | null>;
     editByTradeName(id: string, name: string): Promise<Client | null>;
     editByCnpj(id: string, cnpj: string): Promise<Client | null>;
@@ -61,8 +61,9 @@ export interface IClient {
     findPage(
         limit: number,
         offset: number,
+        companyIds?: string[],
     ): Promise<{ list: Client[]; total: number }>;
-    findAll(): Promise<Client[]>;
-    findActives(): Promise<Client[]>;
-    findInactives(): Promise<Client[]>;
+    findAll(companyIds?: string[]): Promise<Client[]>;
+    findActives(companyIds?: string[]): Promise<Client[]>;
+    findInactives(companyIds?: string[]): Promise<Client[]>;
 }

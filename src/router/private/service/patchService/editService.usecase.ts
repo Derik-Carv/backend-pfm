@@ -16,6 +16,7 @@ export async function usecaseEditService(
     userId: string,
     params: any,
     data: ServiceEditInput,
+    accessibleCompanyIds?: string[],
 ) {
     const receivedId = params.id;
 
@@ -28,6 +29,19 @@ export async function usecaseEditService(
 
     if (!userRole) {
         throw new Error("ROLE_NOT_FOUND");
+    }
+
+    const existingService = await servicesData.findId(receivedId);
+    if (!existingService) {
+        throw new Error("SERVICE_NOT_FOUND");
+    }
+
+    if (
+        accessibleCompanyIds &&
+        existingService.companyId &&
+        !accessibleCompanyIds.includes(existingService.companyId)
+    ) {
+        throw new Error("ROLE_ACESS_DENIED");
     }
 
     if (data.serviceName) {
@@ -62,7 +76,13 @@ export async function usecaseEditService(
     if (data.clientId) {
         const validClient = await clientData.findById(data.clientId);
 
-        if (!validClient) throw new Error("CLIENT_NOT_FOUND");
+        if (
+            !validClient ||
+            (accessibleCompanyIds &&
+                validClient.companyId &&
+                !accessibleCompanyIds.includes(validClient.companyId))
+        )
+            throw new Error("CLIENT_NOT_FOUND");
 
         const newClient = await servicesData.editClient(
             receivedId,

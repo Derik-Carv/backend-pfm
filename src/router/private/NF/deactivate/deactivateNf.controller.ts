@@ -20,7 +20,13 @@ export async function deactivateNfController(
     try {
         const { id } = nfDeactivateParamsSchema.parse(request.params);
         const { reason } = nfDeactivateBodySchema.parse(request.body);
-        const note = await deactivateNf(id, reason, request.user.id);
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
+        const note = await deactivateNf(
+            id,
+            reason,
+            request.user.id,
+            accessibleCompanyIds,
+        );
 
         return reply.status(200).send({
             message: "Fiscal note deactivated successfully",

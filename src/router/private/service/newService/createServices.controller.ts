@@ -13,8 +13,15 @@ export const createServicesController = async (
     try {
         const userId = request.user.id;
         const data = serviceCreateBaseSchema.parse(request.body);
+        const activeCompanyId = request.tenant?.activeCompanyId;
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
 
-        const newService = await usecaseCreateService(userId, data);
+        const newService = await usecaseCreateService(
+            userId,
+            data,
+            activeCompanyId,
+            accessibleCompanyIds,
+        );
 
         return reply.status(201).send({
             message: "Create service with sucess",

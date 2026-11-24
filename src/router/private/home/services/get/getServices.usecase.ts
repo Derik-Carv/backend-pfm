@@ -6,9 +6,11 @@ import { ServicesRepository } from "@/database/tables/services/services.reposito
 export async function usecaseGetService(
     userId: string,
     pagination: { page: number; limit: number },
+    companyIds?: string[],
 ) {
     const allowedRoles = [
         allRoles.administrator,
+        allRoles.company_admin,
         allRoles.manager,
         allRoles.finance,
         allRoles.observer,
@@ -41,6 +43,7 @@ export async function usecaseGetService(
         pagination.limit,
         offset,
         userRole.name === allRoles.colaborator ? userId : undefined,
+        companyIds,
     );
 
     if (!result) throw new Error("SERVICES_DATA_ERROR");

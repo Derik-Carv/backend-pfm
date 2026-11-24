@@ -4,6 +4,8 @@ drizzle/*
 !drizzle/0010_blushing_juggernaut.sql
 !drizzle/0011_daffy_bloodstorm.sql
 !drizzle/0012_password_change_required.sql
+!drizzle/0013_multitenant_hierarchical_companies.sql
+!drizzle/0014_multitenant_roles_and_unique_scopes.sql
 !drizzle/meta/
 drizzle/meta/*
 !drizzle/meta/0010_snapshot.json
@@ -43,6 +45,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 /AVALIACAO-ROTAS.md
 /SECURITY-IMPROVEMENTS.md
 /IMPLEMENTACAO_NFSE_ADN.md
+/PLANEJAMENTO_MULTI_TENANT_MOTHER.md
 
 # IntelliJ based IDEs
 .idea

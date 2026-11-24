@@ -11,11 +11,13 @@ export const getServicesHomeFinderController = async (
         const userId = request.user.id;
         const params = getServicesFinderParamsSchema.parse(request.params);
         const pagination = paginationQuerySchema.parse(request.query);
+        const companyIds = request.tenant?.accessibleCompanyIds;
 
         const menuData = await usecaseMyServicesHomeFind(
             userId,
             params,
             pagination,
+            companyIds,
         );
 
         return reply.status(200).send({

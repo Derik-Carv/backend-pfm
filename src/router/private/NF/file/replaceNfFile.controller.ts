@@ -14,8 +14,14 @@ export async function replaceNfFileController(
 ) {
     try {
         const { id } = paramsSchema.parse(request.params);
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
         const note = await nfRepository.findId(id);
-        if (!note)
+        if (
+            !note ||
+            (accessibleCompanyIds &&
+                note.companyId &&
+                !accessibleCompanyIds.includes(note.companyId))
+        )
             return reply.status(404).send({ message: "Fiscal note not found" });
 
         let file: File | undefined;

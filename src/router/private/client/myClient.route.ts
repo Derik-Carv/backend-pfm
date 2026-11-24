@@ -13,6 +13,7 @@ import { editClientController } from "./patch/editClient.controller";
 
 const allowedRoles = [
     allRoles.administrator,
+    allRoles.company_admin,
     allRoles.manager,
     allRoles.finance,
     allRoles.colaborator,

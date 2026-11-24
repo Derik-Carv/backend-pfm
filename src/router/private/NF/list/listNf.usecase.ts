@@ -5,7 +5,7 @@ import type {
 import type { NfListQuery } from "../nf.schemas";
 
 export function injectListNf({ nf }: { nf: Pick<INF, "findPage"> }) {
-    return async function listNf(query: NfListQuery) {
+    return async function listNf(query: NfListQuery, companyIds?: string[]) {
         const offset = (query.page - 1) * query.limit;
         const filters: NfListFilters = {
             noteNumber: query.note_number,
@@ -15,6 +15,7 @@ export function injectListNf({ nf }: { nf: Pick<INF, "findPage"> }) {
             startDate: query.start_date,
             endDate: query.end_date,
             status: query.status,
+            companyIds,
         };
         const result = await nf.findPage(filters, query.limit, offset);
 

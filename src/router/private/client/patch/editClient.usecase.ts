@@ -11,9 +11,11 @@ export function createEditClientUseCase({
     return async function usecaseEditClient(
         userId: string,
         data: EditClientInput,
+        accessibleCompanyIds?: string[],
     ) {
         const allowedRoles = [
             allRoles.administrator,
+            allRoles.company_admin,
             allRoles.manager,
             allRoles.finance,
         ];
@@ -33,9 +35,22 @@ export function createEditClientUseCase({
 
         if (!data.id) throw new Error("ID_CLIENT_NOT_DEFINED");
 
+        const existingClient = await clientsDb.findById(data.id);
+        if (
+            !existingClient ||
+            (accessibleCompanyIds &&
+                existingClient.companyId &&
+                !accessibleCompanyIds.includes(existingClient.companyId))
+        ) {
+            throw new Error("ROLE_ACESS_DENIED");
+        }
+
+        const scopeCompanyId = existingClient.companyId ?? undefined;
+
         if (data.registeredCompanyName) {
             const companyExists = await clientsDb.findByCompanyName(
                 data.registeredCompanyName,
+                scopeCompanyId,
             );
 
             if (companyExists && companyExists.id !== data.id) {
@@ -46,6 +61,7 @@ export function createEditClientUseCase({
         if (data.tradeName) {
             const tradeNameExists = await clientsDb.findByTradeName(
                 data.tradeName,
+                scopeCompanyId,
             );
 
             if (tradeNameExists && tradeNameExists.id !== data.id) {
@@ -54,7 +70,10 @@ export function createEditClientUseCase({
         }
 
         if (data.cpf) {
-            const cpfExists = await clientsDb.findByCpf(data.cpf);
+            const cpfExists = await clientsDb.findByCpf(
+                data.cpf,
+                scopeCompanyId,
+            );
 
             if (cpfExists && cpfExists.id !== data.id) {
                 throw new Error("CPF_ALREADY_EXISTS");
@@ -62,7 +81,10 @@ export function createEditClientUseCase({
         }
 
         if (data.cnpj) {
-            const cnpjExists = await clientsDb.findByCnpj(data.cnpj);
+            const cnpjExists = await clientsDb.findByCnpj(
+                data.cnpj,
+                scopeCompanyId,
+            );
 
             if (cnpjExists && cnpjExists.id !== data.id) {
                 throw new Error("CNPJ_ALREADY_EXISTS");
@@ -78,7 +100,10 @@ export function createEditClientUseCase({
         }
 
         if (data.email) {
-            const emailExists = await clientsDb.findByEmail(data.email);
+            const emailExists = await clientsDb.findByEmail(
+                data.email,
+                scopeCompanyId,
+            );
             if (emailExists && emailExists.id !== data.id) {
                 throw new Error("EMAIL_ALREADY_EXISTS");
             }

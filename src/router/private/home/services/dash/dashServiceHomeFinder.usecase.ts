@@ -13,9 +13,11 @@ export async function usecaseMyServicesHomeFind(
     userId: string,
     finder: FinderParams,
     pagination: Pagination,
+    companyIds?: string[],
 ) {
     const allowedRoles = [
         allRoles.administrator,
+        allRoles.company_admin,
         allRoles.manager,
         allRoles.finance,
         allRoles.observer,
@@ -48,6 +50,7 @@ export async function usecaseMyServicesHomeFind(
         pagination.limit,
         offset,
         userRole.name === allRoles.colaborator ? userId : undefined,
+        companyIds,
     );
 
     return {

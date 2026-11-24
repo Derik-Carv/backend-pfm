@@ -13,7 +13,7 @@ export const corsOptions: FastifyCorsOptions = {
     },
     methods: ["GET", "POST", "PATCH"],
     maxAge: 600,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-company-id", "x-view-scope"],
     hook: "onRequest",
     credentials: true,
 };

@@ -7,8 +7,9 @@ export const getServicesHomeController = async (
 ) => {
     try {
         const userId = request.user.id;
+        const companyIds = request.tenant?.accessibleCompanyIds;
 
-        const menuData = await usecaseMyServicesHome(userId);
+        const menuData = await usecaseMyServicesHome(userId, companyIds);
 
         return reply.status(200).send({
             message: "Get services home overview with success",

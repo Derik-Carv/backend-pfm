@@ -8,9 +8,10 @@ import {
     date,
     varchar,
     index,
+    uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { v7 as uuidv7 } from "uuid";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const roles = pgTable("roles", {
     id: uuid("id")
@@ -25,6 +26,32 @@ export const roles = pgTable("roles", {
         .$onUpdateFn(() => new Date()),
 });
 
+export const companies = pgTable(
+    "companies",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        registeredCompanyName: text("registered_company_name").notNull(),
+        tradeName: text("trade_name").notNull(),
+        cnpj: text("cnpj").unique().notNull(),
+        email: text("email"),
+        phone: text("phone"),
+        motherId: uuid("mother_id").references((): any => companies.id),
+        active: boolean("active").default(true).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("companies_mother_id_idx").on(table.motherId),
+        index("companies_cnpj_idx").on(table.cnpj),
+        index("companies_active_idx").on(table.active),
+    ],
+);
+
 export const users = pgTable("users", {
     id: uuid("id")
         .primaryKey()
@@ -36,6 +63,9 @@ export const users = pgTable("users", {
     roleId: uuid("role_id")
         .notNull()
         .references(() => roles.id),
+    primaryCompanyId: uuid("primary_company_id").references(
+        () => companies.id,
+    ),
     cpf: text("cpf").unique().notNull(),
     active: boolean("active").default(true).notNull(),
     passwordChangeRequired: boolean("password_change_required")
@@ -48,41 +78,93 @@ export const users = pgTable("users", {
         .$onUpdateFn(() => new Date()),
 });
 
-export const clients = pgTable("clients", {
-    id: uuid("id")
-        .primaryKey()
-        .$defaultFn(() => uuidv7()),
-    registeredCompanyName: text("registered_company_name").notNull().unique(),
-    tradeName: text("trade_name").notNull().unique(),
-    cnpj: text("cnpj").unique(),
-    cpf: text("cpf").unique(),
-    email: text("email").unique(),
-    active: boolean("active").default(true).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-        .defaultNow()
-        .notNull()
-        .$onUpdateFn(() => new Date()),
-});
+export const userCompanies = pgTable(
+    "user_companies",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        userId: uuid("user_id")
+            .notNull()
+            .references(() => users.id),
+        companyId: uuid("company_id")
+            .notNull()
+            .references(() => companies.id),
+        isDefault: boolean("is_default").default(false).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => [
+        index("user_companies_user_idx").on(table.userId),
+        index("user_companies_company_idx").on(table.companyId),
+    ],
+);
 
-export const movimentation = pgTable("movimentation", {
-    id: uuid("id")
-        .primaryKey()
-        .$defaultFn(() => uuidv7()),
-    name: text("name").notNull(),
-    nfId: uuid("nf_id"),
-    destinationUserId: uuid("destination_user_id").references(() => users.id),
-    destinationClientId: uuid("destination_client_id").references(
-        () => clients.id,
-    ),
-    justify: text("justify").notNull(),
-    active: boolean("active").default(true).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-        .defaultNow()
-        .notNull()
-        .$onUpdateFn(() => new Date()),
-});
+export const clients = pgTable(
+    "clients",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id").references(() => companies.id),
+        registeredCompanyName: text("registered_company_name").notNull(),
+        tradeName: text("trade_name").notNull(),
+        cnpj: text("cnpj"),
+        cpf: text("cpf"),
+        email: text("email"),
+        active: boolean("active").default(true).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("clients_company_id_idx").on(table.companyId),
+        uniqueIndex("clients_company_registered_name_uidx").on(
+            table.companyId,
+            table.registeredCompanyName,
+        ),
+        uniqueIndex("clients_company_trade_name_uidx").on(
+            table.companyId,
+            table.tradeName,
+        ),
+        uniqueIndex("clients_company_cnpj_uidx")
+            .on(table.companyId, table.cnpj)
+            .where(sql`${table.cnpj} IS NOT NULL`),
+        uniqueIndex("clients_company_cpf_uidx")
+            .on(table.companyId, table.cpf)
+            .where(sql`${table.cpf} IS NOT NULL`),
+        uniqueIndex("clients_company_email_uidx")
+            .on(table.companyId, table.email)
+            .where(sql`${table.email} IS NOT NULL`),
+    ],
+);
+
+export const movimentation = pgTable(
+    "movimentation",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id").references(() => companies.id),
+        name: text("name").notNull(),
+        nfId: uuid("nf_id"),
+        destinationUserId: uuid("destination_user_id").references(() => users.id),
+        destinationClientId: uuid("destination_client_id").references(
+            () => clients.id,
+        ),
+        justify: text("justify").notNull(),
+        active: boolean("active").default(true).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("movimentation_company_id_idx").on(table.companyId),
+    ],
+);
 
 export const type = pgTable("type", {
     id: uuid("id")
@@ -110,28 +192,35 @@ export const statusService = pgTable("statusService", {
         .$onUpdateFn(() => new Date()),
 });
 
-export const services = pgTable("services", {
-    id: uuid("id")
-        .primaryKey()
-        .$defaultFn(() => uuidv7()),
-    serviceName: text("service_name").notNull(),
-    price: numeric("price", { precision: 10, scale: 2 }).notNull(),
-    initialDate: date("initial_date", { mode: "string" }).notNull(),
-    finishDate: date("finish_date", { mode: "string" }),
-    clientId: uuid("client_id")
-        .references(() => clients.id)
-        .notNull(),
-    details: text("details").notNull(),
-    statusServiceId: uuid("status_service_id").references(
-        () => statusService.id,
-    ),
-    active: boolean("active").default(true).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-        .defaultNow()
-        .notNull()
-        .$onUpdateFn(() => new Date()),
-});
+export const services = pgTable(
+    "services",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id").references(() => companies.id),
+        serviceName: text("service_name").notNull(),
+        price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+        initialDate: date("initial_date", { mode: "string" }).notNull(),
+        finishDate: date("finish_date", { mode: "string" }),
+        clientId: uuid("client_id")
+            .references(() => clients.id)
+            .notNull(),
+        details: text("details").notNull(),
+        statusServiceId: uuid("status_service_id").references(
+            () => statusService.id,
+        ),
+        active: boolean("active").default(true).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("services_company_id_idx").on(table.companyId),
+    ],
+);
 
 export const nf = pgTable(
     "nf",
@@ -139,6 +228,7 @@ export const nf = pgTable(
         id: uuid("id")
             .primaryKey()
             .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id").references(() => companies.id),
         typeId: uuid("type_id")
             .references(() => type.id)
             .notNull(),
@@ -171,6 +261,7 @@ export const nf = pgTable(
             .$onUpdateFn(() => new Date()),
     },
     (table) => [
+        index("nf_company_id_idx").on(table.companyId),
         index("nf_access_key_idx").on(table.acessKey),
         index("nf_number_idx").on(table.numberNf),
         index("nf_emission_date_idx").on(table.emissionDate),
@@ -204,6 +295,33 @@ export const bundled = pgTable("bundled", {
         .$onUpdateFn(() => new Date()),
 });
 
+export const companiesRelations = relations(companies, ({ one, many }) => ({
+    mother: one(companies, {
+        fields: [companies.motherId],
+        references: [companies.id],
+        relationName: "branches",
+    }),
+    branches: many(companies, {
+        relationName: "branches",
+    }),
+    clients: many(clients),
+    services: many(services),
+    movimentations: many(movimentation),
+    notes: many(nf),
+    userCompanies: many(userCompanies),
+}));
+
+export const userCompaniesRelations = relations(userCompanies, ({ one }) => ({
+    user: one(users, {
+        fields: [userCompanies.userId],
+        references: [users.id],
+    }),
+    company: one(companies, {
+        fields: [userCompanies.companyId],
+        references: [companies.id],
+    }),
+}));
+
 export const servicesRelations = relations(services, ({ one }) => ({
     client: one(clients, {
         fields: [services.clientId],
@@ -213,13 +331,30 @@ export const servicesRelations = relations(services, ({ one }) => ({
         fields: [services.statusServiceId],
         references: [statusService.id],
     }),
+    company: one(companies, {
+        fields: [services.companyId],
+        references: [companies.id],
+    }),
 }));
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
     role: one(roles, {
         fields: [users.roleId],
         references: [roles.id],
     }),
+    primaryCompany: one(companies, {
+        fields: [users.primaryCompanyId],
+        references: [companies.id],
+    }),
+    userCompanies: many(userCompanies),
+}));
+
+export const clientsRelations = relations(clients, ({ one, many }) => ({
+    company: one(companies, {
+        fields: [clients.companyId],
+        references: [companies.id],
+    }),
+    services: many(services),
 }));
 
 export const movimentationRelations = relations(movimentation, ({ one }) => ({
@@ -234,6 +369,10 @@ export const movimentationRelations = relations(movimentation, ({ one }) => ({
     destinationClientId: one(clients, {
         fields: [movimentation.destinationClientId],
         references: [clients.tradeName],
+    }),
+    company: one(companies, {
+        fields: [movimentation.companyId],
+        references: [companies.id],
     }),
 }));
 
@@ -253,5 +392,9 @@ export const nfRelations = relations(nf, ({ one }) => ({
     movimentation: one(movimentation, {
         fields: [nf.movimentationId],
         references: [movimentation.name],
+    }),
+    company: one(companies, {
+        fields: [nf.companyId],
+        references: [companies.id],
     }),
 }));

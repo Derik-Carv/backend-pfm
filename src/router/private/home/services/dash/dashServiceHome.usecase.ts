@@ -7,9 +7,13 @@ import { StatusServiceRepository } from "@/database/tables/statusService/statusS
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
 import type { Services } from "@/database/tables/services/services.interface";
 
-export async function usecaseMyServicesHome(userId: string) {
+export async function usecaseMyServicesHome(
+    userId: string,
+    companyIds?: string[],
+) {
     const allowedRoles = [
         allRoles.administrator,
+        allRoles.company_admin,
         allRoles.manager,
         allRoles.finance,
         allRoles.observer,
@@ -50,9 +54,9 @@ export async function usecaseMyServicesHome(userId: string) {
 
         const [highValueServices, recentServices, oldestServices] =
             await Promise.all([
-                servicesData.findHighValueByIds(serviceIds, 3),
-                servicesData.findRecentByIds(serviceIds, 3),
-                servicesData.findOldestByIds(serviceIds, 3),
+                servicesData.findHighValueByIds(serviceIds, 3, companyIds),
+                servicesData.findRecentByIds(serviceIds, 3, companyIds),
+                servicesData.findOldestByIds(serviceIds, 3, companyIds),
             ]);
 
         const [highValueWithNames, recentWithNames, oldestWithNames] =
@@ -71,9 +75,9 @@ export async function usecaseMyServicesHome(userId: string) {
 
     const [highValueServices, recentServices, oldestServices] =
         await Promise.all([
-            servicesData.findHighValue(3),
-            servicesData.findRecent(3),
-            servicesData.findOldest(3),
+            servicesData.findHighValue(3, companyIds),
+            servicesData.findRecent(3, companyIds),
+            servicesData.findOldest(3, companyIds),
         ]);
 
     const [highValueWithNames, recentWithNames, oldestWithNames] =

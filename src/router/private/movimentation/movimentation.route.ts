@@ -15,6 +15,7 @@ import {
 
 const allowedRoles = [
     allRoles.administrator,
+    allRoles.company_admin,
     allRoles.manager,
     allRoles.finance,
 ];

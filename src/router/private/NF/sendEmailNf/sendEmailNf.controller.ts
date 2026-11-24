@@ -19,10 +19,15 @@ export const sendEmailNfController = async (
 ) => {
     try {
         const userId = request.user.id;
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
 
         const data = sendEmailNfSchema.parse(request.body);
 
-        const sendEmail = await usecaseSendEmailNf(userId, data);
+        const sendEmail = await usecaseSendEmailNf(
+            userId,
+            data,
+            accessibleCompanyIds,
+        );
 
         return reply.status(201).send({
             message: "Send nf with email successfully",

@@ -1,5 +1,5 @@
 import { db } from "@/database/index";
-import { roles, users, statusService, type } from "@/database/schema/schema";
+import { roles, users, statusService, type, companies, userCompanies } from "@/database/schema/schema";
 import { cpfClean } from "@/utils/checkCpf";
 import { hashPassword } from "@/lib/hash";
 import { eq } from "drizzle-orm";
@@ -9,8 +9,29 @@ export async function startSeed() {
         "🌱 Iniciando verificação e seed essencial do banco de dados...",
     );
 
+    // 0. Seed da Mother Company padrão
+    const defaultMotherId = "018f0000-0000-7000-8000-000000000001";
+    const [existingMother] = await db
+        .select()
+        .from(companies)
+        .where(eq(companies.id, defaultMotherId))
+        .limit(1);
+
+    if (!existingMother) {
+        console.log("🏢 Criando Mother Company padrão...");
+        await db.insert(companies).values({
+            id: defaultMotherId,
+            registeredCompanyName: "Empresa Matriz Principal",
+            tradeName: "Matriz Principal",
+            cnpj: "00000000000191",
+            active: true,
+        });
+        console.log("✅ Mother Company padrão criada.");
+    }
+
     const targetRoles = [
         "administrator",
+        "company_admin",
         "manager",
         "finance",
         "observer",
@@ -64,17 +85,24 @@ export async function startSeed() {
         const cpf = await cpfClean(adminCpf);
         const hashedPassword = await hashPassword(adminPassword);
 
-        await db.insert(users).values({
+        const [createdAdmin] = await db.insert(users).values({
             name: "administrator",
             surname: "system",
             username: adminUsername,
             password: hashedPassword,
             roleId: administratorRole.id,
+            primaryCompanyId: defaultMotherId,
             cpf: cpf,
             active: true,
             passwordChangeRequired: true,
+        }).returning({ id: users.id });
+
+        await db.insert(userCompanies).values({
+            userId: createdAdmin.id,
+            companyId: defaultMotherId,
+            isDefault: true,
         });
-        console.log("✅ Usuário admin criado.");
+        console.log("✅ Usuário admin criado e vinculado à Mother Company padrão.");
     }
 
     const defaultStatuses = ["Fila", "Em Andamento", "Finalizado"];

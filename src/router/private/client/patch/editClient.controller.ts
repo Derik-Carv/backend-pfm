@@ -18,8 +18,13 @@ export const editClientController = async (
     try {
         const data = editClientSchema.parse(request.body);
         const userId = request.user.id;
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
 
-        const responseClient = await usecaseEditClient(userId, data);
+        const responseClient = await usecaseEditClient(
+            userId,
+            data,
+            accessibleCompanyIds,
+        );
 
         return reply.status(200).send({
             message: "Client edited with sucess",

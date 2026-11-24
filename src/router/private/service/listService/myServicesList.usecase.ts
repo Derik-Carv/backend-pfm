@@ -7,6 +7,7 @@ import { BundledRepository } from "@/database/tables/bundled/bundled.repository"
 export async function usecaseMyServicesList(
     userId: string,
     clientId?: string,
+    companyIds?: string[],
 ) {
     const userData = new UsersRepository();
     const roleData = new RoleRepository();
@@ -37,15 +38,25 @@ export async function usecaseMyServicesList(
             serviceIds.map((id) => servicesData.findId(id)),
         );
 
-        const serviceList = services.filter(Boolean);
+        const serviceList = services.filter(
+            (s) =>
+                Boolean(s) &&
+                (!companyIds ||
+                    companyIds.length === 0 ||
+                    (s.companyId !== null && companyIds.includes(s.companyId))),
+        );
+
+        if (serviceList.length === 0) {
+            throw new Error("SERVICE_NOT_FOUND");
+        }
 
         return { list: serviceList };
     }
 
     if (userRole.name != allRoles.colaborator) {
         const services = clientId
-            ? await servicesData.findActiveByClient(clientId)
-            : await servicesData.findActives();
+            ? await servicesData.findActiveByClient(clientId, companyIds)
+            : await servicesData.findActives(companyIds);
 
         if (!services || services.length === 0)
             throw new Error("SERVICE_NOT_FOUND");

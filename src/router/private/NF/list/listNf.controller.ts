@@ -11,7 +11,8 @@ export async function listNfController(
 ) {
     try {
         const query = nfListQuerySchema.parse(request.query);
-        const result = await listNf(query);
+        const companyIds = request.tenant?.accessibleCompanyIds;
+        const result = await listNf(query, companyIds);
 
         const archiveRoot = path.resolve(process.cwd(), "archives");
         const notes = await Promise.all(result.list.map(async (note) => {

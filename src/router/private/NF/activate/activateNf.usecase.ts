@@ -5,9 +5,15 @@ export function injectActivateNf({
 }: {
     nf: Pick<INF, "findId" | "activate">;
 }) {
-    return async function activateNf(id: string) {
+    return async function activateNf(id: string, accessibleCompanyIds?: string[]) {
         const note = await nf.findId(id);
-        if (!note) throw new Error("NF_NOT_FOUND");
+        if (
+            !note ||
+            (accessibleCompanyIds &&
+                note.companyId &&
+                !accessibleCompanyIds.includes(note.companyId))
+        )
+            throw new Error("NF_NOT_FOUND");
         if (note.active) throw new Error("NF_ALREADY_ACTIVE");
 
         const activated = await nf.activate(id);

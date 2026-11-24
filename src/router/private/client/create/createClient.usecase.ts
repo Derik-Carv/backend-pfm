@@ -10,9 +10,11 @@ export function injectUseCaseCreateClient({
     return async function usecaseCreateClient(
         userId: string,
         data: CreateClientInput,
+        companyId?: string,
     ) {
         const allowedRoles = [
             allRoles.administrator,
+            allRoles.company_admin,
             allRoles.manager,
             allRoles.finance,
         ];
@@ -29,33 +31,40 @@ export function injectUseCaseCreateClient({
 
         const companyExists = await clientsDb.findByCompanyName(
             data.registeredCompanyName,
+            companyId,
         );
 
         if (companyExists) throw new Error("COMPANY_NAME_ALREADY_EXISTS");
 
-        const tradeNameExists = await clientsDb.findByTradeName(data.tradeName);
+        const tradeNameExists = await clientsDb.findByTradeName(
+            data.tradeName,
+            companyId,
+        );
 
         if (tradeNameExists) throw new Error("TRADE_NAME_ALREADY_EXISTS");
 
         if (data.cpf) {
-            const cpfExists = await clientsDb.findByCpf(data.cpf);
+            const cpfExists = await clientsDb.findByCpf(data.cpf, companyId);
 
             if (cpfExists) throw new Error("CPF_ALREADY_EXISTS");
         }
 
         if (data.cnpj) {
-            const cnpjExists = await clientsDb.findByCnpj(data.cnpj);
+            const cnpjExists = await clientsDb.findByCnpj(data.cnpj, companyId);
 
             if (cnpjExists) throw new Error("CNPJ_ALREADY_EXISTS");
         }
 
         if (data.email) {
-            const emailExists = await clientsDb.findByEmail(data.email);
+            const emailExists = await clientsDb.findByEmail(data.email, companyId);
             if (emailExists) throw new Error("EMAIL_ALREADY_EXISTS");
         }
 
         data.active = true;
 
-        return await clientsDb.create(data);
+        return await clientsDb.create({
+            ...data,
+            ...(companyId ? { companyId } : {}),
+        });
     };
 }

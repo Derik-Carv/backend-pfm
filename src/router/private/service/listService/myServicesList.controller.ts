@@ -8,9 +8,14 @@ export const getMyServicesListController = async (
 ) => {
     try {
         const userId = request.user.id;
+        const companyIds = request.tenant?.accessibleCompanyIds;
 
         const { clientId } = servicesListQuerySchema.parse(request.query);
-        const serviceList = await usecaseMyServicesList(userId, clientId);
+        const serviceList = await usecaseMyServicesList(
+            userId,
+            clientId,
+            companyIds,
+        );
 
         return reply.status(200).send({
             message: "Get find services list with success",

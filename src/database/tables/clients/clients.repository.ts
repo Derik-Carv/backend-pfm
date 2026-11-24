@@ -1,6 +1,6 @@
 import { db } from "@/database/index";
 import { clients } from "@/database/schema/schema";
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import type {
     IClient,
     Client,
@@ -22,47 +22,57 @@ export class ClientRepository implements IClient {
         return client || null;
     }
 
-    async findByCompanyName(name: string): Promise<Client | null> {
+    async findByCompanyName(name: string, companyId?: string): Promise<Client | null> {
+        const filters = [eq(clients.registeredCompanyName, name)];
+        if (companyId) filters.push(eq(clients.companyId, companyId));
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.registeredCompanyName, name))
+            .where(and(...filters))
             .limit(1);
         return client || null;
     }
 
-    async findByTradeName(name: string): Promise<Client | null> {
+    async findByTradeName(name: string, companyId?: string): Promise<Client | null> {
+        const filters = [eq(clients.tradeName, name)];
+        if (companyId) filters.push(eq(clients.companyId, companyId));
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.tradeName, name))
+            .where(and(...filters))
             .limit(1);
         return client || null;
     }
 
-    async findByCpf(cpf: string): Promise<Client | null> {
+    async findByCpf(cpf: string, companyId?: string): Promise<Client | null> {
+        const filters = [eq(clients.cpf, cpf)];
+        if (companyId) filters.push(eq(clients.companyId, companyId));
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.cpf, cpf))
+            .where(and(...filters))
             .limit(1);
         return client || null;
     }
 
-    async findByCnpj(cnpj: string): Promise<Client | null> {
+    async findByCnpj(cnpj: string, companyId?: string): Promise<Client | null> {
+        const filters = [eq(clients.cnpj, cnpj)];
+        if (companyId) filters.push(eq(clients.companyId, companyId));
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.cnpj, cnpj))
+            .where(and(...filters))
             .limit(1);
         return client || null;
     }
 
-    async findByEmail(email: string): Promise<Client | null> {
+    async findByEmail(email: string, companyId?: string): Promise<Client | null> {
+        const filters = [eq(clients.email, email)];
+        if (companyId) filters.push(eq(clients.companyId, companyId));
         const [client] = await db
             .select()
             .from(clients)
-            .where(eq(clients.email, email))
+            .where(and(...filters))
             .limit(1);
         return client || null;
     }
@@ -127,21 +137,34 @@ export class ClientRepository implements IClient {
         return client || null;
     }
 
-    async findAll(): Promise<Client[]> {
+    async findAll(companyIds?: string[]): Promise<Client[]> {
+        if (companyIds && companyIds.length > 0) {
+            return await db
+                .select()
+                .from(clients)
+                .where(inArray(clients.companyId, companyIds));
+        }
         return await db.query.clients.findMany();
     }
 
     async findPage(
         limit: number,
         offset: number,
+        companyIds?: string[],
     ): Promise<{ list: Client[]; total: number }> {
+        const whereClause =
+            companyIds && companyIds.length > 0
+                ? inArray(clients.companyId, companyIds)
+                : undefined;
+
         const [list, [totalRow]] = await Promise.all([
             db.query.clients.findMany({
+                where: whereClause,
                 orderBy: (clients, { desc }) => [desc(clients.createdAt)],
                 limit,
                 offset,
             }),
-            db.select({ count: count() }).from(clients),
+            db.select({ count: count() }).from(clients).where(whereClause),
         ]);
 
         return {
@@ -150,11 +173,25 @@ export class ClientRepository implements IClient {
         };
     }
 
-    async findActives(): Promise<Client[]> {
-        return await db.select().from(clients).where(eq(clients.active, true));
+    async findActives(companyIds?: string[]): Promise<Client[]> {
+        const filters = [eq(clients.active, true)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(clients.companyId, companyIds));
+        }
+        return await db
+            .select()
+            .from(clients)
+            .where(and(...filters));
     }
 
-    async findInactives(): Promise<Client[]> {
-        return await db.select().from(clients).where(eq(clients.active, false));
+    async findInactives(companyIds?: string[]): Promise<Client[]> {
+        const filters = [eq(clients.active, false)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(clients.companyId, companyIds));
+        }
+        return await db
+            .select()
+            .from(clients)
+            .where(and(...filters));
     }
 }

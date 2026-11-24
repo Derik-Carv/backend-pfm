@@ -1,6 +1,6 @@
 import { db } from "@/database/index";
 import { movimentation } from "@/database/schema/schema";
-import { eq, count } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import type {
     CreateMovimentationDatabaseInput,
     IMovimentation,
@@ -87,20 +87,28 @@ export class MovimentationRepository implements IMovimentation {
         return idReturning || null;
     }
 
-    async findName(name: string): Promise<Movimentation> {
+    async findName(name: string, companyIds?: string[]): Promise<Movimentation> {
+        const filters = [eq(movimentation.name, name)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(movimentation.companyId, companyIds));
+        }
         const [nameReturning] = await db
             .select()
             .from(movimentation)
-            .where(eq(movimentation.name, name));
+            .where(and(...filters));
 
         return nameReturning || null;
     }
 
-    async findActives(): Promise<Movimentation[]> {
+    async findActives(companyIds?: string[]): Promise<Movimentation[]> {
+        const filters = [eq(movimentation.active, true)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(movimentation.companyId, companyIds));
+        }
         return await db
             .select()
             .from(movimentation)
-            .where(eq(movimentation.active, true));
+            .where(and(...filters));
     }
 
     async findInactives(): Promise<Movimentation[]> {

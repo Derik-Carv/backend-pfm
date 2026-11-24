@@ -15,17 +15,22 @@ export class ServicesRepository implements IServices {
         return newService;
     }
 
-    async findActives(): Promise<Services[]> {
+    async findActives(companyIds?: string[]): Promise<Services[]> {
+        const filters = [eq(services.active, true)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return db
             .select()
             .from(services)
-            .where(eq(services.active, true));
+            .where(and(...filters));
     }
 
     async findActivePage(
         limit: number,
         offset: number,
         collaboratorId?: string,
+        companyIds?: string[],
     ): Promise<{ list: ServicePageItem[]; total: number }> {
         const filters = [
             eq(services.active, true),
@@ -41,6 +46,9 @@ export class ServicesRepository implements IServices {
                               .where(eq(bundled.userId, collaboratorId)),
                       ),
                   ]
+                : []),
+            ...(companyIds && companyIds.length > 0
+                ? [inArray(services.companyId, companyIds)]
                 : []),
         ];
         const where = and(...filters);
@@ -82,13 +90,21 @@ export class ServicesRepository implements IServices {
         };
     }
 
-    async findActiveByClient(clientId: string): Promise<Services[]> {
+    async findActiveByClient(
+        clientId: string,
+        companyIds?: string[],
+    ): Promise<Services[]> {
+        const filters = [
+            eq(services.active, true),
+            eq(services.clientId, clientId),
+            ...(companyIds && companyIds.length > 0
+                ? [inArray(services.companyId, companyIds)]
+                : []),
+        ];
         return db
             .select()
             .from(services)
-            .where(
-                and(eq(services.active, true), eq(services.clientId, clientId)),
-            )
+            .where(and(...filters))
             .orderBy(desc(services.createdAt));
     }
 
@@ -98,6 +114,7 @@ export class ServicesRepository implements IServices {
         limit: number,
         offset: number,
         collaboratorId?: string,
+        companyIds?: string[],
     ): Promise<{ list: ServicePageItem[]; total: number }> {
         const searchFilter = {
             id: eq(services.id, value),
@@ -120,6 +137,9 @@ export class ServicesRepository implements IServices {
                               .where(eq(bundled.userId, collaboratorId)),
                       ),
                   ]
+                : []),
+            ...(companyIds && companyIds.length > 0
+                ? [inArray(services.companyId, companyIds)]
                 : []),
         ];
         const where = and(...filters);
@@ -162,9 +182,7 @@ export class ServicesRepository implements IServices {
         return { list, total: totalRow.count };
     }
 
-    async findAll(): Promise<Services[]> {
-        return await db.query.services.findMany();
-    }
+
 
     async findId(id: string): Promise<Services> {
         const [service] = await db
@@ -224,12 +242,17 @@ export class ServicesRepository implements IServices {
     async findHighValueByIds(
         ids: string[],
         limitNumber: number = 3,
+        companyIds?: string[],
     ): Promise<Services[]> {
         if (ids.length === 0) return [];
+        const filters = [inArray(services.id, ids)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return await db
             .select()
             .from(services)
-            .where(inArray(services.id, ids))
+            .where(and(...filters))
             .orderBy(desc(services.price))
             .limit(limitNumber);
     }
@@ -237,12 +260,17 @@ export class ServicesRepository implements IServices {
     async findRecentByIds(
         ids: string[],
         limitNumber: number = 3,
+        companyIds?: string[],
     ): Promise<Services[]> {
         if (ids.length === 0) return [];
+        const filters = [inArray(services.id, ids)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return await db
             .select()
             .from(services)
-            .where(inArray(services.id, ids))
+            .where(and(...filters))
             .orderBy(desc(services.createdAt))
             .limit(limitNumber);
     }
@@ -250,45 +278,90 @@ export class ServicesRepository implements IServices {
     async findOldestByIds(
         ids: string[],
         limitNumber: number = 3,
+        companyIds?: string[],
     ): Promise<Services[]> {
         if (ids.length === 0) return [];
+        const filters = [inArray(services.id, ids)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return await db
             .select()
             .from(services)
-            .where(inArray(services.id, ids))
+            .where(and(...filters))
             .orderBy(asc(services.createdAt))
             .limit(limitNumber);
     }
 
-    async findHighValue(limitNumber: number = 3): Promise<Services[]> {
+    async findHighValue(
+        limitNumber: number = 3,
+        companyIds?: string[],
+    ): Promise<Services[]> {
+        const filters = [eq(services.active, true)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return await db
             .select()
             .from(services)
+            .where(and(...filters))
             .orderBy(desc(services.price))
             .limit(limitNumber);
     }
 
-    async findRecent(limitNumber: number = 3): Promise<Services[]> {
+    async findRecent(
+        limitNumber: number = 3,
+        companyIds?: string[],
+    ): Promise<Services[]> {
+        const filters = [eq(services.active, true)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return await db
             .select()
             .from(services)
+            .where(and(...filters))
             .orderBy(desc(services.createdAt))
             .limit(limitNumber);
     }
 
-    async findOldest(limitNumber: number = 3): Promise<Services[]> {
+    async findOldest(
+        limitNumber: number = 3,
+        companyIds?: string[],
+    ): Promise<Services[]> {
+        const filters = [eq(services.active, true)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return await db
             .select()
             .from(services)
+            .where(and(...filters))
             .orderBy(asc(services.createdAt))
             .limit(limitNumber);
     }
 
-    async findInactives(): Promise<Services[]> {
+
+
+    async findAll(companyIds?: string[]): Promise<Services[]> {
+        if (companyIds && companyIds.length > 0) {
+            return await db
+                .select()
+                .from(services)
+                .where(inArray(services.companyId, companyIds));
+        }
+        return await db.query.services.findMany();
+    }
+
+    async findInactives(companyIds?: string[]): Promise<Services[]> {
+        const filters = [eq(services.active, false)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(services.companyId, companyIds));
+        }
         return await db
             .select()
             .from(services)
-            .where(eq(services.active, false));
+            .where(and(...filters));
     }
 
     async editName(id: string, name: string): Promise<Services | null> {

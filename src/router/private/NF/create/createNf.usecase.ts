@@ -14,6 +14,8 @@ export function injejctCreateNf({
         userId: string,
         data: NfCreateInput,
         file: File,
+        activeCompanyId?: string,
+        accessibleCompanyIds?: string[],
     ) {
         const user = await findUser.findId(userId);
         if (!user) {
@@ -36,10 +38,22 @@ export function injejctCreateNf({
         if (data.totalValue <= 0) throw new Error("VALUE_INVALID");
 
         const validClient = await clientsDb.findById(data.thirdPartyClientId);
-        if (!validClient) throw new Error("CLIENT_NOT_EXIST");
+        if (
+            !validClient ||
+            (accessibleCompanyIds &&
+                validClient.companyId &&
+                !accessibleCompanyIds.includes(validClient.companyId))
+        )
+            throw new Error("CLIENT_NOT_EXIST");
 
         const validService = await findService.findId(data.servicesId);
-        if (!validService) throw new Error("SERVICE_NOT_EXIST");
+        if (
+            !validService ||
+            (accessibleCompanyIds &&
+                validService.companyId &&
+                !accessibleCompanyIds.includes(validService.companyId))
+        )
+            throw new Error("SERVICE_NOT_EXIST");
 
         data.active = true;
 
@@ -78,10 +92,12 @@ export function injejctCreateNf({
 
         if (!pdf) throw new Error("ERROR_UPDATE_FILE");
 
+        const targetCompanyId = validService.companyId ?? activeCompanyId;
         let newNf;
         try {
             newNf = await nf.create({
                 ...data,
+                ...(targetCompanyId ? { companyId: targetCompanyId } : {}),
                 pathFile: pdf,
                 totalValue: data.totalValue.toFixed(2),
             });

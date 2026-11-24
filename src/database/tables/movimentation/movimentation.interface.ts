@@ -23,13 +23,13 @@ export type MovimentationPageItem = Pick<
 export interface IMovimentation {
     create(data: CreateMovimentationDatabaseInput): Promise<Movimentation>;
     findId(id: string): Promise<Movimentation>;
-    findName(name: string): Promise<Movimentation>;
+    findName(name: string, companyIds?: string[]): Promise<Movimentation>;
     findActivePage(
         limit: number,
         offset: number,
     ): Promise<{ list: MovimentationPageItem[]; total: number }>;
     findAll(): Promise<Movimentation[]>;
-    findActives(): Promise<Movimentation[]>;
+    findActives(companyIds?: string[]): Promise<Movimentation[]>;
     findInactives(): Promise<Movimentation[]>;
     deactivate(id: string): Promise<Movimentation | null>;
 }

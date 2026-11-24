@@ -11,11 +11,18 @@ export function injejctSendEmailNf({
     return async function usecaseSendEmaNlNf(
         userId: string,
         nfData: NfSendEmailInput,
+        accessibleCompanyIds?: string[],
     ) {
         const sender = await findUser.findId(userId);
 
         const nf = await findNf.findNfNumber(nfData.numberNf);
-        if (!nf) throw new Error("NF_NUMBER_INVALID");
+        if (
+            !nf ||
+            (accessibleCompanyIds &&
+                nf.companyId &&
+                !accessibleCompanyIds.includes(nf.companyId))
+        )
+            throw new Error("NF_NUMBER_INVALID");
 
         const type = await findType.findName(nfData.type);
         if (!type) throw new Error("TYPE_ID_INVALID");
@@ -36,8 +43,15 @@ export function injejctSendEmailNf({
 
         const client = await clientsDb.findByCompanyName(
             nfData.clientName.toLocaleLowerCase(),
+            nf.companyId ?? undefined,
         );
-        if (!client) throw new Error("CLIENT_ID_INVALID");
+        if (
+            !client ||
+            (accessibleCompanyIds &&
+                client.companyId &&
+                !accessibleCompanyIds.includes(client.companyId))
+        )
+            throw new Error("CLIENT_ID_INVALID");
 
         if (!nfData.destinationEmail) throw new Error("EMAIL_INVALID");
 

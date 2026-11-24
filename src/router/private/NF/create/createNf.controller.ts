@@ -53,8 +53,16 @@ export const createNfServicesController = async (
         }
 
         const data = nfCreateBaseSchema.parse(nfData);
+        const activeCompanyId = request.tenant?.activeCompanyId;
+        const accessibleCompanyIds = request.tenant?.accessibleCompanyIds;
 
-        const newNf = await usecaseCreateNf(userId, data, file);
+        const newNf = await usecaseCreateNf(
+            userId,
+            data,
+            file,
+            activeCompanyId,
+            accessibleCompanyIds,
+        );
 
         return reply.status(201).send({
             message: "Create nf with sucess",

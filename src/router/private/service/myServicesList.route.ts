@@ -13,6 +13,7 @@ import { editServicesController } from "./patchService/editService.controller";
 
 const allowedRoles = [
     allRoles.administrator,
+    allRoles.company_admin,
     allRoles.manager,
     allRoles.finance,
 ];

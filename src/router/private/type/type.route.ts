@@ -17,7 +17,12 @@ export async function typeRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
     app.addHook(
         "preHandler",
-        inspectRole([allRoles.administrator, allRoles.manager, allRoles.finance]),
+        inspectRole([
+            allRoles.administrator,
+            allRoles.company_admin,
+            allRoles.manager,
+            allRoles.finance,
+        ]),
     );
     app.get("/", getTypesRouteOptions, getTypesController);
     app.post("/", createTypeRouteOptions, createTypeController);

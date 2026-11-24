@@ -13,7 +13,8 @@ export async function getClientsController(
 ) {
     try {
         const { page, limit } = paginationQuerySchema.parse(request.query);
-        const result = await usecaseAllCLients({ page, limit });
+        const companyIds = request.tenant?.accessibleCompanyIds;
+        const result = await usecaseAllCLients({ page, limit }, companyIds);
 
         return reply.status(200).send({
             message: "Viewer Clients with sucess",
