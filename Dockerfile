@@ -15,6 +15,7 @@ CMD ["bun", "run", "dev"]
 
 FROM dependencies AS builder
 
+ENV NODE_ENV=production
 COPY . .
 RUN bun run build
 

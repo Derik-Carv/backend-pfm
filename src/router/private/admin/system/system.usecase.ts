@@ -43,7 +43,7 @@ export async function usecaseGetSystemMetrics() {
             uptimeSeconds: Math.floor(process.uptime()),
             databaseConnection: true,
             memoryUsageMb: memoryMb,
-            environment: process.env.NODE_ENV || "development",
+            environment: Bun.env.NODE_ENV || process.env.NODE_ENV || "development",
         },
         stats: {
             totalCompanies: companiesCount.count,

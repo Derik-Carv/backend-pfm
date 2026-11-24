@@ -10,7 +10,7 @@
         "dc:prod": "docker compose -f compose.yaml -f compose.production.yaml up -d --build",
         "dcreset": "docker compose down && docker compose up --build",
         "start": "bun run src/server.ts",
-        "build": "bun build ./src/server.ts --outdir ./dist --target bun",
+        "build": "NODE_ENV=production bun build ./src/server.ts --outdir ./dist --target bun",
         "typecheck": "tsc --noEmit",
         "preview": "bun run dist/server.js",
         "update": "docker exec bun_backend_dev bun update",
