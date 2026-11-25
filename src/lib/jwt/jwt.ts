@@ -2,14 +2,13 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 
 export function jwtTokenGenerate(
     app: FastifyInstance,
-    payload: { id: string; role: string; cpf: string },
+    payload: { id: string; role: string },
 ): string {
     try {
         return app.jwt.sign(
             {
                 id: payload.id,
                 role: payload.role,
-                cpf: payload.cpf,
                 acessNow: new Date().toISOString(),
             },
             {

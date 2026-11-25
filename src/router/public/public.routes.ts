@@ -19,6 +19,26 @@ import {
     forgotPasswordController,
     resetPasswordController,
 } from "@/router/public/password/password.controller";
+import { getLegalMetadata } from "@/lib/lgpd/legal.constants";
+import { z } from "zod";
+
+const legalMetadataResponseSchema = z.object({
+    termsVersion: z.string(),
+    privacyVersion: z.string(),
+    dpo: z.object({
+        name: z.string(),
+        email: z.string(),
+    }),
+    fiscalRetentionYears: z.number(),
+    otpRetentionHours: z.number(),
+    rejectedRequestRetentionDays: z.number(),
+    subprocessors: z.array(
+        z.object({
+            name: z.string(),
+            purpose: z.string(),
+        }),
+    ),
+});
 
 export async function publicRoutes(app: FastifyInstance) {
     app.post("/login", loginRouteOptions, loginController);
@@ -48,4 +68,20 @@ export async function publicRoutes(app: FastifyInstance) {
     );
 
     app.get("/health", healthRouteOptions, healthController);
+
+    app.get(
+        "/legal",
+        {
+            schema: {
+                tags: ["Public", "LGPD"],
+                summary: "Get current LGPD legal document versions and DPO contact",
+                response: {
+                    200: legalMetadataResponseSchema,
+                },
+            },
+        },
+        async (_request, reply) => {
+            return reply.status(200).send(getLegalMetadata());
+        },
+    );
 }

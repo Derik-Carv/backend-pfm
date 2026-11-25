@@ -18,8 +18,9 @@ import fastifyJwt from "@fastify/jwt";
 import { loggerConfig, loggerProd } from "./config/logger";
 import fastifyMultipart from "@fastify/multipart";
 import { nfCreateMultipartOpenApiSchema } from "./router/private/NF/nf.schemas";
+import { extractRequestMeta, recordAuditLog } from "./lib/lgpd/audit";
 
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = (Bun.env.NODE_ENV ?? process.env.NODE_ENV) !== "production";
 const jwtSecret = process.env.JWT_SECRET as string;
 
 // define fastify and logger configuration
@@ -33,28 +34,63 @@ export const app = fastify({
 const auditEnabled = process.env.AUDIT_LOG_ENABLED === "true";
 
 app.addHook("onResponse", async (request, reply) => {
+    const urlPath = request.routeOptions.url || request.url.split("?")[0] || "";
+    const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method);
+    const isSensitiveRead =
+        request.method === "GET" &&
+        (urlPath.startsWith("/admin/data") ||
+            urlPath === "/account/privacy/export" ||
+            (urlPath.startsWith("/nf/") && urlPath.endsWith("/file")));
+
     if (
-        !auditEnabled ||
-        !["POST", "PUT", "PATCH", "DELETE"].includes(request.method) ||
-        request.url.startsWith("/public/login")
+        (!isMutating && !isSensitiveRead) ||
+        urlPath === "/public/login"
     ) {
         return;
     }
 
-    request.log.info(
-        {
-            audit: true,
-            auditAction: request.method.toLowerCase(),
-            actorId: request.user?.id ?? null,
-            actorRole: request.user?.role ?? null,
-            method: request.method,
-            route: request.routeOptions.url,
-            statusCode: reply.statusCode,
+    const meta = extractRequestMeta(request);
+    const params = (request.params ?? {}) as Record<string, unknown>;
+    const targetId =
+        typeof params.id === "string"
+            ? params.id
+            : undefined;
+    const targetTable =
+        typeof params.table === "string"
+            ? params.table
+            : urlPath.split("/").filter(Boolean)[0] ?? undefined;
+
+    await recordAuditLog({
+        actorId: request.user?.id ?? null,
+        actorRole: request.user?.role ?? null,
+        companyId: request.tenant?.activeCompanyId ?? null,
+        action: `${request.method.toLowerCase()}:${urlPath}`,
+        targetTable,
+        targetId,
+        ipAddress: meta.ipAddress,
+        userAgent: meta.userAgent,
+        statusCode: reply.statusCode,
+        metadata: {
             success: reply.statusCode < 400,
-            requestId: request.id,
         },
-        "Audit action",
-    );
+    });
+
+    if (auditEnabled) {
+        request.log.info(
+            {
+                audit: true,
+                auditAction: request.method.toLowerCase(),
+                actorId: request.user?.id ?? null,
+                actorRole: request.user?.role ?? null,
+                method: request.method,
+                route: urlPath,
+                statusCode: reply.statusCode,
+                success: reply.statusCode < 400,
+                requestId: request.id,
+            },
+            "Audit action",
+        );
+    }
 });
 
 await app.register(cors, corsOptions);
@@ -69,36 +105,38 @@ await app.register(fastifyJwt, {
 
 app.register(fastifyMultipart);
 
-app.register(fasfitySwagger, {
-    openapi: {
-        info: {
-            title: "API Principal Backend",
-            description: "Documentation for API Backend",
-            version: "1.0.0",
+if (isDev) {
+    app.register(fasfitySwagger, {
+        openapi: {
+            info: {
+                title: "API Principal Backend",
+                description: "Documentation for API Backend",
+                version: "1.0.0",
+            },
         },
-    },
-    transform: (document) => {
-        const transformed = jsonSchemaTransform(document);
+        transform: (document) => {
+            const transformed = jsonSchemaTransform(document);
 
-        if (
-            (document.url === "/nf" || document.url === "/nf/") &&
-            transformed.schema
-        ) {
-            return {
-                ...transformed,
-                schema: {
-                    ...transformed.schema,
-                    body: nfCreateMultipartOpenApiSchema,
-                },
-            };
-        }
+            if (
+                (document.url === "/nf" || document.url === "/nf/") &&
+                transformed.schema
+            ) {
+                return {
+                    ...transformed,
+                    schema: {
+                        ...transformed.schema,
+                        body: nfCreateMultipartOpenApiSchema,
+                    },
+                };
+            }
 
-        return transformed;
-    },
-});
+            return transformed;
+        },
+    });
 
-app.register(fasfitySwaggerUi, {
-    routePrefix: "/docs",
-});
+    app.register(fasfitySwaggerUi, {
+        routePrefix: "/docs",
+    });
+}
 
 app.register(appRoutes);

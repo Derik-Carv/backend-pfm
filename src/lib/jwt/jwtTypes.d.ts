@@ -5,13 +5,13 @@ declare module "@fastify/jwt" {
         payload: {
             id: string;
             role: string;
-            cpf: string;
+            cpf?: string;
             acessNow: string;
         };
         user: {
             id: string;
             role: string;
-            cpf: string;
+            cpf?: string;
             acessNow: string;
         };
     }

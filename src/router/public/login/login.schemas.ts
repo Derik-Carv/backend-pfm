@@ -6,7 +6,7 @@ export const loginSchema = z
             .string({ message: "username is required" })
             .trim()
             .min(1)
-            .max(50, { message: "Username can have maximun 50 characters" }),
+            .max(150, { message: "Username can have maximum 150 characters" }),
         password: z
             .string({ message: "password is required" })
             .trim()
@@ -20,6 +20,7 @@ export const loginResponseOkSchema = z
         message: z.string(),
         token: z.string(),
         passwordChangeRequired: z.boolean(),
+        legalAcceptanceRequired: z.boolean(),
     })
     .strict();
 

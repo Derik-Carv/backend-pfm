@@ -7,9 +7,12 @@ import {
 } from "./account.schemas";
 import { hashPassword, verifyPassword } from "@/lib/hash";
 import { errorResponseSchema } from "@/router/error.schema";
+import { registerAccountPrivacyRoutes } from "./account.privacy";
 
 export async function accountRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
+
+    await registerAccountPrivacyRoutes(app);
 
     app.patch("/password", {
         schema: {

@@ -76,6 +76,7 @@ export const users = pgTable(
         passwordChangeRequired: boolean("password_change_required")
             .default(false)
             .notNull(),
+        anonymizedAt: timestamp("anonymized_at"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")
             .defaultNow()
@@ -127,13 +128,17 @@ export const companyRegistrationRequests = pgTable(
         adminSurname: text("admin_surname").notNull(),
         adminEmail: text("admin_email").notNull(),
         adminCpf: text("admin_cpf").notNull(),
-        adminPasswordHash: text("admin_password_hash").notNull(),
+        adminPasswordHash: text("admin_password_hash"),
         status: text("status").default("pending").notNull(),
         rejectionReason: text("rejection_reason"),
         reviewedBy: uuid("reviewed_by").references(() => users.id),
         reviewedAt: timestamp("reviewed_at"),
         approvedCompanyId: uuid("approved_company_id").references(() => companies.id),
         approvedUserId: uuid("approved_user_id").references(() => users.id),
+        acceptedTermsVersion: text("accepted_terms_version"),
+        acceptedPrivacyVersion: text("accepted_privacy_version"),
+        acceptedIp: text("accepted_ip"),
+        acceptedAt: timestamp("accepted_at"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")
             .defaultNow()
@@ -144,6 +149,58 @@ export const companyRegistrationRequests = pgTable(
         index("company_reg_req_status_idx").on(table.status),
         index("company_reg_req_cnpj_idx").on(table.cnpj),
         index("company_reg_req_email_idx").on(sql`lower(${table.adminEmail})`),
+    ],
+);
+
+export const auditLogs = pgTable(
+    "audit_logs",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        actorId: uuid("actor_id").references(() => users.id),
+        actorRole: text("actor_role"),
+        companyId: uuid("company_id").references(() => companies.id),
+        action: text("action").notNull(),
+        targetTable: text("target_table"),
+        targetId: text("target_id"),
+        ipAddress: text("ip_address"),
+        userAgent: text("user_agent"),
+        metadata: text("metadata"),
+        statusCode: integer("status_code"),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => [
+        index("audit_logs_created_at_idx").on(table.createdAt),
+        index("audit_logs_actor_idx").on(table.actorId, table.createdAt),
+        index("audit_logs_company_idx").on(table.companyId, table.createdAt),
+        index("audit_logs_action_idx").on(table.action),
+    ],
+);
+
+export const legalAcceptances = pgTable(
+    "legal_acceptances",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        userId: uuid("user_id").references(() => users.id),
+        companyRequestId: uuid("company_request_id").references(
+            () => companyRegistrationRequests.id,
+        ),
+        documentType: text("document_type").notNull(),
+        documentVersion: text("document_version").notNull(),
+        ipAddress: text("ip_address"),
+        userAgent: text("user_agent"),
+        acceptedAt: timestamp("accepted_at").defaultNow().notNull(),
+    },
+    (table) => [
+        index("legal_acceptances_user_doc_idx").on(
+            table.userId,
+            table.documentType,
+            table.documentVersion,
+        ),
+        index("legal_acceptances_request_idx").on(table.companyRequestId),
     ],
 );
 

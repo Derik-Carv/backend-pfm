@@ -10,6 +10,16 @@ type NfInfo = {
     clientName: string;
     details?: string;
     destinationEmail: string;
+    companySender?: {
+        tradeName: string;
+        phone?: string | null;
+        email?: string | null;
+    };
+    pixInfo?: {
+        receiver: string;
+        key: string;
+        bankName?: string;
+    };
 };
 
 const hostSmtp = process.env.SMTP_HOST;
@@ -19,10 +29,6 @@ const authUserSmtp = {
     pass: process.env.SMTP_PASS,
 };
 const name = process.env.NAME;
-const phone = process.env.PHONE;
-const nameReceiver = process.env.NAME_RECEIVER;
-const keyPix = process.env.KEY_PIX;
-const bankName = process.env.BANK_NAME;
 
 export const transport = nodemailer.createTransport({
     host: hostSmtp,
@@ -173,10 +179,25 @@ export async function sendEmailNf(nfData: NfInfo) {
             );
         }
 
+        const senderName = nfData.companySender?.tradeName || name || "Derik Flash";
+        const senderContact = nfData.companySender?.phone || nfData.companySender?.email || "";
+        const pixSection = nfData.pixInfo
+            ? `
+                    <p style="margin: 0 0 10px 0; font-weight: bold; color: #1a202c;">
+                        Dados para Pagamento (PIX):
+                    </p>
+                    <ul style="margin: 0 0 24px 0; padding-left: 24px;">
+                        <li style="margin-bottom: 6px;"><strong>Favorecido:</strong> ${nfData.pixInfo.receiver}</li>
+                        <li style="margin-bottom: 6px;"><strong>Chave PIX (CNPJ):</strong> ${nfData.pixInfo.key}</li>
+                        ${nfData.pixInfo.bankName ? `<li style="margin-bottom: 6px;"><strong>Banco:</strong> ${nfData.pixInfo.bankName}</li>` : ""}
+                    </ul>
+              `
+            : "";
+
+        // Multi-tenant LGPD: nunca enviar BCC global entre empresas nem expor dados bancários de outro tenant
         const response = await transport.sendMail({
-            from: authUserSmtp.user,
+            from: `"${senderName}" <${authUserSmtp.user}>`,
             to: nfData.destinationEmail,
-            bcc: process.env.BCC_LIST,
             subject: `Nota Fiscal Eletrônica Nº ${nfData.numberNf} – ${nfData.clientName}`,
             attachments: [
                 {
@@ -209,29 +230,17 @@ export async function sendEmailNf(nfData: NfInfo) {
                         <span style="font-family: monospace, Courier New; word-break: break-all; color: #4a5568;">${nfData.acessKey}</span>
                         </li>
                     </ul>
-                    
-                    <p style="margin: 0 0 10px 0; font-weight: bold; color: #1a202c;">
-                        Dados para Pagamento (PIX):
-                    </p>
-                    <ul style="margin: 0 0 24px 0; padding-left: 24px;">
-                        <li style="margin-bottom: 6px;"><strong>Favorecido:</strong> ${nameReceiver}</li>
-                        <li style="margin-bottom: 6px;"><strong>Chave PIX (CNPJ):</strong> ${keyPix}</li>
-                        <li style="margin-bottom: 6px;"><strong>Banco:</strong> ${bankName}</li>
-                    </ul>
-
+                    ${pixSection}
                     <p style="margin: 0 0 24px 0; color: #4a5568;">
-                        Este é um e-mail automático enviado por <a href="mailto:${authUserSmtp.user}" style="color: #3182ce; text-decoration: none;">${authUserSmtp.user}</a>.
-                        Em caso de dúvidas ou necessidade de esclarecimentos, entre em contato pelo número de telefone abaixo.
+                        Este é um e-mail automático enviado por <a href="mailto:${authUserSmtp.user}" style="color: #3182ce; text-decoration: none;">${authUserSmtp.user}</a> em nome de <strong>${senderName}</strong>.
                     </p>
                     <p style="margin: 0 0 8px 0;">
                         Atenciosamente,
                     </p>
                     <p style="margin: 0 0 4px 0; font-weight: bold; color: #1a202c;">
-                        ${name}
+                        ${senderName}
                     </p>
-                    <p style="margin: 0; color: #4a5568;">
-                        ${phone}
-                    </p>
+                    ${senderContact ? `<p style="margin: 0; color: #4a5568;">${senderContact}</p>` : ""}
                 </body>
             `,
         });

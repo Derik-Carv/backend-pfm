@@ -2,8 +2,13 @@ import { db } from "@/database/index";
 import {
     companies,
     companyRegistrationRequests,
+    legalAcceptances,
     users,
 } from "@/database/schema/schema";
+import {
+    LEGAL_PRIVACY_VERSION,
+    LEGAL_TERMS_VERSION,
+} from "@/lib/lgpd/legal.constants";
 import {
     EmailVerificationCodesRepository,
     generateSixDigitCode,
@@ -89,7 +94,13 @@ export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
     };
 }
 
-export async function usecaseCreateCompanyRequest(data: CreateCompanyRequestInput) {
+export async function usecaseCreateCompanyRequest(
+    data: CreateCompanyRequestInput,
+    meta: { ipAddress: string | null; userAgent: string | null } = {
+        ipAddress: null,
+        userAgent: null,
+    },
+) {
     const validCpf = await cpfValidateNormal(data.adminCpf);
     if (!validCpf) {
         throw new Error("INVALID_CPF");
@@ -175,33 +186,61 @@ export async function usecaseCreateCompanyRequest(data: CreateCompanyRequestInpu
     }
 
     const adminPasswordHash = await hashPassword(data.adminPassword);
+    const acceptedAt = new Date();
 
-    const [created] = await db
-        .insert(companyRegistrationRequests)
-        .values({
-            registeredCompanyName: data.registeredCompanyName,
-            tradeName: data.tradeName,
-            cnpj: data.cnpj,
-            companyEmail: data.companyEmail ?? null,
-            phone: data.phone ?? null,
-            adminName: data.adminName,
-            adminSurname: data.adminSurname,
-            adminEmail: data.adminEmail,
-            adminCpf: data.adminCpf,
-            adminPasswordHash,
-            status: "pending",
-        })
-        .returning({
-            id: companyRegistrationRequests.id,
-            registeredCompanyName: companyRegistrationRequests.registeredCompanyName,
-            tradeName: companyRegistrationRequests.tradeName,
-            cnpj: companyRegistrationRequests.cnpj,
-            adminName: companyRegistrationRequests.adminName,
-            adminSurname: companyRegistrationRequests.adminSurname,
-            adminEmail: companyRegistrationRequests.adminEmail,
-            status: companyRegistrationRequests.status,
-            createdAt: companyRegistrationRequests.createdAt,
-        });
+    const created = await db.transaction(async (tx) => {
+        const [reqRow] = await tx
+            .insert(companyRegistrationRequests)
+            .values({
+                registeredCompanyName: data.registeredCompanyName,
+                tradeName: data.tradeName,
+                cnpj: data.cnpj,
+                companyEmail: data.companyEmail ?? null,
+                phone: data.phone ?? null,
+                adminName: data.adminName,
+                adminSurname: data.adminSurname,
+                adminEmail: data.adminEmail,
+                adminCpf: data.adminCpf,
+                adminPasswordHash,
+                status: "pending",
+                acceptedTermsVersion: LEGAL_TERMS_VERSION,
+                acceptedPrivacyVersion: LEGAL_PRIVACY_VERSION,
+                acceptedIp: meta.ipAddress,
+                acceptedAt,
+            })
+            .returning({
+                id: companyRegistrationRequests.id,
+                registeredCompanyName: companyRegistrationRequests.registeredCompanyName,
+                tradeName: companyRegistrationRequests.tradeName,
+                cnpj: companyRegistrationRequests.cnpj,
+                adminName: companyRegistrationRequests.adminName,
+                adminSurname: companyRegistrationRequests.adminSurname,
+                adminEmail: companyRegistrationRequests.adminEmail,
+                status: companyRegistrationRequests.status,
+                createdAt: companyRegistrationRequests.createdAt,
+            });
+
+        await tx.insert(legalAcceptances).values([
+            {
+                companyRequestId: reqRow.id,
+                documentType: "terms_of_use",
+                documentVersion: LEGAL_TERMS_VERSION,
+                ipAddress: meta.ipAddress,
+                userAgent: meta.userAgent,
+                acceptedAt,
+            },
+            {
+                companyRequestId: reqRow.id,
+                documentType: "privacy_policy",
+                documentVersion: LEGAL_PRIVACY_VERSION,
+                ipAddress: meta.ipAddress,
+                userAgent: meta.userAgent,
+                acceptedAt,
+            },
+        ]);
+
+        return reqRow;
+    });
 
     void sendCompanyRequestDecisionEmail({
         to: created.adminEmail,

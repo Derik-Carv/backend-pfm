@@ -2,10 +2,12 @@ import { db } from "@/database/index";
 import {
     companies,
     companyRegistrationRequests,
+    legalAcceptances,
     roles,
     userCompanies,
     users,
 } from "@/database/schema/schema";
+import { maskCpf } from "@/lib/lgpd/legal.constants";
 import { sendCompanyRequestDecisionEmail } from "@/lib/nodemailer/nodemailer";
 import { resolveUniqueUsername } from "@/router/private/companies/companies.usecase";
 import { slugifyCompanyName } from "@/utils/createNick";
@@ -40,11 +42,16 @@ export async function usecaseListCompanyRequests(
             ? undefined
             : eq(companyRegistrationRequests.status, status);
 
-    return await db
+    const rows = await db
         .select(safeRequestColumns)
         .from(companyRegistrationRequests)
         .where(whereClause)
         .orderBy(desc(companyRegistrationRequests.createdAt));
+
+    return rows.map((row) => ({
+        ...row,
+        adminCpf: maskCpf(row.adminCpf),
+    }));
 }
 
 export async function usecaseApproveCompanyRequest(
@@ -61,9 +68,11 @@ export async function usecaseApproveCompanyRequest(
         throw new Error("REQUEST_NOT_FOUND");
     }
 
-    if (reqRecord.status !== "pending") {
+    if (reqRecord.status !== "pending" || !reqRecord.adminPasswordHash) {
         throw new Error("REQUEST_ALREADY_REVIEWED");
     }
+
+    const adminPasswordHash = reqRecord.adminPasswordHash;
 
     const [existingCompany] = await db
         .select({ id: companies.id })
@@ -128,7 +137,7 @@ export async function usecaseApproveCompanyRequest(
                 username: generatedUsername,
                 email: reqRecord.adminEmail.toLowerCase(),
                 emailVerified: true,
-                password: reqRecord.adminPasswordHash,
+                password: adminPasswordHash,
                 roleId: companyAdminRole.id,
                 primaryCompanyId: newCompany.id,
                 cpf: reqRecord.adminCpf,
@@ -148,9 +157,15 @@ export async function usecaseApproveCompanyRequest(
         });
 
         await tx
+            .update(legalAcceptances)
+            .set({ userId: createdAdmin.id })
+            .where(eq(legalAcceptances.companyRequestId, requestId));
+
+        await tx
             .update(companyRegistrationRequests)
             .set({
                 status: "approved",
+                adminPasswordHash: null,
                 reviewedBy: reviewerUserId,
                 reviewedAt: new Date(),
                 approvedCompanyId: newCompany.id,
@@ -204,6 +219,7 @@ export async function usecaseRejectCompanyRequest(
         .set({
             status: "rejected",
             rejectionReason: reason,
+            adminPasswordHash: null,
             reviewedBy: reviewerUserId,
             reviewedAt: new Date(),
         })
@@ -218,5 +234,8 @@ export async function usecaseRejectCompanyRequest(
         reason,
     });
 
-    return updated;
+    return {
+        ...updated,
+        adminCpf: maskCpf(updated.adminCpf),
+    };
 }

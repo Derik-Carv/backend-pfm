@@ -9,6 +9,7 @@ import {
     usecaseCreateCompanyRequest,
     usecaseRequestCompanyCode,
 } from "./companyRequests.usecase";
+import { extractRequestMeta } from "@/lib/lgpd/audit";
 
 export async function requestCompanyCodeController(
     request: FastifyRequest<{ Body: RequestCompanyCodeInput }>,
@@ -63,7 +64,8 @@ export async function createCompanyRequestController(
 ) {
     try {
         const data = createCompanyRequestBodySchema.parse(request.body);
-        const created = await usecaseCreateCompanyRequest(data);
+        const meta = extractRequestMeta(request);
+        const created = await usecaseCreateCompanyRequest(data, meta);
 
         return reply.status(201).send({
             message:

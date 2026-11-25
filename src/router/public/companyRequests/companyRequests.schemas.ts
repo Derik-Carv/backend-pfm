@@ -56,6 +56,12 @@ export const createCompanyRequestBodySchema = z
             .regex(/^\d{6}$/, {
                 message: "Verification code must have 6 digits",
             }),
+        acceptedTerms: z.literal(true, {
+            message: "Terms of use acceptance is required",
+        }),
+        acceptedPrivacy: z.literal(true, {
+            message: "Privacy policy acceptance is required",
+        }),
     })
     .strict();
 

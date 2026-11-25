@@ -3,6 +3,7 @@ import { companies, roles, userCompanies, users } from "@/database/schema/schema
 import { CompaniesRepository } from "@/database/tables/companies/companies.repository";
 import { UserCompaniesRepository } from "@/database/tables/userCompanies/userCompanies.repository";
 import { hashPassword } from "@/lib/hash";
+import { maskCpf } from "@/lib/lgpd/legal.constants";
 import { cpfClean } from "@/utils/checkCpf";
 import { generateNick, slugifyCompanyName } from "@/utils/createNick";
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
@@ -333,7 +334,10 @@ export async function usecaseListCompanyUsers(motherId: string) {
         )
         .orderBy(desc(users.createdAt));
 
-    return rows;
+    return rows.map((row) => ({
+        ...row,
+        cpf: maskCpf(row.cpf),
+    }));
 }
 
 export async function usecaseCreateCompanyUser(

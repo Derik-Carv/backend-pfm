@@ -1,0 +1,49 @@
+export const LEGAL_TERMS_VERSION = "2026-11-24-v1";
+export const LEGAL_PRIVACY_VERSION = "2026-11-24-v1";
+
+export const DPO_NAME =
+    process.env.DPO_NAME || "Encarregado de Proteção de Dados (DPO) — Derik Flash";
+export const DPO_EMAIL =
+    process.env.DPO_EMAIL || "privacidade@derikdev.cloud";
+
+export function maskCpf(cpf: string | null | undefined): string {
+    if (!cpf) return "";
+    if (cpf.startsWith("ANON-")) return "ANONIMIZADO";
+    const digits = cpf.replace(/\D/g, "");
+    if (digits.length === 11) {
+        return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
+    }
+    return "***";
+}
+
+export function getLegalMetadata() {
+    return {
+        termsVersion: LEGAL_TERMS_VERSION,
+        privacyVersion: LEGAL_PRIVACY_VERSION,
+        dpo: {
+            name: DPO_NAME,
+            email: DPO_EMAIL,
+        },
+        fiscalRetentionYears: 5,
+        otpRetentionHours: 24,
+        rejectedRequestRetentionDays: 90,
+        subprocessors: [
+            {
+                name: "Oracle Cloud Infrastructure",
+                purpose: "Hospedagem da API e banco de dados PostgreSQL",
+            },
+            {
+                name: "Vercel",
+                purpose: "Hospedagem da aplicação web frontend",
+            },
+            {
+                name: "Provedor SMTP",
+                purpose: "Envio de códigos OTP, notificações e notas fiscais",
+            },
+            {
+                name: "Axiom (quando habilitado)",
+                purpose: "Telemetria técnica e logs sanitizados de produção",
+            },
+        ],
+    };
+}

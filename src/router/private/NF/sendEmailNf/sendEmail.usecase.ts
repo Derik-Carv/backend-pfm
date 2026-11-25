@@ -1,4 +1,5 @@
 import type { sendEmailNfDependencies } from "@/database/tables/nf/nf.interface";
+import { CompaniesRepository } from "@/database/tables/companies/companies.repository";
 import type { NfSendEmailInput } from "../nf.schemas";
 import { sendEmailNf } from "@/lib/nodemailer/nodemailer";
 
@@ -59,7 +60,25 @@ export function injejctSendEmailNf({
             nfData.details = "cobrança de serviços prestados";
         }
 
-        const response = await sendEmailNf(nfData);
+        let companySender:
+            | { tradeName: string; phone?: string | null; email?: string | null }
+            | undefined;
+        if (nf.companyId) {
+            const companiesRepo = new CompaniesRepository();
+            const company = await companiesRepo.findById(nf.companyId);
+            if (company) {
+                companySender = {
+                    tradeName: company.tradeName,
+                    phone: company.phone,
+                    email: company.email,
+                };
+            }
+        }
+
+        const response = await sendEmailNf({
+            ...nfData,
+            companySender,
+        });
 
         return response;
     };
