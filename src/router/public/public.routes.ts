@@ -25,6 +25,13 @@ import { z } from "zod";
 const legalMetadataResponseSchema = z.object({
     termsVersion: z.string(),
     privacyVersion: z.string(),
+    controller: z.object({
+        name: z.string(),
+        document: z.string().nullable(),
+        address: z.string().nullable(),
+        jurisdiction: z.string(),
+        supportEmail: z.string(),
+    }),
     dpo: z.object({
         name: z.string(),
         email: z.string(),

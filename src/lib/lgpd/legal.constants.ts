@@ -18,12 +18,28 @@ export function maskCpf(cpf: string | null | undefined): string {
 }
 
 export function getLegalMetadata() {
+    const dpoName =
+        process.env.DPO_NAME?.trim() ||
+        "Canal de Privacidade / Encarregado (Agente de Pequeno Porte — Res. CD/ANPD nº 2/2022 e nº 18/2024)";
+    const dpoEmail =
+        process.env.DPO_EMAIL?.trim() || "privacidade@derikdev.cloud";
+
     return {
         termsVersion: LEGAL_TERMS_VERSION,
         privacyVersion: LEGAL_PRIVACY_VERSION,
+        controller: {
+            name:
+                process.env.LEGAL_CONTROLLER_NAME?.trim() ||
+                "Derik Flash (Plataforma PFM)",
+            document: process.env.LEGAL_CONTROLLER_DOCUMENT?.trim() || null,
+            address: process.env.LEGAL_CONTROLLER_ADDRESS?.trim() || null,
+            jurisdiction:
+                process.env.LEGAL_CONTROLLER_JURISDICTION?.trim() || "Brasil",
+            supportEmail: process.env.SUPPORT_EMAIL?.trim() || dpoEmail,
+        },
         dpo: {
-            name: DPO_NAME,
-            email: DPO_EMAIL,
+            name: dpoName,
+            email: dpoEmail,
         },
         fiscalRetentionYears: 5,
         auditLogRetentionYears: 5,
