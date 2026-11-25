@@ -39,12 +39,14 @@ app.addHook("onResponse", async (request, reply) => {
     const isSensitiveRead =
         request.method === "GET" &&
         (urlPath.startsWith("/admin/data") ||
+            urlPath === "/admin/system/clients" ||
             urlPath === "/account/privacy/export" ||
             (urlPath.startsWith("/nf/") && urlPath.endsWith("/file")));
 
     if (
         (!isMutating && !isSensitiveRead) ||
-        urlPath === "/public/login"
+        urlPath === "/public/login" ||
+        urlPath === "/account/privacy/anonymize"
     ) {
         return;
     }

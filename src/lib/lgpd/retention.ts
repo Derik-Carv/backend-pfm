@@ -1,6 +1,7 @@
 import { and, inArray, isNotNull, lt, ne, or } from "drizzle-orm";
 import { db } from "@/database/index";
 import {
+    auditLogs,
     companyRegistrationRequests,
     emailVerificationCodes,
     legalAcceptances,
@@ -10,6 +11,7 @@ export async function runLgpdRetentionCleanup() {
     const now = Date.now();
     const otpCutoff = new Date(now - 24 * 60 * 60 * 1000);
     const rejectedCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000);
+    const auditLogCutoff = new Date(now - 5 * 365 * 24 * 60 * 60 * 1000);
 
     // 1. Expurga códigos OTP expirados ou já consumidos há mais de 24h
     const deletedOtp = await db
@@ -62,13 +64,23 @@ export async function runLgpdRetentionCleanup() {
         deletedRejectedRequests = deletedReqs.length;
     }
 
+    // 4. Expurga logs de auditoria com mais de 5 anos
+    const deletedAuditLogs = await db
+        .delete(auditLogs)
+        .where(lt(auditLogs.createdAt, auditLogCutoff))
+        .returning({ id: auditLogs.id });
+
     return {
         deletedOtpCodes: deletedOtp.length,
         scrubbedRequestHashes: scrubbedRequests.length,
         deletedRejectedRequests,
+        deletedExpiredAuditLogs: deletedAuditLogs.length,
     };
 }
 
 function eqStatusRejected() {
-    return and(ne(companyRegistrationRequests.status, "pending"), ne(companyRegistrationRequests.status, "approved"));
+    return and(
+        ne(companyRegistrationRequests.status, "pending"),
+        ne(companyRegistrationRequests.status, "approved"),
+    );
 }

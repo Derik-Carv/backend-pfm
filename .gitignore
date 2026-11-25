@@ -9,6 +9,7 @@ drizzle/*
 !drizzle/0015_user_email_and_verification_codes.sql
 !drizzle/0016_company_registration_requests.sql
 !drizzle/0017_lgpd_compliance.sql
+!drizzle/0018_lgpd_incidents_and_client_anon.sql
 !drizzle/meta/
 drizzle/meta/*
 !drizzle/meta/0010_snapshot.json

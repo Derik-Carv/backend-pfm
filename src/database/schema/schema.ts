@@ -204,6 +204,38 @@ export const legalAcceptances = pgTable(
     ],
 );
 
+export const securityIncidents = pgTable(
+    "security_incidents",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        title: text("title").notNull(),
+        description: text("description").notNull(),
+        severity: text("severity").notNull(),
+        affectedDataCategories: text("affected_data_categories").notNull(),
+        affectedSubjectsEstimate: integer("affected_subjects_estimate"),
+        relevantRisk: boolean("relevant_risk").default(false).notNull(),
+        notifiedAnpd: boolean("notified_anpd").default(false).notNull(),
+        notifiedAnpdAt: timestamp("notified_anpd_at"),
+        notifiedSubjects: boolean("notified_subjects").default(false).notNull(),
+        notifiedSubjectsAt: timestamp("notified_subjects_at"),
+        containmentMeasures: text("containment_measures"),
+        status: text("status").default("open").notNull(),
+        detectedAt: timestamp("detected_at").notNull(),
+        reportedBy: uuid("reported_by").references(() => users.id),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("security_incidents_detected_idx").on(table.detectedAt),
+        index("security_incidents_status_idx").on(table.status),
+    ],
+);
+
 export const userCompanies = pgTable(
     "user_companies",
     {
@@ -238,6 +270,7 @@ export const clients = pgTable(
         cpf: text("cpf"),
         email: text("email"),
         active: boolean("active").default(true).notNull(),
+        anonymizedAt: timestamp("anonymized_at"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")
             .defaultNow()

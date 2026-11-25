@@ -36,12 +36,17 @@ const legalMetadataSchema = z.object({
         email: z.string(),
     }),
     fiscalRetentionYears: z.number(),
+    auditLogRetentionYears: z.number(),
+    incidentRetentionYears: z.number(),
+    incidentNotificationBusinessDays: z.number(),
+    smallAgentNotificationBusinessDays: z.number(),
     otpRetentionHours: z.number(),
     rejectedRequestRetentionDays: z.number(),
     subprocessors: z.array(
         z.object({
             name: z.string(),
             purpose: z.string(),
+            mechanism: z.string(),
         }),
     ),
 });

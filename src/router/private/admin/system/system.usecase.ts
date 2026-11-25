@@ -8,6 +8,7 @@ import {
     userCompanies,
 } from "@/database/schema/schema";
 import { count, eq, isNull, sql } from "drizzle-orm";
+import { maskCpf } from "@/lib/lgpd/legal.constants";
 
 export async function usecaseGetSystemMetrics() {
     // 1. Estatísticas de Entidades
@@ -140,7 +141,7 @@ export async function usecaseGetCascadeHierarchy() {
 }
 
 export async function usecaseGetClientsByCompany(companyId: string) {
-    return await db
+    const rows = await db
         .select({
             id: clients.id,
             registeredCompanyName: clients.registeredCompanyName,
@@ -153,4 +154,9 @@ export async function usecaseGetClientsByCompany(companyId: string) {
         })
         .from(clients)
         .where(eq(clients.companyId, companyId));
+
+    return rows.map((row) => ({
+        ...row,
+        cpf: row.cpf ? maskCpf(row.cpf) : null,
+    }));
 }

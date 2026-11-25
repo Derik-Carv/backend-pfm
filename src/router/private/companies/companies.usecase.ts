@@ -440,7 +440,7 @@ export async function usecaseCreateCompanyUser(
         surname: created.surname,
         username: created.username,
         email: created.email,
-        cpf: created.cpf,
+        cpf: maskCpf(created.cpf),
         roleId: created.roleId,
         roleName: targetRole.name,
         primaryCompanyId: created.primaryCompanyId,
@@ -568,5 +568,10 @@ export async function usecaseUpdateCompanyUser(
         .where(eq(users.id, targetUserId))
         .limit(1);
 
-    return updated;
+    return updated
+        ? {
+              ...updated,
+              cpf: maskCpf(updated.cpf),
+          }
+        : undefined;
 }
