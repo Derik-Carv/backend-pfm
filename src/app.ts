@@ -22,10 +22,22 @@ import { extractRequestMeta, recordAuditLog } from "./lib/lgpd/audit";
 
 const isDev = (Bun.env.NODE_ENV ?? process.env.NODE_ENV) !== "production";
 const jwtSecret = process.env.JWT_SECRET as string;
+const trustProxyEnv = (
+    Bun.env.TRUST_PROXY ??
+    process.env.TRUST_PROXY ??
+    "loopback, linklocal, uniquelocal"
+).trim();
+const trustProxy: boolean | string =
+    trustProxyEnv === "false" || trustProxyEnv === "0"
+        ? false
+        : trustProxyEnv === "true"
+          ? true
+          : trustProxyEnv;
 
 // define fastify and logger configuration
 export const app = fastify({
     logger: isDev ? loggerConfig : loggerProd,
+    trustProxy,
 })
     .withTypeProvider<ZodTypeProvider>()
     .setValidatorCompiler(validatorCompiler)
@@ -34,7 +46,13 @@ export const app = fastify({
 const auditEnabled = process.env.AUDIT_LOG_ENABLED === "true";
 
 app.addHook("onResponse", async (request, reply) => {
-    const urlPath = request.routeOptions.url || request.url.split("?")[0] || "";
+    // Não persistir rotas inexistentes / scans 404 públicos na tabela LGPD audit_logs
+    const matchedRoute = request.routeOptions.url;
+    if (!matchedRoute) {
+        return;
+    }
+
+    const urlPath = matchedRoute;
     const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method);
     const isSensitiveRead =
         request.method === "GET" &&

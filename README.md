@@ -14,6 +14,9 @@ autorização para integração, containerização e publicação neste projeto.
 
 > Documentação completa para consulta no navegador:
 > [`docs/index.html`](./docs/index.html)
+>
+> Padrões de segurança obrigatórios do projeto (OWASP Cheat Sheet Series):
+> [`SECURITY.md`](./SECURITY.md)
 
 ## Visão geral
 

@@ -1,7 +1,9 @@
 # INSTRUÇÕES DO PROJETO — BACKEND MOBILE
 
-> **Atenção para qualquer IA ou agente de desenvolvimento:**  
+> **Atenção para qualquer IA ou agente de desenvolvimento:**
 > Este documento é a fonte definitiva de verdade (Single Source of Truth) sobre a arquitetura, regras de negócio, bibliotecas, padrões de design e regras invioláveis deste projeto. **Leia com atenção antes de sugerir ou executar qualquer alteração.**
+>
+> **Consulta de Segurança Obrigatória:** Leia e siga também [`SECURITY.md`](./SECURITY.md) (padrões OWASP Cheat Sheet Series aplicados à stack) antes de criar ou alterar qualquer código, rota, schema, query, upload, e-mail ou configuração.
 
 ---
 
@@ -75,6 +77,8 @@ Cada rota privada é dividida em arquivos com responsabilidades únicas:
 
 ## 3. Regras de Negócio e Segurança
 
+> **Referência obrigatória:** Todos os padrões técnicos de segurança baseados no OWASP Cheat Sheet Series para esta stack (JWT, RBAC/Multi-Tenant, IDOR, Zod, Drizzle, Upload/PDF, E-mail HTML, CORS/Helmet, Rate Limit, Docker e LGPD) estão documentados em [`SECURITY.md`](./SECURITY.md) e devem ser consultados antes de qualquer alteração.
+
 ### 3.1 Papéis de Usuário (RBAC / `allRoles`):
 
 As roles são restritas e imutáveis:
@@ -139,6 +143,10 @@ As roles são restritas e imutáveis:
 5. **PRESERVAÇÃO DA ARQUITETURA EM CAMADAS:**
     - Não coloque queries SQL ou Drizzle diretamente dentro de Controllers ou rotas.
     - Fluxo obrigatório: **Route -> Controller -> UseCase -> Repository (Interface).**
+
+6. **CONSULTA E ADERÊNCIA OBRIGATÓRIA AO `SECURITY.md` (PADRÕES OWASP):**
+    - Antes de implementar ou revisar qualquer funcionalidade, integração externa, endpoint, query, upload, template de e-mail, dependência ou configuração de deploy, **consulte [`SECURITY.md`](./SECURITY.md)**.
+    - O arquivo `SECURITY.md` é documentação permanente obrigatória do repositório (exceção à regra 1 por solicitação explícita do mantenedor) e deve ser mantido atualizado sempre que novas superfícies de ataque, integrações (ex.: NFS-e ADN) ou controles de segurança forem adicionados.
 
 ---
 

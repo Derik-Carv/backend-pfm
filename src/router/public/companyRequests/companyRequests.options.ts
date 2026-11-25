@@ -9,7 +9,7 @@ import {
 
 export const requestCompanyCodeOptions = {
     config: {
-        rateLimit: rateLimitProfiles.default,
+        rateLimit: rateLimitProfiles.sensitive,
     },
     schema: {
         tags: ["Auth", "Companies"],
@@ -26,7 +26,7 @@ export const requestCompanyCodeOptions = {
 
 export const createCompanyRequestOptions = {
     config: {
-        rateLimit: rateLimitProfiles.standard,
+        rateLimit: rateLimitProfiles.sensitive,
     },
     schema: {
         tags: ["Auth", "Companies"],

@@ -16,14 +16,9 @@ export type AuditLogInput = {
 };
 
 export function extractRequestMeta(request: FastifyRequest) {
-    const forwarded = request.headers["x-forwarded-for"];
-    const forwardedIp =
-        typeof forwarded === "string"
-            ? forwarded.split(",")[0]?.trim()
-            : undefined;
     const rawUserAgent = request.headers["user-agent"];
     return {
-        ipAddress: forwardedIp || request.ip || null,
+        ipAddress: request.ip || null,
         userAgent:
             typeof rawUserAgent === "string"
                 ? rawUserAgent.slice(0, 300)

@@ -7,7 +7,7 @@ import { errorResponseSchema } from "../../error.schema";
 
 export const loginRouteOptions = {
     config: {
-        rateLimit: rateLimitProfiles.standard,
+        rateLimit: rateLimitProfiles.auth,
     },
     schema: {
         tags: ["Login"],

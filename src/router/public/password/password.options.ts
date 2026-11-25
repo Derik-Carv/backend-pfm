@@ -9,7 +9,7 @@ import {
 
 export const forgotPasswordRouteOptions = {
     config: {
-        rateLimit: rateLimitProfiles.default,
+        rateLimit: rateLimitProfiles.sensitive,
     },
     schema: {
         tags: ["Auth", "Password"],
@@ -25,7 +25,7 @@ export const forgotPasswordRouteOptions = {
 
 export const resetPasswordRouteOptions = {
     config: {
-        rateLimit: rateLimitProfiles.default,
+        rateLimit: rateLimitProfiles.sensitive,
     },
     schema: {
         tags: ["Auth", "Password"],
