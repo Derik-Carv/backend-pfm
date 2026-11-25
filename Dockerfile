@@ -30,6 +30,10 @@ RUN bun install --production --frozen-lockfile
 
 COPY --from=builder /usr/src/app/dist ./dist
 
+RUN mkdir -p /usr/src/app/archives && chown -R bun:bun /usr/src/app
+
+USER bun
+
 EXPOSE ${PORT:-3000}
 
 CMD ["bun", "run", "dist/server.js"]

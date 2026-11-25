@@ -132,6 +132,12 @@ export async function updateBranchCompanyController(
     reply: FastifyReply,
 ) {
     try {
+        if (request.user.role !== "administrator" && !request.tenant?.isMother) {
+            return reply.status(403).send({
+                message: "Only Mother company admins can update branches",
+            });
+        }
+
         const updated = await usecaseUpdateBranchCompany(
             request.params.id,
             request.body,
@@ -183,6 +189,14 @@ export async function listBranchesController(
             return reply.status(400).send({ message: "No active mother company context" });
         }
 
+        if (request.user.role !== "administrator" && !request.tenant?.isMother) {
+            const activeCompany = request.tenant?.activeCompany;
+            return reply.status(200).send({
+                message: "Branches listed successfully",
+                companies: activeCompany && activeCompany.motherId ? [activeCompany] : [],
+            });
+        }
+
         const branches = await usecaseListBranches(motherId, true);
         return reply.status(200).send({
             message: "Branches listed successfully",
@@ -230,7 +244,12 @@ export async function listCompanyUsersController(
             return reply.status(400).send({ message: "No active mother company context" });
         }
 
-        const usersList = await usecaseListCompanyUsers(motherId);
+        const usersList = await usecaseListCompanyUsers({
+            motherId,
+            isMother: Boolean(request.tenant?.isMother),
+            accessibleCompanyIds: request.tenant?.accessibleCompanyIds ?? [],
+            isPlatformAdmin: request.user.role === "administrator",
+        });
         return reply.status(200).send({
             message: "Company users listed successfully",
             users: usersList,
@@ -254,7 +273,12 @@ export async function createCompanyUserController(
 
         const created = await usecaseCreateCompanyUser(
             request.body,
-            motherId,
+            {
+                motherId,
+                isMother: Boolean(request.tenant?.isMother),
+                accessibleCompanyIds: request.tenant?.accessibleCompanyIds ?? [],
+                isPlatformAdmin: request.user.role === "administrator",
+            },
             activeCompanyId,
         );
 
@@ -301,7 +325,12 @@ export async function updateCompanyUserController(
         const updated = await usecaseUpdateCompanyUser(
             request.params.id,
             request.body,
-            motherId,
+            {
+                motherId,
+                isMother: Boolean(request.tenant?.isMother),
+                accessibleCompanyIds: request.tenant?.accessibleCompanyIds ?? [],
+                isPlatformAdmin: request.user.role === "administrator",
+            },
         );
 
         return reply.status(200).send({

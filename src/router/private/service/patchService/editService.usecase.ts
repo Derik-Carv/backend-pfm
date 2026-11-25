@@ -1,9 +1,10 @@
-import { allRoles } from "@/lib/roles.list";
 import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
+import type { CreateServicesDatabaseInput } from "@/database/tables/services/services.interface";
 import { StatusServiceRepository } from "@/database/tables/statusService/statusService.repository";
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
+import { hasTenantAccess } from "@/lib/tenant";
 import type { ServiceEditInput } from "../myServicesList.schemas";
 
 const userData = new UsersRepository();
@@ -36,85 +37,42 @@ export async function usecaseEditService(
         throw new Error("SERVICE_NOT_FOUND");
     }
 
-    if (
-        accessibleCompanyIds &&
-        existingService.companyId &&
-        !accessibleCompanyIds.includes(existingService.companyId)
-    ) {
+    if (!hasTenantAccess(existingService.companyId, accessibleCompanyIds)) {
         throw new Error("ROLE_ACESS_DENIED");
     }
 
-    if (data.serviceName) {
-        const newName = await servicesData.editName(
-            receivedId,
-            data.serviceName,
-        );
-        if (!newName) throw new Error("SERVICE_NOT_FOUND");
-    }
+    const updates: Partial<CreateServicesDatabaseInput> = {};
 
-    if (data.price) {
-        const newPrice = await servicesData.editPrice(receivedId, data.price);
-        if (!newPrice) throw new Error("SERVICE_NOT_FOUND");
-    }
-
-    if (data.initialDate) {
-        const newDate = await servicesData.editInitialDate(
-            receivedId,
-            data.initialDate,
-        );
-        if (!newDate) throw new Error("SERVICE_NOT_FOUND");
-    }
-
-    if (data.finishDate) {
-        const newDate = await servicesData.editFinishDate(
-            receivedId,
-            data.finishDate,
-        );
-        if (!newDate) throw new Error("SERVICE_NOT_FOUND");
-    }
+    if (data.serviceName) updates.serviceName = data.serviceName;
+    if (data.price) updates.price = data.price;
+    if (data.initialDate) updates.initialDate = data.initialDate;
+    if (data.finishDate) updates.finishDate = data.finishDate;
 
     if (data.clientId) {
         const validClient = await clientData.findById(data.clientId);
-
         if (
             !validClient ||
-            (accessibleCompanyIds &&
-                validClient.companyId &&
-                !accessibleCompanyIds.includes(validClient.companyId))
-        )
+            !hasTenantAccess(validClient.companyId, accessibleCompanyIds)
+        ) {
             throw new Error("CLIENT_NOT_FOUND");
-
-        const newClient = await servicesData.editClient(
-            receivedId,
-            data.clientId,
-        );
-        if (!newClient) throw new Error("SERVICE_NOT_FOUND");
+        }
+        updates.clientId = data.clientId;
     }
 
-    if (data.details) {
-        if (data.details.length === 0)
+    if (data.details !== undefined && data.details !== null) {
+        if (data.details.length === 0) {
             throw new Error("NEW_SERVICE_DETAILS_INVALID");
-
-        const newDetails = await servicesData.editDetails(
-            receivedId,
-            data.details,
-        );
-        if (!newDetails) throw new Error("SERVICE_NOT_FOUND");
+        }
+        updates.details = data.details;
     }
 
     if (data.statusServiceId) {
         const validStatus = await statusData.findId(data.statusServiceId);
-
         if (!validStatus) throw new Error("NEW_SERVICE_STATUS_INVALID");
-
-        const newStatus = await servicesData.editStatus(
-            receivedId,
-            data.statusServiceId,
-        );
-        if (!newStatus) throw new Error("SERVICE_NOT_FOUND");
+        updates.statusServiceId = data.statusServiceId;
     }
 
-    const updatedService = await servicesData.findId(receivedId);
+    const updatedService = await servicesData.updateFields(receivedId, updates);
     if (!updatedService) throw new Error("SERVICE_NOT_FOUND");
 
     return updatedService;

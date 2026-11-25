@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { rateLimitProfiles } from "@/policies/rateLimit";
 import { errorResponseSchema } from "@/router/error.schema";
 import {
@@ -53,6 +54,9 @@ export const editServicesRouteOptions = {
     },
     schema: {
         tags: ["Services Menu"],
+        params: z.object({
+            id: z.string().uuid(),
+        }),
         body: serviceEditBaseSchema,
         summary: "Edit a service",
         description: "Returns the edited service with all its details",

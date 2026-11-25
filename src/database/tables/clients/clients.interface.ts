@@ -6,7 +6,7 @@ export type CreateClientDatabaseInput = typeof clients.$inferInsert;
 export type Client = typeof clients.$inferSelect;
 
 export type ClientDependencies = {
-    clientsDb: Pick<IClient, "findPage">;
+    clientsDb: Pick<IClient, "findPage" | "findPageByIds">;
 };
 
 export type CreateClientDependencies = {
@@ -59,6 +59,12 @@ export interface IClient {
     editByEmail(id: string, email: string): Promise<Client | null>;
     editByActive(id: string, active: boolean): Promise<Client | null>;
     findPage(
+        limit: number,
+        offset: number,
+        companyIds?: string[],
+    ): Promise<{ list: Client[]; total: number }>;
+    findPageByIds(
+        ids: string[],
         limit: number,
         offset: number,
         companyIds?: string[],

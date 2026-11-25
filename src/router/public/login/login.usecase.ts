@@ -2,14 +2,22 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import type { Users } from "@/database/tables/users/users.interface";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import type { LoginUserInput } from "@/router/public/login/login.schemas";
-import { verifyPassword } from "@/lib/hash";
+import { hashPassword, verifyPassword } from "@/lib/hash";
 import { db } from "@/database/index";
 import { legalAcceptances } from "@/database/schema/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
     LEGAL_PRIVACY_VERSION,
     LEGAL_TERMS_VERSION,
 } from "@/lib/lgpd/legal.constants";
+
+let dummyHashPromise: Promise<string> | null = null;
+function getDummyPasswordHash(): Promise<string> {
+    if (!dummyHashPromise) {
+        dummyHashPromise = hashPassword("dummy-timing-protection-password");
+    }
+    return dummyHashPromise;
+}
 
 export async function usecaseLogin(data: LoginUserInput) {
     const { username, password } = data;
@@ -23,7 +31,10 @@ export async function usecaseLogin(data: LoginUserInput) {
         validUsername = await userRepository.findActiveByEmail(username);
     }
 
-    if (!validUsername) throw new Error("USERNAME_OR_PASSOWORD_INVALID");
+    if (!validUsername) {
+        await verifyPassword(password, await getDummyPasswordHash()).catch(() => false);
+        throw new Error("USERNAME_OR_PASSOWORD_INVALID");
+    }
 
     const validPassword = await verifyPassword(password, validUsername.password);
 
@@ -32,7 +43,7 @@ export async function usecaseLogin(data: LoginUserInput) {
     const roleRepository = new RoleRepository();
     const role = await roleRepository.findById(validUsername.roleId);
 
-    if (!role) throw new Error("ROLE_NOT_FOUND");
+    if (!role || !role.active) throw new Error("USERNAME_OR_PASSOWORD_INVALID");
 
     const acceptances = await db
         .select({
@@ -61,6 +72,7 @@ export async function usecaseLogin(data: LoginUserInput) {
             surname: validUsername.surname,
             username: validUsername.username,
             role: role.name,
+            tokenVersion: validUsername.tokenVersion,
             passwordChangeRequired: validUsername.passwordChangeRequired,
             legalAcceptanceRequired: !(hasTerms && hasPrivacy),
         },

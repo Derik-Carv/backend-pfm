@@ -85,6 +85,11 @@ export async function createAdminRecordController(
         });
     } catch (error) {
         if (validationError(reply, error)) return;
+        if (error instanceof Error && error.message === "INVALID_ADMIN_PASSWORD_LENGTH") {
+            return reply.status(400).send({
+                message: "Password must be between 8 and 128 characters",
+            });
+        }
         request.log.error({ err: error }, "Error while creating administrative record");
         return reply.status(409).send({
             message: "Record could not be created",
@@ -108,6 +113,11 @@ export async function updateAdminRecordController(
         });
     } catch (error) {
         if (validationError(reply, error)) return;
+        if (error instanceof Error && error.message === "INVALID_ADMIN_PASSWORD_LENGTH") {
+            return reply.status(400).send({
+                message: "Password must be between 8 and 128 characters",
+            });
+        }
         request.log.error({ err: error }, "Error while updating administrative record");
         return reply.status(409).send({
             message: "Record could not be updated",

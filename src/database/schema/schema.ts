@@ -76,6 +76,7 @@ export const users = pgTable(
         passwordChangeRequired: boolean("password_change_required")
             .default(false)
             .notNull(),
+        tokenVersion: integer("token_version").default(1).notNull(),
         anonymizedAt: timestamp("anonymized_at"),
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")

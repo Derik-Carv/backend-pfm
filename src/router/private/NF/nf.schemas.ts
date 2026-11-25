@@ -21,17 +21,14 @@ const nfMultipartExample = JSON.stringify(
 );
 
 export const nfCreateBaseSchema = z.object({
-    typeId: z.string(),
-    numberNf: z.string(),
+    typeId: z.string().uuid(),
+    numberNf: z.string().trim().min(1).max(50),
     acessKey: nfAccessKeySchema,
-    thirdPartyClientId: z.string(),
-    emissionDate: z.string(),
-    cancelDate: z.string().nullable().optional(),
-    totalValue: z.number().nonnegative(),
-    pathFile: z.string().nullable().optional(),
-    servicesId: z.string(),
+    thirdPartyClientId: z.string().uuid(),
+    emissionDate: z.string().trim().min(1),
+    totalValue: z.number().positive(),
+    servicesId: z.string().uuid(),
     movimentationId: z.string().uuid().nullable().optional(),
-    active: z.boolean().optional(),
 });
 
 export const nfCreateMultipartOpenApiSchema = {
@@ -164,33 +161,26 @@ export const nfActivateResponseSchema = z.object({
     note: nfItemResponseSchema,
 });
 
-export const sendEmailNfSchema = z.object({
-    numberNf: z.string(),
-    type: z.string(),
-    value: z.string(),
-    emissionDate: z.string(),
-    acessKey: z.string(),
-    clientName: z.string(),
-    details: z.string().optional(),
-    destinationEmail: z.email(),
-});
+export const sendEmailNfSchema = z
+    .object({
+        nfId: z.string().uuid().optional(),
+        numberNf: z.string().trim().min(1).max(50).optional(),
+        type: z.string().max(100).optional(),
+        value: z.string().max(50).optional(),
+        emissionDate: z.string().max(50).optional(),
+        acessKey: z.string().max(50).optional(),
+        clientName: z.string().max(150).optional(),
+        details: z.string().trim().max(500).optional(),
+        destinationEmail: z.email(),
+    })
+    .refine((data) => Boolean(data.nfId || data.numberNf), {
+        message: "nfId or numberNf is required",
+    });
 
 export const sendEmailNfResponseSchema = z.object({
     message: z.string(),
-    response: z.object({
-        accepted: z.array(z.string()),
-        rejected: z.array(z.string()),
-        ehlo: z.array(z.string()).optional(),
-        envelopeTime: z.number().optional(),
-        messageTime: z.number().optional(),
-        messageSize: z.number(),
-        response: z.string(),
-        envelope: z.object({
-            from: z.string(),
-            to: z.array(z.string()),
-        }),
-        messageId: z.string(),
-    }),
+    messageId: z.string().optional(),
+    accepted: z.array(z.string()).optional(),
 });
 
 export type NfCreateInput = z.infer<typeof nfCreateBaseSchema>;

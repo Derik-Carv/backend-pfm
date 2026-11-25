@@ -41,6 +41,9 @@ export async function recordAuditLog(entry: AuditLogInput): Promise<void> {
             statusCode: entry.statusCode ?? null,
         });
     } catch (error) {
-        console.error("Failed to persist LGPD audit log:", error);
+        console.error(
+            "Failed to persist LGPD audit log:",
+            error instanceof Error ? error.message : "unknown error",
+        );
     }
 }

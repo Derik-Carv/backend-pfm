@@ -13,4 +13,5 @@ export const changePasswordSchema = z
 export const changePasswordResponseSchema = z.object({
     message: z.string(),
     passwordChangeRequired: z.boolean(),
+    token: z.string().optional(),
 });

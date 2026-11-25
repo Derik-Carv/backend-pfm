@@ -5,6 +5,7 @@ import {
     companyRegistrationRequests,
     emailVerificationCodes,
     legalAcceptances,
+    securityIncidents,
 } from "@/database/schema/schema";
 
 export async function runLgpdRetentionCleanup() {
@@ -53,28 +54,37 @@ export async function runLgpdRetentionCleanup() {
     let deletedRejectedRequests = 0;
     if (expiredRejected.length > 0) {
         const ids = expiredRejected.map((row) => row.id);
-        await db
-            .delete(legalAcceptances)
-            .where(inArray(legalAcceptances.companyRequestId, ids));
+        deletedRejectedRequests = await db.transaction(async (tx) => {
+            await tx
+                .delete(legalAcceptances)
+                .where(inArray(legalAcceptances.companyRequestId, ids));
 
-        const deletedReqs = await db
-            .delete(companyRegistrationRequests)
-            .where(inArray(companyRegistrationRequests.id, ids))
-            .returning({ id: companyRegistrationRequests.id });
-        deletedRejectedRequests = deletedReqs.length;
+            const deletedReqs = await tx
+                .delete(companyRegistrationRequests)
+                .where(inArray(companyRegistrationRequests.id, ids))
+                .returning({ id: companyRegistrationRequests.id });
+            return deletedReqs.length;
+        });
     }
 
-    // 4. Expurga logs de auditoria com mais de 5 anos
-    const deletedAuditLogs = await db
-        .delete(auditLogs)
-        .where(lt(auditLogs.createdAt, auditLogCutoff))
-        .returning({ id: auditLogs.id });
+    // 4. Expurga logs de auditoria e incidentes de segurança com mais de 5 anos
+    const [deletedAuditLogs, deletedIncidents] = await Promise.all([
+        db
+            .delete(auditLogs)
+            .where(lt(auditLogs.createdAt, auditLogCutoff))
+            .returning({ id: auditLogs.id }),
+        db
+            .delete(securityIncidents)
+            .where(lt(securityIncidents.createdAt, auditLogCutoff))
+            .returning({ id: securityIncidents.id }),
+    ]);
 
     return {
         deletedOtpCodes: deletedOtp.length,
         scrubbedRequestHashes: scrubbedRequests.length,
         deletedRejectedRequests,
         deletedExpiredAuditLogs: deletedAuditLogs.length,
+        deletedExpiredIncidents: deletedIncidents.length,
     };
 }
 

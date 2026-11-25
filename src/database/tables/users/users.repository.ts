@@ -162,7 +162,11 @@ export class UsersRepository implements IUsers {
     async updatePassword(id: string, password: string): Promise<Users | null> {
         const [user] = await db
             .update(users)
-            .set({ password, passwordChangeRequired: false })
+            .set({
+                password,
+                passwordChangeRequired: false,
+                tokenVersion: sql`${users.tokenVersion} + 1`,
+            })
             .where(eq(users.id, id))
             .returning();
 

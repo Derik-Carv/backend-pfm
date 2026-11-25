@@ -2,18 +2,20 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 
 export function jwtTokenGenerate(
     app: FastifyInstance,
-    payload: { id: string; role: string },
+    payload: { id: string; role: string; tokenVersion?: number },
 ): string {
     try {
         return app.jwt.sign(
             {
                 id: payload.id,
                 role: payload.role,
+                tv: payload.tokenVersion ?? 1,
                 acessNow: new Date().toISOString(),
             },
             {
                 sub: payload.id,
                 expiresIn: "30m",
+                algorithm: "HS256",
             },
         );
     } catch (error) {

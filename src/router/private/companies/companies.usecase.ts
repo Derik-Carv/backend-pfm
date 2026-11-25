@@ -298,14 +298,30 @@ export async function usecaseGetMyCompanies(
     return { companies: directCompanies, isMother: false };
 }
 
-async function resolveAllowedCompanyIdsForActor(motherId: string): Promise<string[]> {
+export type CompanyActorScope = {
+    motherId: string;
+    isMother: boolean;
+    accessibleCompanyIds: string[];
+    isPlatformAdmin: boolean;
+};
+
+async function resolveAllowedCompanyIdsForActor(
+    scope: CompanyActorScope,
+): Promise<string[]> {
+    if (!scope.isPlatformAdmin && !scope.isMother) {
+        return [...scope.accessibleCompanyIds];
+    }
+
     const companiesRepo = new CompaniesRepository();
-    const branches = await companiesRepo.findBranchesByMotherId(motherId, true);
-    return [motherId, ...branches.map((b) => b.id)];
+    const branches = await companiesRepo.findBranchesByMotherId(scope.motherId, true);
+    return [scope.motherId, ...branches.map((b) => b.id)];
 }
 
-export async function usecaseListCompanyUsers(motherId: string) {
-    const allowedCompanyIds = await resolveAllowedCompanyIdsForActor(motherId);
+export async function usecaseListCompanyUsers(scope: CompanyActorScope) {
+    const allowedCompanyIds = await resolveAllowedCompanyIdsForActor(scope);
+    if (allowedCompanyIds.length === 0) {
+        return [];
+    }
 
     const rows = await db
         .select({
@@ -342,14 +358,14 @@ export async function usecaseListCompanyUsers(motherId: string) {
 
 export async function usecaseCreateCompanyUser(
     data: CreateCompanyUserInput,
-    motherId: string,
+    scope: CompanyActorScope,
     defaultCompanyId: string,
 ) {
     if ((data.roleName as string) === "administrator") {
         throw new Error("FORBIDDEN_ROLE");
     }
 
-    const allowedCompanyIds = await resolveAllowedCompanyIdsForActor(motherId);
+    const allowedCompanyIds = await resolveAllowedCompanyIdsForActor(scope);
     const targetCompanyId = data.companyId || defaultCompanyId;
 
     if (!allowedCompanyIds.includes(targetCompanyId)) {
@@ -454,13 +470,13 @@ export async function usecaseCreateCompanyUser(
 export async function usecaseUpdateCompanyUser(
     targetUserId: string,
     data: UpdateCompanyUserInput,
-    motherId: string,
+    scope: CompanyActorScope,
 ) {
     if (data.roleName && (data.roleName as string) === "administrator") {
         throw new Error("FORBIDDEN_ROLE");
     }
 
-    const allowedCompanyIds = await resolveAllowedCompanyIdsForActor(motherId);
+    const allowedCompanyIds = await resolveAllowedCompanyIdsForActor(scope);
 
     const [existing] = await db
         .select({
@@ -523,18 +539,6 @@ export async function usecaseUpdateCompanyUser(
             throw new Error("COMPANY_ACCESS_DENIED");
         }
         updates.primaryCompanyId = data.companyId;
-        const userCompaniesRepo = new UserCompaniesRepository();
-        const existingLink = await userCompaniesRepo.findByUserAndCompany(
-            targetUserId,
-            data.companyId,
-        );
-        if (!existingLink) {
-            await userCompaniesRepo.create({
-                userId: targetUserId,
-                companyId: data.companyId,
-                isDefault: true,
-            });
-        }
     }
 
     if (data.password !== undefined) {
@@ -542,9 +546,31 @@ export async function usecaseUpdateCompanyUser(
         updates.passwordChangeRequired = true;
     }
 
-    if (Object.keys(updates).length > 0) {
-        await db.update(users).set(updates).where(eq(users.id, targetUserId));
-    }
+    await db.transaction(async (tx) => {
+        if (data.companyId !== undefined) {
+            const { userCompanies: userCompaniesTable } = await import("@/database/schema/schema");
+            await tx
+                .delete(userCompaniesTable)
+                .where(eq(userCompaniesTable.userId, targetUserId));
+            await tx.insert(userCompaniesTable).values({
+                userId: targetUserId,
+                companyId: data.companyId,
+                isDefault: true,
+            });
+        }
+
+        if (Object.keys(updates).length > 0 || data.password !== undefined) {
+            await tx
+                .update(users)
+                .set({
+                    ...updates,
+                    ...(data.password !== undefined
+                        ? { tokenVersion: sql`${users.tokenVersion} + 1` }
+                        : {}),
+                })
+                .where(eq(users.id, targetUserId));
+        }
+    });
 
     const [updated] = await db
         .select({

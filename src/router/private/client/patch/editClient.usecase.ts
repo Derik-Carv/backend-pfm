@@ -1,6 +1,7 @@
 import type { EditClientDependencies } from "@/database/tables/clients/clients.interface";
 import type { EditClientInput } from "../client.schemas";
 import { allRoles } from "@/lib/roles.list";
+import { hasTenantAccess } from "@/lib/tenant";
 import { cpfValidateNormal } from "@/utils/checkCpf";
 
 export function createEditClientUseCase({
@@ -38,9 +39,7 @@ export function createEditClientUseCase({
         const existingClient = await clientsDb.findById(data.id);
         if (
             !existingClient ||
-            (accessibleCompanyIds &&
-                existingClient.companyId &&
-                !accessibleCompanyIds.includes(existingClient.companyId))
+            !hasTenantAccess(existingClient.companyId, accessibleCompanyIds)
         ) {
             throw new Error("ROLE_ACESS_DENIED");
         }

@@ -1,7 +1,17 @@
 import { z } from "zod";
 
 export const serviceCreateBaseSchema = z.object({
-    id: z.string().uuid().optional(),
+    serviceName: z.string().trim().min(1).max(200),
+    price: z.string().regex(/^\d+(\.\d+)?$/),
+    initialDate: z.string().trim().min(1),
+    finishDate: z.string().nullable().optional(),
+    clientId: z.string().uuid(),
+    details: z.string().trim().min(1).max(2000),
+    statusServiceId: z.string().uuid().nullable().optional(),
+});
+
+const serviceListItemSchema = z.object({
+    id: z.string().uuid(),
     serviceName: z.string(),
     price: z.string(),
     initialDate: z.string(),
@@ -28,7 +38,7 @@ export const getServicesCreateResponseSchema = z.object({
 export const getMyServicesListResponseSchema = z.object({
     message: z.string(),
     myServicesList: z.object({
-        list: z.array(serviceCreateBaseSchema),
+        list: z.array(serviceListItemSchema),
     }),
 });
 

@@ -10,8 +10,9 @@ import {
     type,
     users,
 } from "@/database/schema/schema";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { hashPassword } from "@/lib/hash";
+import { maskCpf } from "@/lib/lgpd/legal.constants";
 import type { AdminTableName } from "./adminData.types";
 
 const tables = {
@@ -26,29 +27,119 @@ const tables = {
     bundled,
 } as const;
 
+const ALLOWED_WRITABLE_FIELDS: Record<AdminTableName, readonly string[]> = {
+    roles: ["name", "active"],
+    users: [
+        "name",
+        "surname",
+        "username",
+        "email",
+        "emailVerified",
+        "password",
+        "roleId",
+        "primaryCompanyId",
+        "cpf",
+        "active",
+        "passwordChangeRequired",
+    ],
+    clients: [
+        "registeredCompanyName",
+        "tradeName",
+        "cnpj",
+        "cpf",
+        "email",
+        "companyId",
+        "active",
+    ],
+    movimentations: [
+        "name",
+        "nfId",
+        "destinationUserId",
+        "destinationClientId",
+        "justify",
+        "companyId",
+        "active",
+    ],
+    types: ["name", "active"],
+    "status-services": ["name", "active"],
+    services: [
+        "serviceName",
+        "price",
+        "initialDate",
+        "finishDate",
+        "clientId",
+        "details",
+        "statusServiceId",
+        "companyId",
+        "active",
+    ],
+    notes: [
+        "typeId",
+        "numberNf",
+        "acessKey",
+        "thirdPartyClientId",
+        "emissionDate",
+        "cancelDate",
+        "totalValue",
+        "servicesId",
+        "movimentationId",
+        "companyId",
+        "active",
+        "deactivationReason",
+    ],
+    bundled: [
+        "serviceBundledId",
+        "userId",
+        "serviceNameBundled",
+        "priceBundled",
+        "clientIdBundled",
+        "initialDateBundled",
+        "finishDateBundled",
+        "active",
+    ],
+};
+
 function tableFor(name: AdminTableName) {
     return tables[name];
 }
 
 function sanitizeRecord<T extends Record<string, unknown>>(record: T) {
     const { password: _password, ...safeRecord } = record;
+    const mutable = safeRecord as Record<string, unknown>;
+    if (typeof mutable.cpf === "string") {
+        mutable.cpf = maskCpf(mutable.cpf);
+    }
     return safeRecord;
 }
 
-function preparePayload(tableName: AdminTableName, payload: Record<string, unknown>) {
-    const data = { ...payload };
-    delete data.id;
-    delete data.createdAt;
-    delete data.updatedAt;
+async function preparePayload(
+    tableName: AdminTableName,
+    payload: Record<string, unknown>,
+) {
+    const allowedFields = new Set(ALLOWED_WRITABLE_FIELDS[tableName]);
+    const data: Record<string, unknown> = {};
 
-    if (tableName === "users" && typeof data.password === "string") {
-        return hashPassword(data.password).then((password) => ({
-            ...data,
-            password,
-        }));
+    for (const key of Object.keys(payload)) {
+        if (!allowedFields.has(key)) {
+            continue;
+        }
+        data[key] = payload[key];
     }
 
-    return Promise.resolve(data);
+    if (tableName === "users" && "password" in data) {
+        if (typeof data.password === "string" && data.password.trim() === "") {
+            delete data.password;
+        } else if (typeof data.password === "string") {
+            if (data.password.length < 8 || data.password.length > 128) {
+                throw new Error("INVALID_ADMIN_PASSWORD_LENGTH");
+            }
+            data.password = await hashPassword(data.password);
+        } else {
+            delete data.password;
+        }
+    }
+
+    return data;
 }
 
 export async function listAdminRecords(
@@ -115,10 +206,14 @@ export async function updateAdminRecord(
 ) {
     const table = tableFor(tableName);
     const data = await preparePayload(tableName, payload);
+    const updateData =
+        tableName === "users" && "password" in data
+            ? { ...data, tokenVersion: sql`${users.tokenVersion} + 1` }
+            : data;
     const [record] = await db
         .update(table)
         // The table is selected from a closed, validated admin table map.
-        .set(data as never)
+        .set(updateData as never)
         .where(eq(table.id, id))
         .returning();
 

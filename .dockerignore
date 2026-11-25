@@ -1,5 +1,15 @@
 node_modules
 .git
-.env
+.env*
+!.env.example
 dist
-archives/**/*.pdf
+archives
+*.log
+*.md
+docs
+.idea
+.DS_Store
+*.pem
+*.key
+*.pfx
+*.p12

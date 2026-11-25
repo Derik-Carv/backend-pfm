@@ -9,7 +9,12 @@ const typeItemSchema = z.object({
 });
 
 export const createTypeSchema = z.object({
-    name: z.string().trim().min(2).max(100),
+    name: z
+        .string()
+        .trim()
+        .min(2)
+        .max(100)
+        .regex(/^[\p{L}\p{N} _-]+$/u, "Nome do tipo contém caracteres inválidos"),
 });
 
 export const typeIdParamsSchema = z.object({

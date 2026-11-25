@@ -88,27 +88,35 @@ export class MovimentationRepository implements IMovimentation {
     }
 
     async findName(name: string, companyIds?: string[]): Promise<Movimentation> {
-        const filters = [eq(movimentation.name, name)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(movimentation.companyId, companyIds));
+        if (!companyIds || companyIds.length === 0) {
+            return null as unknown as Movimentation;
         }
         const [nameReturning] = await db
             .select()
             .from(movimentation)
-            .where(and(...filters));
+            .where(
+                and(
+                    eq(movimentation.name, name),
+                    inArray(movimentation.companyId, companyIds),
+                ),
+            );
 
         return nameReturning || null;
     }
 
     async findActives(companyIds?: string[]): Promise<Movimentation[]> {
-        const filters = [eq(movimentation.active, true)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(movimentation.companyId, companyIds));
+        if (!companyIds || companyIds.length === 0) {
+            return [];
         }
         return await db
             .select()
             .from(movimentation)
-            .where(and(...filters));
+            .where(
+                and(
+                    eq(movimentation.active, true),
+                    inArray(movimentation.companyId, companyIds),
+                ),
+            );
     }
 
     async findInactives(): Promise<Movimentation[]> {

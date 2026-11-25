@@ -34,16 +34,15 @@ export type NfPageResult = {
 };
 
 export type sendEmailNfDependencies = {
-    findNf: Pick<INF, "findNfNumber">;
-    clientsDb: Pick<IClient, "findByCompanyName">;
-    findType: Pick<IType, "findName">;
+    findNf: Pick<INF, "findId" | "findNfNumber">;
+    clientsDb: Pick<IClient, "findById">;
     findUser: Pick<IUsers, "findId">;
 };
 
 export interface INF {
     create(data: CreateNfDatabaseInput): Promise<NF>;
     findId(id: string): Promise<NF>;
-    findNfNumber(number: string): Promise<NF>;
+    findNfNumber(number: string, companyIds?: string[]): Promise<NF>;
     findAcessKey(acessKey: string): Promise<NF>;
     findClientId(clientId: string): Promise<NF>;
     findEmissionDate(emissionDate: string): Promise<NF>;

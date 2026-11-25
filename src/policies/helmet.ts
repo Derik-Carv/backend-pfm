@@ -1,8 +1,10 @@
 import type { FastifyHelmetOptions } from "@fastify/helmet";
 
+const isProd = (Bun.env.NODE_ENV ?? process.env.NODE_ENV) === "production";
+
 export const helmetOptions: FastifyHelmetOptions = {
     xFrameOptions: {
-        action: "sameorigin",
+        action: "deny",
     },
     contentSecurityPolicy: {
         directives: {
@@ -10,12 +12,18 @@ export const helmetOptions: FastifyHelmetOptions = {
             scriptSrc: ["'self'"],
             styleSrc: ["'self'"],
             imgSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'none'"],
         },
     },
-    // hsts: {  // only active with https active
-    //     maxAge: 31536000, // 1 ano em segundos
-    //     includeSubDomains: true,
-    //     preload: true,
-    // },
-    dnsPrefetchControl: false,
+    ...(isProd
+        ? {
+              hsts: {
+                  maxAge: 31536000,
+                  includeSubDomains: true,
+              },
+          }
+        : {}),
 };

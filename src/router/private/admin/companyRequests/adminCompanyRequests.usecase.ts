@@ -161,7 +161,7 @@ export async function usecaseApproveCompanyRequest(
             .set({ userId: createdAdmin.id })
             .where(eq(legalAcceptances.companyRequestId, requestId));
 
-        await tx
+        const [claimed] = await tx
             .update(companyRegistrationRequests)
             .set({
                 status: "approved",
@@ -171,7 +171,17 @@ export async function usecaseApproveCompanyRequest(
                 approvedCompanyId: newCompany.id,
                 approvedUserId: createdAdmin.id,
             })
-            .where(eq(companyRegistrationRequests.id, requestId));
+            .where(
+                and(
+                    eq(companyRegistrationRequests.id, requestId),
+                    eq(companyRegistrationRequests.status, "pending"),
+                ),
+            )
+            .returning({ id: companyRegistrationRequests.id });
+
+        if (!claimed) {
+            throw new Error("REQUEST_ALREADY_REVIEWED");
+        }
 
         return {
             company: newCompany,
@@ -223,8 +233,17 @@ export async function usecaseRejectCompanyRequest(
             reviewedBy: reviewerUserId,
             reviewedAt: new Date(),
         })
-        .where(eq(companyRegistrationRequests.id, requestId))
+        .where(
+            and(
+                eq(companyRegistrationRequests.id, requestId),
+                eq(companyRegistrationRequests.status, "pending"),
+            ),
+        )
         .returning(safeRequestColumns);
+
+    if (!updated) {
+        throw new Error("REQUEST_ALREADY_REVIEWED");
+    }
 
     void sendCompanyRequestDecisionEmail({
         to: reqRecord.adminEmail,

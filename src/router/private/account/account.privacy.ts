@@ -13,6 +13,7 @@ import {
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { verifyPassword } from "@/lib/hash";
 import { extractRequestMeta, recordAuditLog } from "@/lib/lgpd/audit";
+import { rateLimitProfiles } from "@/policies/rateLimit";
 import {
     LEGAL_PRIVACY_VERSION,
     LEGAL_TERMS_VERSION,
@@ -68,6 +69,7 @@ const privacyMeResponseSchema = z.object({
         emailVerified: z.boolean(),
         cpfMasked: z.string(),
         role: z.string(),
+        passwordChangeRequired: z.boolean(),
         createdAt: z.date(),
         anonymizedAt: z.date().nullable(),
     }),
@@ -267,6 +269,7 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
                     emailVerified: user.emailVerified,
                     cpfMasked: maskCpf(user.cpf),
                     role: request.user.role,
+                    passwordChangeRequired: user.passwordChangeRequired,
                     createdAt: user.createdAt,
                     anonymizedAt: user.anonymizedAt,
                 },
@@ -403,6 +406,9 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
     app.get(
         "/privacy/export",
         {
+            config: {
+                rateLimit: rateLimitProfiles.sensitive,
+            },
             schema: {
                 tags: ["Account", "LGPD"],
                 summary: "Export personal data for portability (LGPD Art. 18 II & V)",
@@ -478,6 +484,9 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
     app.post(
         "/privacy/anonymize",
         {
+            config: {
+                rateLimit: rateLimitProfiles.sensitive,
+            },
             schema: {
                 tags: ["Account", "LGPD"],
                 summary:

@@ -16,14 +16,18 @@ export class ServicesRepository implements IServices {
     }
 
     async findActives(companyIds?: string[]): Promise<Services[]> {
-        const filters = [eq(services.active, true)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
+        if (!companyIds || companyIds.length === 0) {
+            return [];
         }
         return db
             .select()
             .from(services)
-            .where(and(...filters));
+            .where(
+                and(
+                    eq(services.active, true),
+                    inArray(services.companyId, companyIds),
+                ),
+            );
     }
 
     async findActivePage(
@@ -32,8 +36,12 @@ export class ServicesRepository implements IServices {
         collaboratorId?: string,
         companyIds?: string[],
     ): Promise<{ list: ServicePageItem[]; total: number }> {
+        if (!companyIds || companyIds.length === 0) {
+            return { list: [], total: 0 };
+        }
         const filters = [
             eq(services.active, true),
+            inArray(services.companyId, companyIds),
             ...(collaboratorId
                 ? [
                       inArray(
@@ -43,12 +51,14 @@ export class ServicesRepository implements IServices {
                                   serviceBundledId: bundled.serviceBundledId,
                               })
                               .from(bundled)
-                              .where(eq(bundled.userId, collaboratorId)),
+                              .where(
+                                  and(
+                                      eq(bundled.userId, collaboratorId),
+                                      eq(bundled.active, true),
+                                  ),
+                              ),
                       ),
                   ]
-                : []),
-            ...(companyIds && companyIds.length > 0
-                ? [inArray(services.companyId, companyIds)]
                 : []),
         ];
         const where = and(...filters);
@@ -94,17 +104,19 @@ export class ServicesRepository implements IServices {
         clientId: string,
         companyIds?: string[],
     ): Promise<Services[]> {
-        const filters = [
-            eq(services.active, true),
-            eq(services.clientId, clientId),
-            ...(companyIds && companyIds.length > 0
-                ? [inArray(services.companyId, companyIds)]
-                : []),
-        ];
+        if (!companyIds || companyIds.length === 0) {
+            return [];
+        }
         return db
             .select()
             .from(services)
-            .where(and(...filters))
+            .where(
+                and(
+                    eq(services.active, true),
+                    eq(services.clientId, clientId),
+                    inArray(services.companyId, companyIds),
+                ),
+            )
             .orderBy(desc(services.createdAt));
     }
 
@@ -116,6 +128,9 @@ export class ServicesRepository implements IServices {
         collaboratorId?: string,
         companyIds?: string[],
     ): Promise<{ list: ServicePageItem[]; total: number }> {
+        if (!companyIds || companyIds.length === 0) {
+            return { list: [], total: 0 };
+        }
         const searchFilter = {
             id: eq(services.id, value),
             client: eq(services.clientId, value),
@@ -124,7 +139,9 @@ export class ServicesRepository implements IServices {
             finishdate: eq(services.finishDate, value),
         }[type];
         const filters = [
+            eq(services.active, true),
             searchFilter,
+            inArray(services.companyId, companyIds),
             ...(collaboratorId
                 ? [
                       inArray(
@@ -134,12 +151,14 @@ export class ServicesRepository implements IServices {
                                   serviceBundledId: bundled.serviceBundledId,
                               })
                               .from(bundled)
-                              .where(eq(bundled.userId, collaboratorId)),
+                              .where(
+                                  and(
+                                      eq(bundled.userId, collaboratorId),
+                                      eq(bundled.active, true),
+                                  ),
+                              ),
                       ),
                   ]
-                : []),
-            ...(companyIds && companyIds.length > 0
-                ? [inArray(services.companyId, companyIds)]
                 : []),
         ];
         const where = and(...filters);
@@ -244,15 +263,17 @@ export class ServicesRepository implements IServices {
         limitNumber: number = 3,
         companyIds?: string[],
     ): Promise<Services[]> {
-        if (ids.length === 0) return [];
-        const filters = [inArray(services.id, ids)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
-        }
+        if (ids.length === 0 || !companyIds || companyIds.length === 0) return [];
         return await db
             .select()
             .from(services)
-            .where(and(...filters))
+            .where(
+                and(
+                    eq(services.active, true),
+                    inArray(services.id, ids),
+                    inArray(services.companyId, companyIds),
+                ),
+            )
             .orderBy(desc(services.price))
             .limit(limitNumber);
     }
@@ -262,15 +283,17 @@ export class ServicesRepository implements IServices {
         limitNumber: number = 3,
         companyIds?: string[],
     ): Promise<Services[]> {
-        if (ids.length === 0) return [];
-        const filters = [inArray(services.id, ids)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
-        }
+        if (ids.length === 0 || !companyIds || companyIds.length === 0) return [];
         return await db
             .select()
             .from(services)
-            .where(and(...filters))
+            .where(
+                and(
+                    eq(services.active, true),
+                    inArray(services.id, ids),
+                    inArray(services.companyId, companyIds),
+                ),
+            )
             .orderBy(desc(services.createdAt))
             .limit(limitNumber);
     }
@@ -280,15 +303,17 @@ export class ServicesRepository implements IServices {
         limitNumber: number = 3,
         companyIds?: string[],
     ): Promise<Services[]> {
-        if (ids.length === 0) return [];
-        const filters = [inArray(services.id, ids)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
-        }
+        if (ids.length === 0 || !companyIds || companyIds.length === 0) return [];
         return await db
             .select()
             .from(services)
-            .where(and(...filters))
+            .where(
+                and(
+                    eq(services.active, true),
+                    inArray(services.id, ids),
+                    inArray(services.companyId, companyIds),
+                ),
+            )
             .orderBy(asc(services.createdAt))
             .limit(limitNumber);
     }
@@ -297,14 +322,16 @@ export class ServicesRepository implements IServices {
         limitNumber: number = 3,
         companyIds?: string[],
     ): Promise<Services[]> {
-        const filters = [eq(services.active, true)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
-        }
+        if (!companyIds || companyIds.length === 0) return [];
         return await db
             .select()
             .from(services)
-            .where(and(...filters))
+            .where(
+                and(
+                    eq(services.active, true),
+                    inArray(services.companyId, companyIds),
+                ),
+            )
             .orderBy(desc(services.price))
             .limit(limitNumber);
     }
@@ -313,14 +340,16 @@ export class ServicesRepository implements IServices {
         limitNumber: number = 3,
         companyIds?: string[],
     ): Promise<Services[]> {
-        const filters = [eq(services.active, true)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
-        }
+        if (!companyIds || companyIds.length === 0) return [];
         return await db
             .select()
             .from(services)
-            .where(and(...filters))
+            .where(
+                and(
+                    eq(services.active, true),
+                    inArray(services.companyId, companyIds),
+                ),
+            )
             .orderBy(desc(services.createdAt))
             .limit(limitNumber);
     }
@@ -329,39 +358,39 @@ export class ServicesRepository implements IServices {
         limitNumber: number = 3,
         companyIds?: string[],
     ): Promise<Services[]> {
-        const filters = [eq(services.active, true)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
-        }
+        if (!companyIds || companyIds.length === 0) return [];
         return await db
             .select()
             .from(services)
-            .where(and(...filters))
+            .where(
+                and(
+                    eq(services.active, true),
+                    inArray(services.companyId, companyIds),
+                ),
+            )
             .orderBy(asc(services.createdAt))
             .limit(limitNumber);
     }
 
-
-
     async findAll(companyIds?: string[]): Promise<Services[]> {
-        if (companyIds && companyIds.length > 0) {
-            return await db
-                .select()
-                .from(services)
-                .where(inArray(services.companyId, companyIds));
-        }
-        return await db.query.services.findMany();
-    }
-
-    async findInactives(companyIds?: string[]): Promise<Services[]> {
-        const filters = [eq(services.active, false)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(services.companyId, companyIds));
-        }
+        if (!companyIds || companyIds.length === 0) return [];
         return await db
             .select()
             .from(services)
-            .where(and(...filters));
+            .where(inArray(services.companyId, companyIds));
+    }
+
+    async findInactives(companyIds?: string[]): Promise<Services[]> {
+        if (!companyIds || companyIds.length === 0) return [];
+        return await db
+            .select()
+            .from(services)
+            .where(
+                and(
+                    eq(services.active, false),
+                    inArray(services.companyId, companyIds),
+                ),
+            );
     }
 
     async editName(id: string, name: string): Promise<Services | null> {
@@ -428,6 +457,22 @@ export class ServicesRepository implements IServices {
         const [upService] = await db
             .update(services)
             .set({ finishDate: date })
+            .where(eq(services.id, id))
+            .returning();
+
+        return upService || null;
+    }
+
+    async updateFields(
+        id: string,
+        fields: Partial<CreateServicesDatabaseInput>,
+    ): Promise<Services | null> {
+        if (Object.keys(fields).length === 0) {
+            return this.findId(id);
+        }
+        const [upService] = await db
+            .update(services)
+            .set(fields)
             .where(eq(services.id, id))
             .returning();
 

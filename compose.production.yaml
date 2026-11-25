@@ -11,6 +11,12 @@ services:
         build:
             target: production
         restart: always
+        security_opt:
+            - no-new-privileges:true
+        cap_drop:
+            - ALL
+        mem_limit: 512m
+        pids_limit: 256
         ports: !override
             - "127.0.0.1:${PORT:?PORT is required}:${PORT:?PORT is required}"
         volumes: !override

@@ -3,7 +3,13 @@ import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { CompaniesRepository } from "@/database/tables/companies/companies.repository";
 import { UserCompaniesRepository } from "@/database/tables/userCompanies/userCompanies.repository";
-import type { TenantContext } from "@/types/tenant";
+import { isValidUuid } from "@/lib/tenant";
+
+const FIRST_LOGIN_ALLOWED_ROUTES = new Set([
+    "/account/password",
+    "/account/legal/accept",
+    "/account/privacy/me",
+]);
 
 export async function authMiddleware(
     request: FastifyRequest,
@@ -11,7 +17,7 @@ export async function authMiddleware(
 ) {
     try {
         await request.jwtVerify();
-    } catch (error) {
+    } catch {
         return reply.status(401).send({
             message: "Unauthorized: Invalid or expired token",
         });
@@ -27,6 +33,16 @@ export async function authMiddleware(
         });
     }
 
+    if (
+        (typeof request.user.tv === "number" &&
+            request.user.tv !== user.tokenVersion) ||
+        (request.user.tv === undefined && user.tokenVersion > 1)
+    ) {
+        return reply.status(401).send({
+            message: "Unauthorized: Token has been revoked",
+        });
+    }
+
     const role = await roleRepository.findById(user.roleId);
 
     if (!role?.active) {
@@ -38,12 +54,36 @@ export async function authMiddleware(
     request.user.role = role.name;
     request.user.cpf = user.cpf;
 
+    const routeUrl =
+        request.routeOptions.url ?? request.url.split("?")[0] ?? "";
+
+    if (
+        user.passwordChangeRequired &&
+        !FIRST_LOGIN_ALLOWED_ROUTES.has(routeUrl)
+    ) {
+        return reply.status(403).send({
+            message: "Password change required before accessing this resource",
+        });
+    }
+
     // Tenant Resolution
     const companiesRepo = new CompaniesRepository();
     const userCompaniesRepo = new UserCompaniesRepository();
 
-    const requestedCompanyId = request.headers["x-company-id"] as string | undefined;
-    const requestedViewScope = (request.headers["x-view-scope"] as string | undefined) || "single";
+    const rawRequestedCompanyId = request.headers["x-company-id"];
+    const requestedCompanyId =
+        typeof rawRequestedCompanyId === "string"
+            ? rawRequestedCompanyId.trim()
+            : undefined;
+
+    if (requestedCompanyId && !isValidUuid(requestedCompanyId)) {
+        return reply.status(400).send({
+            message: "Invalid x-company-id header",
+        });
+    }
+
+    const requestedViewScope =
+        (request.headers["x-view-scope"] as string | undefined) || "single";
 
     let targetCompanyId = requestedCompanyId || user.primaryCompanyId;
 
@@ -55,7 +95,18 @@ export async function authMiddleware(
     }
 
     if (!targetCompanyId) {
-        return;
+        const canSkipTenant =
+            role.name === "administrator" ||
+            routeUrl.startsWith("/account/") ||
+            routeUrl === "/companies/me";
+
+        if (canSkipTenant) {
+            return;
+        }
+
+        return reply.status(403).send({
+            message: "Forbidden: No active company context assigned to user",
+        });
     }
 
     const targetCompany = await companiesRepo.findById(targetCompanyId);

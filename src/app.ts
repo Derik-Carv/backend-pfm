@@ -1,6 +1,4 @@
 import fastify from "fastify";
-import fasfitySwagger from "@fastify/swagger";
-import fasfitySwaggerUi from "@fastify/swagger-ui";
 import cors from "@fastify/cors";
 import { corsOptions } from "./policies/cors";
 import helmet from "@fastify/helmet";
@@ -22,6 +20,18 @@ import { extractRequestMeta, recordAuditLog } from "./lib/lgpd/audit";
 
 const isDev = (Bun.env.NODE_ENV ?? process.env.NODE_ENV) !== "production";
 const jwtSecret = process.env.JWT_SECRET as string;
+
+if (
+    !isDev &&
+    (!jwtSecret ||
+        jwtSecret.trim().length < 32 ||
+        jwtSecret.includes("change-me"))
+) {
+    throw new Error(
+        "JWT_SECRET must be defined with at least 32 characters and not use placeholder values in production.",
+    );
+}
+
 const trustProxyEnv = (
     Bun.env.TRUST_PROXY ??
     process.env.TRUST_PROXY ??
@@ -38,10 +48,39 @@ const trustProxy: boolean | string =
 export const app = fastify({
     logger: isDev ? loggerConfig : loggerProd,
     trustProxy,
+    bodyLimit: 1024 * 1024,
+    connectionTimeout: 10_000,
+    requestTimeout: 30_000,
 })
     .withTypeProvider<ZodTypeProvider>()
     .setValidatorCompiler(validatorCompiler)
     .setSerializerCompiler(serializerCompiler);
+
+app.setErrorHandler((error, request, reply) => {
+    request.log.error({ err: error }, "Unhandled request error");
+
+    const fastifyError = error as { statusCode?: number; code?: string; message?: string };
+    const statusCode =
+        fastifyError.code === "FST_REQ_FILE_TOO_LARGE"
+            ? 413
+            : typeof fastifyError.statusCode === "number" &&
+                fastifyError.statusCode >= 400 &&
+                fastifyError.statusCode < 500
+              ? fastifyError.statusCode
+              : 500;
+
+    if (statusCode >= 500) {
+        return reply.status(500).send({
+            message: "Internal server error",
+            statusCode: 500,
+        });
+    }
+
+    return reply.status(statusCode).send({
+        message: fastifyError.message || "Bad request",
+        statusCode,
+    });
+});
 
 const auditEnabled = process.env.AUDIT_LOG_ENABLED === "true";
 
@@ -57,9 +96,12 @@ app.addHook("onResponse", async (request, reply) => {
     const isSensitiveRead =
         request.method === "GET" &&
         (urlPath.startsWith("/admin/data") ||
+            urlPath.startsWith("/admin/lgpd") ||
+            urlPath.startsWith("/admin/company-requests") ||
             urlPath === "/admin/system/clients" ||
             urlPath === "/account/privacy/export" ||
-            (urlPath.startsWith("/nf/") && urlPath.endsWith("/file")));
+            ((urlPath.startsWith("/notes/") || urlPath.startsWith("/nf/")) &&
+                urlPath.endsWith("/file")));
 
     if (
         (!isMutating && !isSensitiveRead) ||
@@ -121,11 +163,31 @@ await app.register(rateLimit, globalRateLimitConfig);
 
 await app.register(fastifyJwt, {
     secret: jwtSecret,
+    sign: {
+        algorithm: "HS256",
+    },
+    verify: {
+        algorithms: ["HS256"],
+    },
 });
 
-app.register(fastifyMultipart);
+app.register(fastifyMultipart, {
+    limits: {
+        fileSize: 10 * 1024 * 1024,
+        files: 1,
+        fields: 5,
+        fieldSize: 64 * 1024,
+        parts: 10,
+    },
+});
 
 if (isDev) {
+    const [{ default: fasfitySwagger }, { default: fasfitySwaggerUi }] =
+        await Promise.all([
+            import("@fastify/swagger"),
+            import("@fastify/swagger-ui"),
+        ]);
+
     app.register(fasfitySwagger, {
         openapi: {
             info: {

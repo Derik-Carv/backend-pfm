@@ -13,7 +13,7 @@ export const createMotherAdminInputSchema = z.object({
     surname: z.string().min(2),
     email: z.string().trim().email().toLowerCase(),
     cpf: z.string().min(11).max(14),
-    password: z.string().min(6),
+    password: z.string().min(8).max(128),
     username: z.string().min(3).optional(),
 });
 
@@ -89,7 +89,7 @@ export const createCompanyUserBodySchema = z.object({
     surname: z.string().min(2),
     email: z.string().trim().email().toLowerCase(),
     cpf: z.string().min(11).max(14),
-    password: z.string().min(6),
+    password: z.string().min(8).max(128),
     roleName: companyAdminRolesEnum,
     companyId: z.string().uuid().optional(),
     username: z.string().min(3).optional(),
@@ -102,7 +102,7 @@ export const updateCompanyUserBodySchema = z.object({
     roleName: companyAdminRolesEnum.optional(),
     companyId: z.string().uuid().optional(),
     active: z.boolean().optional(),
-    password: z.string().min(6).optional(),
+    password: z.string().min(8).max(128).optional(),
 });
 
 export const companyUserItemSchema = z.object({

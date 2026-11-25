@@ -1,4 +1,5 @@
 import type { INF } from "@/database/tables/nf/nf.interface";
+import { hasTenantAccess } from "@/lib/tenant";
 
 export function injectDeactivateNf({
     nf,
@@ -12,12 +13,7 @@ export function injectDeactivateNf({
         accessibleCompanyIds?: string[],
     ) {
         const note = await nf.findId(id);
-        if (
-            !note ||
-            (accessibleCompanyIds &&
-                note.companyId &&
-                !accessibleCompanyIds.includes(note.companyId))
-        ) {
+        if (!note || !hasTenantAccess(note.companyId, accessibleCompanyIds)) {
             throw new Error("NF_NOT_FOUND");
         }
         if (!note.active) {

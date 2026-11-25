@@ -29,7 +29,13 @@ export const createNfServicesController = async (
 
         for await (const part of request.parts()) {
             if (part.type === "file" && part.fieldname === "file") {
+                if (file) {
+                    throw new Error("MULTIPLE_FILES_NOT_ALLOWED");
+                }
                 const fileBuffer = await part.toBuffer();
+                if (part.file.truncated) {
+                    throw new Error("PDF_FILE_TOO_LARGE");
+                }
                 file = new File([fileBuffer], part.filename, {
                     type: part.mimetype,
                 });
@@ -91,14 +97,23 @@ export const createNfServicesController = async (
             });
         }
 
+        if (error.message === "PDF_FILE_TOO_LARGE") {
+            return reply.status(413).send({
+                message: "PDF file exceeds maximum allowed size",
+            });
+        }
+
         const businessErrors400 = [
             "FILE_NOT_FOUND",
+            "MULTIPLE_FILES_NOT_ALLOWED",
             "NF_DATA_NOT_FOUND",
             "INVALID_NF_JSON",
             "INVALID_FILE_TYPE",
             "EMPTY_FILE",
             "PDF_TEXT_NOT_FOUND",
             "PDF_READ_ERROR",
+            "PDF_PAGE_LIMIT_EXCEEDED",
+            "PDF_PARSE_TIMEOUT",
         ];
 
         if (
@@ -119,6 +134,7 @@ export const createNfServicesController = async (
             "VALUE_INVALID",
             "CLIENT_NOT_EXIST",
             "SERVICE_NOT_EXIST",
+            "MOVIMENTATION_NOT_FOUND",
         ];
 
         if (businessErrors404.includes(error.message)) {
@@ -136,7 +152,7 @@ export const createNfServicesController = async (
         }
 
         return reply.status(500).send({
-            message: "Internal server error while registering role",
+            message: "Internal server error while creating NF",
         });
     }
 };

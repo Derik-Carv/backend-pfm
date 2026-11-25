@@ -1,26 +1,47 @@
+const sharedRedact = [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "body.password",
+    "body.currentPassword",
+    "body.newPassword",
+    "body.adminPassword",
+    "body.cpf",
+    "body.adminCpf",
+    "body.cnpj",
+    "body.email",
+    "body.adminEmail",
+    "body.destinationEmail",
+    "body.code",
+    "*.password",
+    "*.currentPassword",
+    "*.newPassword",
+    "*.adminPassword",
+    "*.adminPasswordHash",
+    "*.cpf",
+    "*.adminCpf",
+    "*.cnpj",
+    "*.email",
+    "*.adminEmail",
+    "*.destinationEmail",
+    "*.token",
+    "*.code",
+    "password",
+    "adminPasswordHash",
+    "cpf",
+    "adminCpf",
+    "cnpj",
+    "email",
+    "adminEmail",
+    "destinationEmail",
+    "token",
+    "code",
+];
+
+const axiomToken = process.env.AXIOM_TOKEN ?? process.env.LOGTOKEN;
+
 export const loggerConfig = {
     level: process.env.LOG_LEVEL ?? "info",
-    redact: [
-        "req.headers.authorization",
-        "req.headers.cookie",
-        "body.password",
-        "body.currentPassword",
-        "body.newPassword",
-        "body.adminPassword",
-        "body.cpf",
-        "body.adminCpf",
-        "body.email",
-        "body.adminEmail",
-        "body.code",
-        "password",
-        "adminPasswordHash",
-        "cpf",
-        "adminCpf",
-        "email",
-        "adminEmail",
-        "token",
-        "code",
-    ],
+    redact: sharedRedact,
     transport: {
         target: "pino-pretty",
         options: {
@@ -32,32 +53,16 @@ export const loggerConfig = {
 
 export const loggerProd = {
     level: process.env.LOG_LEVEL ?? "info",
-    redact: [
-        "req.headers.authorization",
-        "req.headers.cookie",
-        "body.password",
-        "body.currentPassword",
-        "body.newPassword",
-        "body.adminPassword",
-        "body.cpf",
-        "body.adminCpf",
-        "body.email",
-        "body.adminEmail",
-        "body.code",
-        "password",
-        "adminPasswordHash",
-        "cpf",
-        "adminCpf",
-        "email",
-        "adminEmail",
-        "token",
-        "code",
-    ],
-    transport: {
-        target: "@axiomhq/pino",
-        options: {
-            dataset: process.env.AXIOM_DATASET ?? "backend-mei",
-            token: process.env.AXIOM_TOKEN ?? process.env.LOGTOKEN,
-        },
-    },
+    redact: sharedRedact,
+    ...(axiomToken
+        ? {
+              transport: {
+                  target: "@axiomhq/pino",
+                  options: {
+                      dataset: process.env.AXIOM_DATASET ?? "backend-pfm",
+                      token: axiomToken,
+                  },
+              },
+          }
+        : {}),
 };

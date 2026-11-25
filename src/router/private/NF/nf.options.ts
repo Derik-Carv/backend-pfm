@@ -16,7 +16,7 @@ import {
 
 export const createNfRouteOptions = {
     config: {
-        rateLimit: rateLimitProfiles.standard,
+        rateLimit: rateLimitProfiles.sensitive,
     },
     schema: {
         consumes: ["multipart/form-data"],
@@ -125,7 +125,7 @@ export const activateNfRouteOptions = {
 
 export const sendEmailNfRouteOptions = {
     config: {
-        rateLimit: rateLimitProfiles.standard,
+        rateLimit: rateLimitProfiles.sensitive,
     },
     schema: {
         tags: ["NF Menu"],

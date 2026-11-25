@@ -234,23 +234,25 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 
 ## Diagnóstico Atual do Projeto (Status vs. Backlog de Hardening)
 
-*Estado observado diretamente no código-fonte em `2026-11-25` (apenas levantamento de referência; aplicar em PRs específicos):*
+*Estado atualizado em `2026-11-25` após aplicação das rodadas P0, P1 e P2/P3 de segurança:*
 
-### Controles já implementados positivamente
+### Controles implementados e verificados
 
-- Senhas com **Argon2id** (`src/lib/hash.ts`).
-- Revalidação de usuário/role ativos e vínculo multi-tenant em cada requisição protegida (`src/middlewares/auth.middleware.ts`).
-- Swagger/OpenAPI restrito a ambientes não produtivos (`src/app.ts`).
-- Resposta anti-enumeração na recuperação de senha (`src/router/public/password/password.usecase.ts`) e remoção de BCC global entre tenants no envio de NF (`src/lib/nodemailer/nodemailer.ts`).
-- Redação de segredos e PII no logger Pino (`src/config/logger.ts`) e isolamento do PostgreSQL e da porta `3336` em `127.0.0.1` (`compose.production.yaml`).
+- Senhas com **Argon2id** (`src/lib/hash.ts`), `JWT_SECRET` fail-fast, algoritmo `HS256` fixado e revogação imediata pós-troca/reset de senha via `token_version` (`drizzle/0019_user_token_version.sql`, `src/lib/jwt/jwt.ts`, `src/middlewares/auth.middleware.ts`).
+- Revalidação de usuário/role ativos, bloqueio de `passwordChangeRequired` no servidor (sincronizado no frontend), validação de `x-company-id` e isolamento multi-tenant *fail-closed* (`src/middlewares/auth.middleware.ts`, `src/lib/tenant.ts`, repositórios).
+- Escopo restrito de `company_admin` por matriz/filial e troca atômica de empresa sem vínculo residual (`src/router/private/companies/`).
+- Restrição de `colaborator` em `/clients` (`bundled` ativos + CPF mascarado) e restrição de mutações globais em `/types` ao `administrator`.
+- Proteção contra Path Traversal em `archives/` (`src/lib/archivePath.ts`, `src/router/private/NF/sendEmailNf/`, `getNfFile.controller.ts`), limites no `@fastify/multipart` (`10 MB`, `1 arquivo`), magic bytes `%PDF-`, limite de 20 páginas e timeout no `pdfjs-dist`.
+- Escape HTML e sanitização de headers no Nodemailer (`src/lib/nodemailer/nodemailer.ts`), verificação atômica e cooldown de OTP (`emailVerificationCodes.repository.ts`), verificação OTP antes de checagens de conflito no onboarding público e timing protection no login (`login.usecase.ts`).
+- Allowlist de escrita em `/admin/data/:table`, transação atômica na aprovação/rejeição de empresas, update atômico de serviços, validação de CPF corrigida (`src/utils/checkCpf.ts`) e remoção de Mass Assignment de `id`/`cancelDate`/`pathFile`.
+- `trustProxy` configurado com `request.ip`, filtro de `404` públicos fora de `audit_logs`, auditoria de `/notes/:id/file`, Swagger carregado dinamicamente apenas fora de produção (`devDependencies`), error handler global, redação Pino com wildcards (`src/config/logger.ts`), timeouts no PostgreSQL (`src/database/index.ts`), `demoSeed` bloqueado em produção, limpeza de `security_incidents` (5 anos) em `retention.ts`, container não-root (`USER bun`), hardened Compose e CSP/headers no frontend (`nginx.conf`, `vercel.json`).
+- Suíte de testes automatizados de segurança (`bun test` em `src/tests/security.test.ts`).
 
-### Backlog prioritário de melhorias identificadas
+> **Aviso operacional de deploy (volume `nf_archives`):** Como o container de produção do backend agora executa como `USER bun`, se o volume `nf_archives` já existir na VM com dono `root:root`, execute `docker compose -f compose.yaml -f compose.production.yaml run --rm --user root backend chown -R bun:bun /usr/src/app/archives` e rode a migration `drizzle/0019_user_token_version.sql` ao atualizar a produção.
 
-1. **`trustProxy` e IP real (`src/app.ts`, `src/lib/lgpd/audit.ts`):** `TRUST_PROXY_HOPS=1` já consta no `.env.example`, mas `fastify({...})` não configura `trustProxy`, e `extractRequestMeta` lê `x-forwarded-for` diretamente (sujeito a spoofing caso não seja sobrescrito pelo proxy). Configurar `trustProxy` no Fastify e ler `request.ip`.
-2. **Filtro de `audit_logs` para `404` públicos (`src/app.ts`):** O hook `onResponse` grava na tabela `audit_logs` requisições `POST` em rotas inexistentes (`!request.routeOptions.url`), permitindo que bots poluam a tabela de auditoria LGPD. Ignorar rotas não casadas na persistência de auditoria (mantendo apenas no Pino).
-3. **Perfis de Rate Limit (`src/policies/rateLimit.ts`):** O perfil `default` (`max: 7/min`) no hook `onRequest` é muito restritivo para rotas autenticadas comuns (gera falsos `429` como `público` antes da validação JWT). Separar perfil rígido para rotas públicas sensíveis e perfil adequado para rotas autenticadas com chave por `userId`/IP.
-4. **Limites no `@fastify/multipart` (`src/app.ts`):** Registrar `limits` explícitos (`fileSize`, `files`, `fields`) e reforçar validação de assinatura `%PDF-` + path canonical (`path.resolve`) ao manipular arquivos em `archives/`.
-5. **Container não-root e hardening Docker (`Dockerfile`, `compose.production.yaml`):** Adicionar `USER bun` no estágio `production` do `Dockerfile` e restrições de privilégios (`no-new-privileges`, `cap_drop`) no Compose de produção.
-6. **Escape HTML em e-mails e validação de caminho (`src/lib/nodemailer/nodemailer.ts`):** Escapar variáveis interpoladas nos templates HTML de e-mail e validar caminho canônico do PDF antes de anexar.
-7. **HSTS em produção (`src/policies/helmet.ts` / Nginx):** Garantir que `Strict-Transport-Security` esteja ativo na camada HTTPS de produção.
-8. **Fail-fast de `JWT_SECRET`, limite de tentativas em OTP e revogação pós-troca de senha:** Validar força de `JWT_SECRET` no startup em produção, limitar tentativas por código em `emailVerificationCodes` e invalidar JWTs emitidos antes da troca/redefinição de senha.
+### Evoluções estruturais recomendadas (Médio Prazo)
+
+1. **Sessão Web via Cookie `HttpOnly; Secure; SameSite` + Refresh Token rotativo:** substituir o armazenamento de JWT em `localStorage` no frontend web, com proteção CSRF.
+2. **MFA (TOTP ou Passkeys):** segundo fator obrigatório para contas `administrator` e `company_admin`.
+3. **Menor privilégio no PostgreSQL + `NOT NULL` em `company_id`:** separar usuário DML da aplicação da conta de migrations e aplicar `NOT NULL` nas FKs de tenant após backfill.
+4. **Bloqueio de bots na borda (Nginx/Cloudflare):** rejeitar scans comuns (`POST /`, `/vpnsvc/*`, `/.env`) diretamente no Nginx antes do Fastify.

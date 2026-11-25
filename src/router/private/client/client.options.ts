@@ -11,7 +11,7 @@ import {
 
 export const createClientRouteOptions = {
     config: {
-        rateLimit: rateLimitProfiles.manager,
+        rateLimit: rateLimitProfiles.standard,
     },
     schema: {
         tags: ["Client"],
@@ -47,7 +47,7 @@ export const getClientRouteOptions = {
 
 export const editClientRouteOptions = {
     config: {
-        rateLimit: rateLimitProfiles.manager,
+        rateLimit: rateLimitProfiles.standard,
     },
     schema: {
         tags: ["Client"],

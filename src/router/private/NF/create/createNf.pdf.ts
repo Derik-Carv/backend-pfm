@@ -2,9 +2,27 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import { buildSafeNfArchivePath } from "@/lib/archivePath";
 import type { NfCreateInput } from "../nf.schemas";
 
+export const MAX_NF_PDF_BYTES = 10 * 1024 * 1024;
+const MAX_NF_PDF_PAGES = 20;
+const PDF_PARSE_TIMEOUT_MS = 10_000;
+const PDF_MAGIC = Buffer.from("%PDF-", "ascii");
+
 type NfPdfField = "numberNf" | "acessKey" | "emissionDate" | "totalValue";
+
+export function assertValidPdfBuffer(buffer: Buffer): void {
+    if (buffer.length === 0) {
+        throw new Error("EMPTY_FILE");
+    }
+    if (buffer.length > MAX_NF_PDF_BYTES) {
+        throw new Error("PDF_FILE_TOO_LARGE");
+    }
+    if (buffer.length < PDF_MAGIC.length || !buffer.subarray(0, 5).equals(PDF_MAGIC)) {
+        throw new Error("INVALID_FILE_TYPE");
+    }
+}
 
 export class NfPdfInconsistencyError extends Error {
     constructor(
@@ -35,6 +53,9 @@ function normalizePdfMoney(value: string) {
 }
 
 export async function validateNfPdf(file: File, data: NfCreateInput) {
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
+    assertValidPdfBuffer(rawBuffer);
+
     pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
         path.join(
             process.cwd(),
@@ -42,30 +63,46 @@ export async function validateNfPdf(file: File, data: NfCreateInput) {
         ),
     ).href;
     const loadingTask = pdfjs.getDocument({
-        data: new Uint8Array(await file.arrayBuffer()),
+        data: new Uint8Array(rawBuffer),
         useWorkerFetch: false,
     });
 
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     try {
-        const pdf = await loadingTask.promise;
-        const pageTexts: string[] = [];
+        const parsePromise = (async () => {
+            const pdf = await loadingTask.promise;
+            if (pdf.numPages > MAX_NF_PDF_PAGES) {
+                throw new Error("PDF_PAGE_LIMIT_EXCEEDED");
+            }
 
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-            const page = await pdf.getPage(pageNumber);
-            const content = await page.getTextContent();
-            pageTexts.push(
-                content.items
-                    .map((item) =>
-                        "str" in item && typeof item.str === "string"
-                            ? item.str
-                            : "",
-                    )
-                    .filter(Boolean)
-                    .join(" "),
-            );
-        }
+            const pageTexts: string[] = [];
 
-        const text = pageTexts.join(" ").replace(/\s+/g, " ").trim();
+            for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                const page = await pdf.getPage(pageNumber);
+                const content = await page.getTextContent();
+                pageTexts.push(
+                    content.items
+                        .map((item) =>
+                            "str" in item && typeof item.str === "string"
+                                ? item.str
+                                : "",
+                        )
+                        .filter(Boolean)
+                        .join(" "),
+                );
+            }
+
+            return pageTexts.join(" ").replace(/\s+/g, " ").trim();
+        })();
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(() => {
+                void loadingTask.destroy();
+                reject(new Error("PDF_PARSE_TIMEOUT"));
+            }, PDF_PARSE_TIMEOUT_MS);
+        });
+
+        const text = await Promise.race([parsePromise, timeoutPromise]);
 
         if (!text) {
             throw new Error("PDF_TEXT_NOT_FOUND");
@@ -115,29 +152,29 @@ export async function validateNfPdf(file: File, data: NfCreateInput) {
             throw new NfPdfInconsistencyError(inconsistencies);
         }
     } finally {
-        await loadingTask.destroy();
+        if (timeoutHandle) {
+            clearTimeout(timeoutHandle);
+        }
+        await loadingTask.destroy().catch(() => {});
     }
 }
 
 export async function updateNfPdf(
     file: File,
+    companyId: string,
     typeName: string,
     acessKey: string,
 ) {
-    const folderName = typeName
-        .trim()
-        .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
-        .replace(/\s+/g, "_");
-    const fileRepository = path.join(process.cwd(), "archives", folderName);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    assertValidPdfBuffer(buffer);
 
-    await fs.mkdir(fileRepository, { recursive: true });
+    const { absoluteDir, absolutePath, relativePath } = buildSafeNfArchivePath(
+        companyId,
+        typeName,
+        acessKey,
+    );
 
-    const sanitizedKey = acessKey
-        .trim()
-        .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_");
-    const fileName = `${sanitizedKey}.pdf`;
-    const filePath = path.join(fileRepository, fileName);
-
-    await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
-    return path.join("archives", folderName, fileName);
+    await fs.mkdir(absoluteDir, { recursive: true });
+    await fs.writeFile(absolutePath, buffer);
+    return relativePath;
 }

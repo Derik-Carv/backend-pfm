@@ -16,12 +16,20 @@ import { createClientController } from "./create/createClient.controller";
 import { editClientController } from "./patch/editClient.controller";
 import { errorResponseSchema } from "@/router/error.schema";
 
-const allowedRoles = [
+const allowedReadRoles = [
     allRoles.administrator,
     allRoles.company_admin,
     allRoles.manager,
     allRoles.finance,
+    allRoles.observer,
     allRoles.colaborator,
+];
+
+const allowedWriteRoles = [
+    allRoles.administrator,
+    allRoles.company_admin,
+    allRoles.manager,
+    allRoles.finance,
 ];
 
 const clientIdParamsSchema = z.object({
@@ -38,13 +46,16 @@ const anonymizeClientResponseSchema = z.object({
 export async function menuClientRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
 
-    app.addHook("preHandler", inspectRole(allowedRoles));
+    app.register(async (readRoutes) => {
+        readRoutes.addHook("preHandler", inspectRole(allowedReadRoles));
+        readRoutes.get("/", getClientRouteOptions, getClientsController);
+    });
 
-    app.get("/", getClientRouteOptions, getClientsController);
-
-    app.post("/", createClientRouteOptions, createClientController);
-
-    app.patch("/", editClientRouteOptions, editClientController);
+    app.register(async (writeRoutes) => {
+        writeRoutes.addHook("preHandler", inspectRole(allowedWriteRoles));
+        writeRoutes.post("/", createClientRouteOptions, createClientController);
+        writeRoutes.patch("/", editClientRouteOptions, editClientController);
+    });
 
     app.post(
         "/:id/anonymize",

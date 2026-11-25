@@ -5,15 +5,21 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "")
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+const localDevOriginRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 export const corsOptions: FastifyCorsOptions = {
     origin: (requestOrigin, callback) => {
-        if ((Bun.env.NODE_ENV ?? process.env.NODE_ENV) !== "production") {
+        if (!requestOrigin) {
             callback(null, true);
             return;
         }
 
-        if (!requestOrigin) {
-            callback(null, true);
+        if ((Bun.env.NODE_ENV ?? process.env.NODE_ENV) !== "production") {
+            callback(
+                null,
+                allowedOrigins.includes(requestOrigin) ||
+                    localDevOriginRegex.test(requestOrigin),
+            );
             return;
         }
 

@@ -1,12 +1,12 @@
 export function cpfClean(cpf: string) {
-    return cpf.replace(/[^\w]/g, "");
+    return cpf.replace(/\D/g, "");
 }
 
 export async function cpfValidateNormal(cpf: string) {
-    // check brazilian CPF
-    const cpfFormat = await cpfClean(cpf); // keep only numbers and letters
+    const cpfFormat = cpfClean(cpf);
 
-    if (/^(\d)\1{10}$/.test(cpfFormat)) return false; // reject sequence with only number
+    if (!/^\d{11}$/.test(cpfFormat)) return false;
+    if (/^(\d)\1{10}$/.test(cpfFormat)) return false;
 
     const cpfCalc = (weight: number) => {
         const soma = [...cpfFormat.slice(0, weight - 1)].reduce(
@@ -17,5 +17,8 @@ export async function cpfValidateNormal(cpf: string) {
         return resto < 10 ? resto : 0;
     };
 
-    return cpfCalc(10) === Number(cpf[9]) && cpfCalc(11) === Number(cpf[10]);
+    return (
+        cpfCalc(10) === Number(cpfFormat[9]) &&
+        cpfCalc(11) === Number(cpfFormat[10])
+    );
 }

@@ -10,6 +10,7 @@ drizzle/*
 !drizzle/0016_company_registration_requests.sql
 !drizzle/0017_lgpd_compliance.sql
 !drizzle/0018_lgpd_incidents_and_client_anon.sql
+!drizzle/0019_user_token_version.sql
 !drizzle/meta/
 drizzle/meta/*
 !drizzle/meta/0010_snapshot.json
@@ -30,15 +31,19 @@ coverage
 
 # logs
 logs
-_.log
+*.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # dotenv environment variable files
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+.env.*
+!.env.example
+
+# certificates and private keys
+*.pem
+*.key
+*.pfx
+*.p12
 
 # caches
 .eslintcache

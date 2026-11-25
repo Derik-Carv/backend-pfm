@@ -16,7 +16,7 @@ const USER_COUNT = 20;
 const SERVICE_COUNT = 5_000;
 const INVOICE_COUNT = 1_000;
 const INSERT_BATCH_SIZE = 250;
-const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD ?? "Demo@123456";
+const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD;
 
 function stableId(entity: string, index: number): string {
     const bytes = createHash("sha256")
@@ -47,6 +47,13 @@ async function insertInBatches<T>(
 }
 
 export async function seedDemoData(roleMap: Record<string, string>) {
+    if ((Bun.env.NODE_ENV ?? process.env.NODE_ENV) === "production") {
+        throw new Error("DEMO_SEED_FORBIDDEN_IN_PRODUCTION");
+    }
+    if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 8) {
+        throw new Error("DEMO_SEED_PASSWORD_REQUIRED");
+    }
+    const demoPassword = DEMO_PASSWORD;
     const clientRows = Array.from({ length: CLIENT_COUNT }, (_, index) => {
         const number = index + 1;
         const tradeName = `Cliente Demonstração ${String(number).padStart(3, "0")}`;
@@ -92,7 +99,7 @@ export async function seedDemoData(roleMap: Record<string, string>) {
         (user) => !existingUsernames.has(user.username),
     );
     if (usersToInsert.length > 0) {
-        const password = await hashPassword(DEMO_PASSWORD);
+        const password = await hashPassword(demoPassword);
         await insertInBatches(
             usersToInsert.map((user) => ({ ...user, password })),
             async (batch) => {

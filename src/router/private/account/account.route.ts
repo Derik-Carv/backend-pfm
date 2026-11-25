@@ -6,6 +6,8 @@ import {
     changePasswordSchema,
 } from "./account.schemas";
 import { hashPassword, verifyPassword } from "@/lib/hash";
+import { jwtTokenGenerate } from "@/lib/jwt/jwt";
+import { rateLimitProfiles } from "@/policies/rateLimit";
 import { errorResponseSchema } from "@/router/error.schema";
 import { registerAccountPrivacyRoutes } from "./account.privacy";
 
@@ -15,6 +17,9 @@ export async function accountRoutes(app: FastifyInstance) {
     await registerAccountPrivacyRoutes(app);
 
     app.patch("/password", {
+        config: {
+            rateLimit: rateLimitProfiles.sensitive,
+        },
         schema: {
             tags: ["Account", "Password"],
             summary: "Change the authenticated user's password",
@@ -38,7 +43,15 @@ export async function accountRoutes(app: FastifyInstance) {
                 return reply.status(401).send({ message: "Current password is invalid" });
             }
 
-            await users.updatePassword(request.user.id, await hashPassword(newPassword));
+            const updatedUser = await users.updatePassword(
+                request.user.id,
+                await hashPassword(newPassword),
+            );
+            const token = jwtTokenGenerate(request.server, {
+                id: request.user.id,
+                role: request.user.role,
+                tokenVersion: updatedUser?.tokenVersion ?? user.tokenVersion + 1,
+            });
             request.log.info(
                 {
                     audit: true,
@@ -56,6 +69,7 @@ export async function accountRoutes(app: FastifyInstance) {
             return reply.status(200).send({
                 message: "Password changed successfully",
                 passwordChangeRequired: false,
+                token,
             });
         } catch (error: any) {
             if (error?.name === "ZodError") {

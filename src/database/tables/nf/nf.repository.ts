@@ -18,11 +18,20 @@ export class NfRepository implements INF {
         return await db.query.nf.findMany();
     }
 
-    async findNfNumber(number: string): Promise<NF> {
+    async findNfNumber(number: string, companyIds?: string[]): Promise<NF> {
+        if (companyIds !== undefined && companyIds.length === 0) {
+            return null as unknown as NF;
+        }
+
+        const filters = [eq(nf.numberNf, number)];
+        if (companyIds && companyIds.length > 0) {
+            filters.push(inArray(nf.companyId, companyIds));
+        }
+
         const [returnNf] = await db
             .select()
             .from(nf)
-            .where(eq(nf.numberNf, number))
+            .where(and(...filters))
             .limit(1);
 
         return returnNf || null;
@@ -143,9 +152,10 @@ export class NfRepository implements INF {
             conditions.push(isNotNull(nf.cancelDate));
         }
 
-        if (filters.companyIds && filters.companyIds.length > 0) {
-            conditions.push(inArray(nf.companyId, filters.companyIds));
+        if (!filters.companyIds || filters.companyIds.length === 0) {
+            return { list: [], total: 0 };
         }
+        conditions.push(inArray(nf.companyId, filters.companyIds));
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;
         const [list, [totalRow]] = await Promise.all([

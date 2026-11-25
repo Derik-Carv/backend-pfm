@@ -15,16 +15,37 @@ import {
 
 export async function typeRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
-    app.addHook(
-        "preHandler",
-        inspectRole([
-            allRoles.administrator,
-            allRoles.company_admin,
-            allRoles.manager,
-            allRoles.finance,
-        ]),
+
+    app.get(
+        "/",
+        {
+            ...getTypesRouteOptions,
+            preHandler: [
+                inspectRole([
+                    allRoles.administrator,
+                    allRoles.company_admin,
+                    allRoles.manager,
+                    allRoles.finance,
+                    allRoles.observer,
+                ]),
+            ],
+        },
+        getTypesController,
     );
-    app.get("/", getTypesRouteOptions, getTypesController);
-    app.post("/", createTypeRouteOptions, createTypeController);
-    app.patch("/:id/deactivate", deactivateTypeRouteOptions, deactivateTypeController);
+    app.post(
+        "/",
+        {
+            ...createTypeRouteOptions,
+            preHandler: [inspectRole([allRoles.administrator])],
+        },
+        createTypeController,
+    );
+    app.patch(
+        "/:id/deactivate",
+        {
+            ...deactivateTypeRouteOptions,
+            preHandler: [inspectRole([allRoles.administrator])],
+        },
+        deactivateTypeController,
+    );
 }

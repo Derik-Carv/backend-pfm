@@ -1,12 +1,13 @@
 import type { sendEmailNfDependencies } from "@/database/tables/nf/nf.interface";
 import { CompaniesRepository } from "@/database/tables/companies/companies.repository";
+import { resolveSafeArchivePath, verifyRealArchivePath } from "@/lib/archivePath";
+import { hasTenantAccess } from "@/lib/tenant";
 import type { NfSendEmailInput } from "../nf.schemas";
 import { sendEmailNf } from "@/lib/nodemailer/nodemailer";
 
 export function injejctSendEmailNf({
     findNf,
     clientsDb,
-    findType,
     findUser,
 }: sendEmailNfDependencies) {
     return async function usecaseSendEmaNlNf(
@@ -14,72 +15,68 @@ export function injejctSendEmailNf({
         nfData: NfSendEmailInput,
         accessibleCompanyIds?: string[],
     ) {
-        const sender = await findUser.findId(userId);
+        await findUser.findId(userId);
 
-        const nf = await findNf.findNfNumber(nfData.numberNf);
-        if (
-            !nf ||
-            (accessibleCompanyIds &&
-                nf.companyId &&
-                !accessibleCompanyIds.includes(nf.companyId))
-        )
+        if (!accessibleCompanyIds || accessibleCompanyIds.length === 0) {
             throw new Error("NF_NUMBER_INVALID");
+        }
 
-        const type = await findType.findName(nfData.type);
-        if (!type) throw new Error("TYPE_ID_INVALID");
+        const nf = nfData.nfId
+            ? await findNf.findId(nfData.nfId)
+            : nfData.numberNf
+              ? await findNf.findNfNumber(nfData.numberNf, accessibleCompanyIds)
+              : null;
 
-        nfData.type = type.name.replace(/\s+/g, "_");
+        if (!nf || !hasTenantAccess(nf.companyId, accessibleCompanyIds)) {
+            throw new Error("NF_NUMBER_INVALID");
+        }
 
-        const value = parseFloat(nfData.value);
-        if (value <= 0) throw new Error("VALUE_INVALID");
+        if (!nf.pathFile || !nf.acessKey || !nf.numberNf) {
+            throw new Error("NF_FILE_NOT_FOUND");
+        }
 
-        if (!nfData.emissionDate) throw new Error("DATE_INVALID");
+        let attachmentPath: string;
+        try {
+            const candidatePath = resolveSafeArchivePath(nf.pathFile);
+            attachmentPath = await verifyRealArchivePath(candidatePath);
+        } catch {
+            throw new Error("NF_FILE_NOT_FOUND");
+        }
 
-        if (
-            !nfData.acessKey ||
-            nfData.acessKey.toLocaleString().length < 44 ||
-            nfData.acessKey.toLocaleString().length > 50
-        )
-            throw new Error("ACESS_KEY_INVALID");
-
-        const client = await clientsDb.findByCompanyName(
-            nfData.clientName.toLocaleLowerCase(),
-            nf.companyId ?? undefined,
-        );
-        if (
-            !client ||
-            (accessibleCompanyIds &&
-                client.companyId &&
-                !accessibleCompanyIds.includes(client.companyId))
-        )
+        const client = await clientsDb.findById(nf.thirdPartyClientId);
+        if (!client || !hasTenantAccess(client.companyId, accessibleCompanyIds)) {
             throw new Error("CLIENT_ID_INVALID");
-
-        if (!nfData.destinationEmail) throw new Error("EMAIL_INVALID");
-
-        if (!nfData.details) {
-            nfData.details = "cobrança de serviços prestados";
         }
 
-        let companySender:
-            | { tradeName: string; phone?: string | null; email?: string | null }
-            | undefined;
-        if (nf.companyId) {
-            const companiesRepo = new CompaniesRepository();
-            const company = await companiesRepo.findById(nf.companyId);
-            if (company) {
-                companySender = {
-                    tradeName: company.tradeName,
-                    phone: company.phone,
-                    email: company.email,
-                };
-            }
+        if (!nfData.destinationEmail) {
+            throw new Error("EMAIL_INVALID");
         }
 
-        const response = await sendEmailNf({
-            ...nfData,
+        const companiesRepo = new CompaniesRepository();
+        const company = nf.companyId
+            ? await companiesRepo.findById(nf.companyId)
+            : null;
+        const companySender = company
+            ? {
+                  tradeName: company.tradeName,
+                  phone: company.phone,
+                  email: company.email,
+              }
+            : undefined;
+
+        const details =
+            nfData.details?.trim() || "cobrança de serviços prestados";
+
+        return await sendEmailNf({
+            numberNf: nf.numberNf,
+            value: String(nf.totalValue),
+            emissionDate: nf.emissionDate,
+            acessKey: nf.acessKey,
+            clientName: client.tradeName || client.registeredCompanyName,
+            details,
+            destinationEmail: nfData.destinationEmail,
+            attachmentPath,
             companySender,
         });
-
-        return response;
     };
 }

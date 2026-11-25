@@ -138,13 +138,13 @@ export class ClientRepository implements IClient {
     }
 
     async findAll(companyIds?: string[]): Promise<Client[]> {
-        if (companyIds && companyIds.length > 0) {
-            return await db
-                .select()
-                .from(clients)
-                .where(inArray(clients.companyId, companyIds));
+        if (!companyIds || companyIds.length === 0) {
+            return [];
         }
-        return await db.query.clients.findMany();
+        return await db
+            .select()
+            .from(clients)
+            .where(inArray(clients.companyId, companyIds));
     }
 
     async findPage(
@@ -152,10 +152,11 @@ export class ClientRepository implements IClient {
         offset: number,
         companyIds?: string[],
     ): Promise<{ list: Client[]; total: number }> {
-        const whereClause =
-            companyIds && companyIds.length > 0
-                ? inArray(clients.companyId, companyIds)
-                : undefined;
+        if (!companyIds || companyIds.length === 0) {
+            return { list: [], total: 0 };
+        }
+
+        const whereClause = inArray(clients.companyId, companyIds);
 
         const [list, [totalRow]] = await Promise.all([
             db.query.clients.findMany({
@@ -173,25 +174,55 @@ export class ClientRepository implements IClient {
         };
     }
 
+    async findPageByIds(
+        ids: string[],
+        limit: number,
+        offset: number,
+        companyIds?: string[],
+    ): Promise<{ list: Client[]; total: number }> {
+        if (ids.length === 0 || !companyIds || companyIds.length === 0) {
+            return { list: [], total: 0 };
+        }
+
+        const whereClause = and(
+            inArray(clients.id, ids),
+            inArray(clients.companyId, companyIds),
+        );
+
+        const [list, [totalRow]] = await Promise.all([
+            db
+                .select()
+                .from(clients)
+                .where(whereClause)
+                .orderBy(desc(clients.createdAt))
+                .limit(limit)
+                .offset(offset),
+            db.select({ count: count() }).from(clients).where(whereClause),
+        ]);
+
+        return {
+            list,
+            total: totalRow.count,
+        };
+    }
+
     async findActives(companyIds?: string[]): Promise<Client[]> {
-        const filters = [eq(clients.active, true)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(clients.companyId, companyIds));
+        if (!companyIds || companyIds.length === 0) {
+            return [];
         }
         return await db
             .select()
             .from(clients)
-            .where(and(...filters));
+            .where(and(eq(clients.active, true), inArray(clients.companyId, companyIds)));
     }
 
     async findInactives(companyIds?: string[]): Promise<Client[]> {
-        const filters = [eq(clients.active, false)];
-        if (companyIds && companyIds.length > 0) {
-            filters.push(inArray(clients.companyId, companyIds));
+        if (!companyIds || companyIds.length === 0) {
+            return [];
         }
         return await db
             .select()
             .from(clients)
-            .where(and(...filters));
+            .where(and(eq(clients.active, false), inArray(clients.companyId, companyIds)));
     }
 }

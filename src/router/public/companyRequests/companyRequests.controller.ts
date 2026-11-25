@@ -43,6 +43,12 @@ export async function requestCompanyCodeController(
             });
         }
 
+        if (error.message === "OTP_COOLDOWN_ACTIVE") {
+            return reply.status(429).send({
+                message: "Aguarde alguns instantes antes de solicitar um novo código",
+            });
+        }
+
         if (
             error.message === "SMTP_NOT_CONFIGURED" ||
             error.message === "EMAIL_SEND_FAILED"

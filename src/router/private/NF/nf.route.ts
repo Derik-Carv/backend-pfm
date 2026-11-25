@@ -1,4 +1,5 @@
 import { type FastifyInstance } from "fastify";
+import { rateLimitProfiles } from "@/policies/rateLimit";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { inspectRole } from "@/middlewares/role.middleware";
 import { allRoles } from "@/lib/roles.list";
@@ -45,7 +46,15 @@ export async function nfQueryRoutes(app: FastifyInstance) {
 
     app.get("/", listNfRouteOptions, listNfController);
     app.get("/:id/file", getNfFileController);
-    app.post("/:id/file", replaceNfFileController);
+    app.post(
+        "/:id/file",
+        {
+            config: {
+                rateLimit: rateLimitProfiles.sensitive,
+            },
+        },
+        replaceNfFileController,
+    );
     app.patch("/:id/activate", activateNfRouteOptions, activateNfController);
     app.patch(
         "/:id/deactivate",

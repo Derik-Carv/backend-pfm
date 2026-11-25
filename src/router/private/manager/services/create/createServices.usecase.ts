@@ -1,4 +1,5 @@
 import { allRoles } from "@/lib/roles.list";
+import { hasTenantAccess } from "@/lib/tenant";
 import { UsersRepository } from "@/database/tables/users/users.repository";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import { ServicesRepository } from "@/database/tables/services/services.repository";
@@ -18,7 +19,6 @@ export async function usecaseCreateService(
         allRoles.company_admin,
         allRoles.manager,
         allRoles.finance,
-        allRoles.observer,
     ];
 
     const userData = new UsersRepository();
@@ -49,9 +49,7 @@ export async function usecaseCreateService(
 
     if (
         !validClient ||
-        (accessibleCompanyIds &&
-            validClient.companyId &&
-            !accessibleCompanyIds.includes(validClient.companyId))
+        !hasTenantAccess(validClient.companyId, accessibleCompanyIds)
     ) {
         throw new Error("CLIENT_NOT_FOUND");
     }
@@ -71,7 +69,12 @@ export async function usecaseCreateService(
 
     const targetCompanyId = validClient.companyId ?? activeCompanyId;
     const newService = await servicesData.create({
-        ...data,
+        serviceName: data.serviceName,
+        price: data.price,
+        initialDate: data.initialDate,
+        clientId: data.clientId,
+        details: data.details,
+        statusServiceId: data.statusServiceId,
         ...(targetCompanyId ? { companyId: targetCompanyId } : {}),
     });
 

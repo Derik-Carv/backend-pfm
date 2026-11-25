@@ -106,6 +106,16 @@ export async function usecaseCreateCompanyRequest(
         throw new Error("INVALID_CPF");
     }
 
+    const codesRepo = new EmailVerificationCodesRepository();
+    const verification = await codesRepo.verifyAndConsumeCode(
+        data.adminEmail,
+        "company_register",
+        data.code,
+    );
+    if (!verification.ok) {
+        throw new Error("INVALID_OR_EXPIRED_CODE");
+    }
+
     const [existingCompany] = await db
         .select({ id: companies.id })
         .from(companies)
@@ -173,16 +183,6 @@ export async function usecaseCreateCompanyRequest(
         .limit(1);
     if (pendingCpfReq) {
         throw new Error("REQUEST_ALREADY_PENDING");
-    }
-
-    const codesRepo = new EmailVerificationCodesRepository();
-    const verification = await codesRepo.verifyAndConsumeCode(
-        data.adminEmail,
-        "company_register",
-        data.code,
-    );
-    if (!verification.ok) {
-        throw new Error("INVALID_OR_EXPIRED_CODE");
     }
 
     const adminPasswordHash = await hashPassword(data.adminPassword);

@@ -13,6 +13,10 @@ if (!databaseUrl) {
 const queryClient = postgres(databaseUrl, {
     max: 10,
     idle_timeout: 30, // set the idle timeout for connections in seconds
+    connect_timeout: 10,
+    connection: {
+        statement_timeout: 15000,
+    },
 });
 
 export const db = drizzle(queryClient, { schema });

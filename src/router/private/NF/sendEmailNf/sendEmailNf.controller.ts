@@ -2,14 +2,12 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import { sendEmailNfSchema, type NfSendEmailInput } from "../nf.schemas";
 import { NfRepository } from "@/database/tables/nf/nf.repository";
 import { ClientRepository } from "@/database/tables/clients/clients.repository";
-import { TypeRepository } from "@/database/tables/type/type.repository,";
 import { injejctSendEmailNf } from "./sendEmail.usecase";
 import { UsersRepository } from "@/database/tables/users/users.repository";
 
 const usecaseSendEmailNf = injejctSendEmailNf({
     findNf: new NfRepository(),
     clientsDb: new ClientRepository(),
-    findType: new TypeRepository(),
     findUser: new UsersRepository(),
 });
 
@@ -31,13 +29,24 @@ export const sendEmailNfController = async (
 
         return reply.status(201).send({
             message: "Send nf with email successfully",
-            response: sendEmail,
+            messageId: sendEmail?.messageId,
+            accepted: Array.isArray(sendEmail?.accepted)
+                ? sendEmail.accepted.map(String)
+                : undefined,
         });
     } catch (error: any) {
+        request.log.error({ err: error }, "Error while sending NF email");
+
         if (error.name === "ZodError") {
             return reply.status(400).send({
                 message: "Validation error",
                 issues: error.errors,
+            });
+        }
+
+        if (error.message === "NF_FILE_NOT_FOUND") {
+            return reply.status(404).send({
+                message: "Fiscal note PDF file not found",
             });
         }
 
@@ -57,8 +66,17 @@ export const sendEmailNfController = async (
             });
         }
 
+        if (
+            error.message === "SMTP_NOT_CONFIGURED" ||
+            error.message === "EMAIL_SEND_FAILED"
+        ) {
+            return reply.status(500).send({
+                message: "Could not send fiscal note email right now",
+            });
+        }
+
         return reply.status(500).send({
-            message: "Internal server error while registering role",
+            message: "Internal server error while sending fiscal note email",
         });
     }
 };

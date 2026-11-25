@@ -3,13 +3,18 @@ import path from "node:path";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { NfRepository } from "@/database/tables/nf/nf.repository";
+import { resolveSafeArchivePath, verifyRealArchivePath } from "@/lib/archivePath";
+import { hasTenantAccess } from "@/lib/tenant";
 
 const nfFileParamsSchema = z.object({
     id: z.string().uuid(),
 });
 
 const nfFileQuerySchema = z.object({
-    download: z.coerce.boolean().default(false),
+    download: z
+        .enum(["true", "false"])
+        .optional()
+        .transform((value) => value === "true"),
 });
 
 const nfRepository = new NfRepository();
@@ -27,16 +32,19 @@ export async function getNfFileController(
         if (
             !note ||
             !note.pathFile ||
-            (accessibleCompanyIds &&
-                note.companyId &&
-                !accessibleCompanyIds.includes(note.companyId))
+            !hasTenantAccess(note.companyId, accessibleCompanyIds)
         ) {
             return reply.status(404).send({ message: "NF file not found" });
         }
 
-        const archiveRoot = path.resolve(process.cwd(), "archives");
-        const filePath = path.resolve(process.cwd(), note.pathFile);
-        if (!filePath.startsWith(`${archiveRoot}${path.sep}`)) {
+        let filePath: string;
+        try {
+            const candidate = resolveSafeArchivePath(note.pathFile);
+            filePath = await verifyRealArchivePath(candidate);
+        } catch (err) {
+            if (err instanceof Error && "code" in err && err.code === "ENOENT") {
+                return reply.status(404).send({ message: "NF file not found" });
+            }
             request.log.warn({ noteId: id }, "Rejected NF file path outside archive");
             return reply.status(404).send({ message: "NF file not found" });
         }
@@ -44,6 +52,7 @@ export async function getNfFileController(
         const file = await fs.readFile(filePath);
         const fileName = path.basename(filePath).replace(/["\\\r\n]/g, "_");
         reply.header("Content-Type", "application/pdf");
+        reply.header("X-Content-Type-Options", "nosniff");
         reply.header(
             "Content-Disposition",
             `${download ? "attachment" : "inline"}; filename="${fileName}"`,

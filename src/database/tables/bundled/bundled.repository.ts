@@ -1,6 +1,6 @@
 import { db } from "@/database/index";
 import { bundled } from "@/database/schema/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type {
     CreateBundledDatabaseInput,
     IBundled,
@@ -31,7 +31,7 @@ export class BundledRepository implements IBundled {
         return await db
             .select()
             .from(bundled)
-            .where(eq(bundled.userId, userId));
+            .where(and(eq(bundled.userId, userId), eq(bundled.active, true)));
     }
 
     async findByServiceId(serviceId: string): Promise<Bundled[]> {

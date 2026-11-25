@@ -76,4 +76,8 @@ export interface IServices {
     editClient(id: string, client: string): Promise<Services | null>;
     editDetails(id: string, details: string): Promise<Services | null>;
     editStatus(id: string, status: string): Promise<Services | null>;
+    updateFields(
+        id: string,
+        fields: Partial<CreateServicesDatabaseInput>,
+    ): Promise<Services | null>;
 }

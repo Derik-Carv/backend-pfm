@@ -20,6 +20,7 @@ export const loginController = async (
         const token = jwtTokenGenerate(request.server, {
             id: userloged.user.id,
             role: userloged.user.role,
+            tokenVersion: userloged.user.tokenVersion,
         });
 
         await recordAuditLog({
