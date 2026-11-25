@@ -55,8 +55,8 @@ export async function sendVerificationCodeEmail(params: {
         params.purpose === "company_register"
             ? "Código de verificação — Solicitação de cadastro de empresa"
             : params.purpose === "register"
-              ? "Código de verificação de cadastro — Derik Flash"
-              : "Código de recuperação de senha — Derik Flash";
+              ? "Código de verificação de cadastro — PFM"
+              : "Código de recuperação de senha — PFM";
 
     const greeting = params.recipientName
         ? `Olá, <strong>${params.recipientName}</strong>,`
@@ -72,7 +72,7 @@ export async function sendVerificationCodeEmail(params: {
     try {
         // Nunca enviar BCC para códigos OTP / recuperação de senha
         return await transport.sendMail({
-            from: `"${name || "Derik Flash"}" <${authUserSmtp.user}>`,
+            from: `"${name || "PFM"}" <${authUserSmtp.user}>`,
             to: params.to,
             subject,
             text: `Seu código de verificação para ${actionLabel} é: ${params.code}. Ele expira em 15 minutos. Se você não solicitou, ignore este e-mail.`,
@@ -149,7 +149,7 @@ export async function sendCompanyRequestDecisionEmail(params: {
         }
 
         return await transport.sendMail({
-            from: `"${name || "Derik Flash"}" <${authUserSmtp.user}>`,
+            from: `"${name || "PFM"}" <${authUserSmtp.user}>`,
             to: params.to,
             subject,
             text,
@@ -158,7 +158,7 @@ export async function sendCompanyRequestDecisionEmail(params: {
                     <div style="max-width: 540px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 28px;">
                         <p style="margin: 0 0 12px 0;">Olá, <strong>${params.adminName}</strong>,</p>
                         ${bodyHtml}
-                        <p style="margin: 20px 0 0 0; font-size: 13px; color: #718096;">Atenciosamente, Equipe Derik Flash.</p>
+                        <p style="margin: 20px 0 0 0; font-size: 13px; color: #718096;">Atenciosamente, Equipe PFM.</p>
                     </div>
                 </body>
             `,
@@ -179,7 +179,7 @@ export async function sendEmailNf(nfData: NfInfo) {
             );
         }
 
-        const senderName = nfData.companySender?.tradeName || name || "Derik Flash";
+        const senderName = nfData.companySender?.tradeName || name || "PFM";
         const senderContact = nfData.companySender?.phone || nfData.companySender?.email || "";
         const pixSection = nfData.pixInfo
             ? `

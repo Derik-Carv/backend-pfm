@@ -30,7 +30,7 @@ export function getLegalMetadata() {
         controller: {
             name:
                 process.env.LEGAL_CONTROLLER_NAME?.trim() ||
-                "Derik Flash (Plataforma PFM)",
+                "PFM",
             document: process.env.LEGAL_CONTROLLER_DOCUMENT?.trim() || null,
             address: process.env.LEGAL_CONTROLLER_ADDRESS?.trim() || null,
             jurisdiction:
