@@ -1,6 +1,6 @@
 import { db } from "@/database/index";
 import { users } from "@/database/schema/schema";
-import { and, eq, count } from "drizzle-orm";
+import { and, eq, count, sql } from "drizzle-orm";
 import type {
     CreateUsersDatabaseInput,
     IUsers,
@@ -91,6 +91,33 @@ export class UsersRepository implements IUsers {
             .select()
             .from(users)
             .where(and(eq(users.username, username), eq(users.active, true)))
+            .limit(1);
+
+        return user || null;
+    }
+
+    async findEmail(email: string): Promise<Users | null> {
+        const normalized = email.trim().toLowerCase();
+        const [user] = await db
+            .select()
+            .from(users)
+            .where(sql`lower(${users.email}) = ${normalized}`)
+            .limit(1);
+
+        return user || null;
+    }
+
+    async findActiveByEmail(email: string): Promise<Users | null> {
+        const normalized = email.trim().toLowerCase();
+        const [user] = await db
+            .select()
+            .from(users)
+            .where(
+                and(
+                    sql`lower(${users.email}) = ${normalized}`,
+                    eq(users.active, true),
+                ),
+            )
             .limit(1);
 
         return user || null;

@@ -13,6 +13,16 @@ import {
     getCascadeHierarchyController,
     getCompanyClientsController,
 } from "./system/system.controller";
+import {
+    approveCompanyRequestOptions,
+    listCompanyRequestsOptions,
+    rejectCompanyRequestOptions,
+} from "./companyRequests/adminCompanyRequests.options";
+import {
+    approveCompanyRequestController,
+    listCompanyRequestsController,
+    rejectCompanyRequestController,
+} from "./companyRequests/adminCompanyRequests.controller";
 
 export async function adminRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
@@ -23,6 +33,11 @@ export async function adminRoutes(app: FastifyInstance) {
     app.get("/system/metrics", getSystemMetricsOptions, getSystemMetricsController);
     app.get("/system/hierarchy", getCascadeHierarchyOptions, getCascadeHierarchyController);
     app.get("/system/clients", getCompanyClientsOptions, getCompanyClientsController);
+
+    // Fila de Solicitações de Cadastro de Empresas (Aprovação Admin SaaS)
+    app.get("/company-requests", listCompanyRequestsOptions, listCompanyRequestsController);
+    app.post("/company-requests/:id/approve", approveCompanyRequestOptions, approveCompanyRequestController);
+    app.post("/company-requests/:id/reject", rejectCompanyRequestOptions, rejectCompanyRequestController);
 
     // Gestão de tabelas brutas
     app.register(adminDataRoutes, { prefix: "/data" });

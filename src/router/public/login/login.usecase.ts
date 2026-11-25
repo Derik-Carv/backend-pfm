@@ -1,4 +1,5 @@
 import { UsersRepository } from "@/database/tables/users/users.repository";
+import type { Users } from "@/database/tables/users/users.interface";
 import { RoleRepository } from "@/database/tables/roles/roles.repository";
 import type { LoginUserInput } from "@/router/public/login/login.schemas";
 import { verifyPassword } from "@/lib/hash";
@@ -10,7 +11,10 @@ export async function usecaseLogin(data: LoginUserInput) {
 
     const userRepository = new UsersRepository();
 
-    const validUsername = await userRepository.findUsername(username);
+    let validUsername: Users | null = await userRepository.findUsername(username);
+    if (!validUsername && username.includes("@")) {
+        validUsername = await userRepository.findActiveByEmail(username);
+    }
 
     if (!validUsername) throw new Error("USERNAME_OR_PASSOWORD_INVALID");
 

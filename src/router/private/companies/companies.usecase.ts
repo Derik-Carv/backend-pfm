@@ -4,8 +4,8 @@ import { CompaniesRepository } from "@/database/tables/companies/companies.repos
 import { UserCompaniesRepository } from "@/database/tables/userCompanies/userCompanies.repository";
 import { hashPassword } from "@/lib/hash";
 import { cpfClean } from "@/utils/checkCpf";
-import { generateNick } from "@/utils/createNick";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { generateNick, slugifyCompanyName } from "@/utils/createNick";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type {
     CreateMotherCompanyInput,
     CreateBranchCompanyInput,
@@ -14,17 +14,7 @@ import type {
     UpdateCompanyUserInput,
 } from "./companies.schemas";
 
-function slugifyCompanyName(name: string): string {
-    const cleaned = name
-        .trim()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
-    return cleaned || "empresa";
-}
-
-async function resolveUniqueUsername(
+export async function resolveUniqueUsername(
     baseUsername: string,
     isExplicit: boolean,
 ): Promise<string> {
@@ -88,6 +78,15 @@ export async function usecaseCreateMotherCompany(
             throw new Error("CPF_ALREADY_EXISTS");
         }
 
+        const [emailTaken] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(sql`lower(${users.email}) = ${data.admin.email}`)
+            .limit(1);
+        if (emailTaken) {
+            throw new Error("EMAIL_ALREADY_EXISTS");
+        }
+
         const [companyAdminRole] = await db
             .select({ id: roles.id })
             .from(roles)
@@ -133,6 +132,8 @@ export async function usecaseCreateMotherCompany(
                 name: data.admin.name.trim(),
                 surname: data.admin.surname.trim(),
                 username: adminUsername,
+                email: data.admin.email,
+                emailVerified: true,
                 password: hashedPassword,
                 roleId: companyAdminRoleId,
                 primaryCompanyId: newCompany.id,
@@ -311,6 +312,7 @@ export async function usecaseListCompanyUsers(motherId: string) {
             name: users.name,
             surname: users.surname,
             username: users.username,
+            email: users.email,
             cpf: users.cpf,
             roleId: users.roleId,
             roleName: roles.name,
@@ -364,6 +366,15 @@ export async function usecaseCreateCompanyUser(
         throw new Error("CPF_ALREADY_EXISTS");
     }
 
+    const [emailTaken] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`lower(${users.email}) = ${data.email}`)
+        .limit(1);
+    if (emailTaken) {
+        throw new Error("EMAIL_ALREADY_EXISTS");
+    }
+
     const [targetRole] = await db
         .select()
         .from(roles)
@@ -401,6 +412,8 @@ export async function usecaseCreateCompanyUser(
             name: data.name.trim(),
             surname: data.surname.trim(),
             username: finalUsername,
+            email: data.email,
+            emailVerified: true,
             password: hashedPassword,
             roleId: targetRole.id,
             primaryCompanyId: targetCompanyId,
@@ -422,6 +435,7 @@ export async function usecaseCreateCompanyUser(
         name: created.name,
         surname: created.surname,
         username: created.username,
+        email: created.email,
         cpf: created.cpf,
         roleId: created.roleId,
         roleName: targetRole.name,
@@ -471,6 +485,22 @@ export async function usecaseUpdateCompanyUser(
     if (data.name !== undefined) updates.name = data.name.trim();
     if (data.surname !== undefined) updates.surname = data.surname.trim();
     if (data.active !== undefined) updates.active = data.active;
+    if (data.email !== undefined) {
+        const [emailTaken] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(
+                and(
+                    sql`lower(${users.email}) = ${data.email}`,
+                    ne(users.id, targetUserId),
+                ),
+            )
+            .limit(1);
+        if (emailTaken) {
+            throw new Error("EMAIL_ALREADY_EXISTS");
+        }
+        updates.email = data.email;
+    }
 
     if (data.roleName !== undefined) {
         const [targetRole] = await db
@@ -518,6 +548,7 @@ export async function usecaseUpdateCompanyUser(
             name: users.name,
             surname: users.surname,
             username: users.username,
+            email: users.email,
             cpf: users.cpf,
             roleId: users.roleId,
             roleName: roles.name,

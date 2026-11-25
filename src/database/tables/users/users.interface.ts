@@ -16,6 +16,8 @@ export interface IUsers {
     findName(name: string): Promise<Users>;
     findSurname(surname: string): Promise<Users>;
     findUsername(username: string): Promise<Users>;
+    findEmail(email: string): Promise<Users | null>;
+    findActiveByEmail(email: string): Promise<Users | null>;
     findRoleId(roleId: string): Promise<Users>;
     findCpf(cpf: string): Promise<Users>;
     findActivePage(

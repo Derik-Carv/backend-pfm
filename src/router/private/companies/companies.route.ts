@@ -38,11 +38,11 @@ export async function companiesRoutes(app: FastifyInstance) {
         saasRoutes.patch("/mothers/:id", updateMotherCompanyOptions, updateMotherCompanyController);
     });
 
-    // Gestão Mother & Filiais + Equipe da Empresa (Admin SaaS ou Admin Cliente)
+    // Gestão Mother & Filiais + Equipe da Empresa (Exclusivo Admin da Empresa Cliente)
     app.register(async (companyAdminRoutes) => {
         companyAdminRoutes.addHook(
             "preHandler",
-            inspectRole([allRoles.administrator, allRoles.company_admin]),
+            inspectRole([allRoles.company_admin]),
         );
         companyAdminRoutes.post("/branches", createBranchCompanyOptions, createBranchCompanyController);
         companyAdminRoutes.patch("/branches/:id", updateBranchCompanyOptions, updateBranchCompanyController);

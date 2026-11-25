@@ -6,6 +6,8 @@ drizzle/*
 !drizzle/0012_password_change_required.sql
 !drizzle/0013_multitenant_hierarchical_companies.sql
 !drizzle/0014_multitenant_roles_and_unique_scopes.sql
+!drizzle/0015_user_email_and_verification_codes.sql
+!drizzle/0016_company_registration_requests.sql
 !drizzle/meta/
 drizzle/meta/*
 !drizzle/meta/0010_snapshot.json

@@ -49,6 +49,9 @@ export async function createMotherCompanyController(
         if (error.message === "CPF_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "Admin CPF already registered" });
         }
+        if (error.message === "EMAIL_ALREADY_EXISTS") {
+            return reply.status(409).send({ message: "Admin email already registered" });
+        }
         if (error.message === "USERNAME_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "Admin username already registered" });
         }
@@ -272,6 +275,9 @@ export async function createCompanyUserController(
         if (error.message === "CPF_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "CPF already registered" });
         }
+        if (error.message === "EMAIL_ALREADY_EXISTS") {
+            return reply.status(409).send({ message: "Email already registered" });
+        }
         if (error.message === "USERNAME_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "Username already registered" });
         }
@@ -308,6 +314,9 @@ export async function updateCompanyUserController(
         }
         if (error.message === "USER_NOT_FOUND" || error.message === "ROLE_NOT_FOUND") {
             return reply.status(404).send({ message: error.message });
+        }
+        if (error.message === "EMAIL_ALREADY_EXISTS") {
+            return reply.status(409).send({ message: "Email already registered" });
         }
         return reply.status(500).send({ message: "Internal server error" });
     }

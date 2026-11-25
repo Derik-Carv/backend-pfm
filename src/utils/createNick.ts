@@ -21,3 +21,13 @@ export function generateNick(name: string, surname: string): string {
 
     return `${firstName}.${lastSurname}`;
 }
+
+export function slugifyCompanyName(name: string): string {
+    const cleaned = name
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+    return cleaned || "empresa";
+}

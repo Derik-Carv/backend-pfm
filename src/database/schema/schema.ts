@@ -1,5 +1,6 @@
 import {
     boolean,
+    integer,
     numeric,
     pgTable,
     text,
@@ -52,31 +53,99 @@ export const companies = pgTable(
     ],
 );
 
-export const users = pgTable("users", {
-    id: uuid("id")
-        .primaryKey()
-        .$defaultFn(() => uuidv7()),
-    name: text("name").notNull(),
-    surname: text("surname").notNull(),
-    username: text("username").unique().notNull(),
-    password: text("password").notNull(),
-    roleId: uuid("role_id")
-        .notNull()
-        .references(() => roles.id),
-    primaryCompanyId: uuid("primary_company_id").references(
-        () => companies.id,
-    ),
-    cpf: text("cpf").unique().notNull(),
-    active: boolean("active").default(true).notNull(),
-    passwordChangeRequired: boolean("password_change_required")
-        .default(false)
-        .notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-        .defaultNow()
-        .notNull()
-        .$onUpdateFn(() => new Date()),
-});
+export const users = pgTable(
+    "users",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        name: text("name").notNull(),
+        surname: text("surname").notNull(),
+        username: text("username").unique().notNull(),
+        email: text("email"),
+        emailVerified: boolean("email_verified").default(false).notNull(),
+        password: text("password").notNull(),
+        roleId: uuid("role_id")
+            .notNull()
+            .references(() => roles.id),
+        primaryCompanyId: uuid("primary_company_id").references(
+            () => companies.id,
+        ),
+        cpf: text("cpf").unique().notNull(),
+        active: boolean("active").default(true).notNull(),
+        passwordChangeRequired: boolean("password_change_required")
+            .default(false)
+            .notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        uniqueIndex("users_email_lower_uidx")
+            .on(sql`lower(${table.email})`)
+            .where(sql`${table.email} IS NOT NULL`),
+    ],
+);
+
+export const emailVerificationCodes = pgTable(
+    "email_verification_codes",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        email: text("email").notNull(),
+        purpose: text("purpose").notNull(),
+        codeHash: text("code_hash").notNull(),
+        attempts: integer("attempts").default(0).notNull(),
+        expiresAt: timestamp("expires_at").notNull(),
+        consumedAt: timestamp("consumed_at"),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => [
+        index("email_verification_codes_lookup_idx").on(
+            table.email,
+            table.purpose,
+            table.createdAt,
+        ),
+    ],
+);
+
+export const companyRegistrationRequests = pgTable(
+    "company_registration_requests",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        registeredCompanyName: text("registered_company_name").notNull(),
+        tradeName: text("trade_name").notNull(),
+        cnpj: text("cnpj").notNull(),
+        companyEmail: text("company_email"),
+        phone: text("phone"),
+        adminName: text("admin_name").notNull(),
+        adminSurname: text("admin_surname").notNull(),
+        adminEmail: text("admin_email").notNull(),
+        adminCpf: text("admin_cpf").notNull(),
+        adminPasswordHash: text("admin_password_hash").notNull(),
+        status: text("status").default("pending").notNull(),
+        rejectionReason: text("rejection_reason"),
+        reviewedBy: uuid("reviewed_by").references(() => users.id),
+        reviewedAt: timestamp("reviewed_at"),
+        approvedCompanyId: uuid("approved_company_id").references(() => companies.id),
+        approvedUserId: uuid("approved_user_id").references(() => users.id),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("company_reg_req_status_idx").on(table.status),
+        index("company_reg_req_cnpj_idx").on(table.cnpj),
+        index("company_reg_req_email_idx").on(sql`lower(${table.adminEmail})`),
+    ],
+);
 
 export const userCompanies = pgTable(
     "user_companies",

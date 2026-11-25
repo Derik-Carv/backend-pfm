@@ -11,6 +11,7 @@ export const companyAdminRolesEnum = z.enum([
 export const createMotherAdminInputSchema = z.object({
     name: z.string().min(2),
     surname: z.string().min(2),
+    email: z.string().trim().email().toLowerCase(),
     cpf: z.string().min(11).max(14),
     password: z.string().min(6),
     username: z.string().min(3).optional(),
@@ -86,6 +87,7 @@ export const userAccessibleCompaniesResponseSchema = z.object({
 export const createCompanyUserBodySchema = z.object({
     name: z.string().min(2),
     surname: z.string().min(2),
+    email: z.string().trim().email().toLowerCase(),
     cpf: z.string().min(11).max(14),
     password: z.string().min(6),
     roleName: companyAdminRolesEnum,
@@ -96,6 +98,7 @@ export const createCompanyUserBodySchema = z.object({
 export const updateCompanyUserBodySchema = z.object({
     name: z.string().min(2).optional(),
     surname: z.string().min(2).optional(),
+    email: z.string().trim().email().toLowerCase().optional(),
     roleName: companyAdminRolesEnum.optional(),
     companyId: z.string().uuid().optional(),
     active: z.boolean().optional(),
@@ -107,6 +110,7 @@ export const companyUserItemSchema = z.object({
     name: z.string(),
     surname: z.string(),
     username: z.string(),
+    email: z.string().nullable().optional(),
     cpf: z.string(),
     roleId: z.string().uuid(),
     roleName: z.string(),
