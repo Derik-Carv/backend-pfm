@@ -1,5 +1,6 @@
 import { db } from "@/database/index";
 import { roles, users, statusService, type, companies, userCompanies } from "@/database/schema/schema";
+import { ensureDefaultFinancialCategories } from "@/lib/finance/defaultCategories";
 import { cpfClean } from "@/utils/checkCpf";
 import { hashPassword } from "@/lib/hash";
 import { eq } from "drizzle-orm";
@@ -29,6 +30,8 @@ export async function startSeed() {
         console.log("✅ Mother Company padrão criada.");
     }
 
+    await ensureDefaultFinancialCategories(defaultMotherId);
+
     const targetRoles = [
         "administrator",
         "company_admin",
@@ -55,14 +58,6 @@ export async function startSeed() {
     }
 
     const adminUsername = "administrator.system";
-    const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD;
-    const adminCpf = process.env.CPFADMIN;
-
-    if (!adminPassword || !adminCpf) {
-        throw new Error(
-            "ADMIN_DEFAULT_PASSWORD and CPFADMIN are required to seed the administrator",
-        );
-    }
 
     const [administratorRole] = await db
         .select({ id: roles.id })
@@ -75,32 +70,53 @@ export async function startSeed() {
     }
 
     const [existingUser] = await db
-        .select()
+        .select({ id: users.id })
         .from(users)
         .where(eq(users.username, adminUsername))
         .limit(1);
 
     if (!existingUser) {
+        const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+        const adminCpf = process.env.CPFADMIN?.trim();
+
+        if (!adminPassword?.trim() || !adminCpf) {
+            throw new Error(
+                "ADMIN_DEFAULT_PASSWORD and CPFADMIN are required to seed the administrator",
+            );
+        }
+
+        const isProd = (Bun.env.NODE_ENV ?? process.env.NODE_ENV) === "production";
+        if (isProd && /^change-me/i.test(adminPassword.trim())) {
+            throw new Error(
+                "ADMIN_DEFAULT_PASSWORD must not use a placeholder value in production",
+            );
+        }
+
         console.log("👤 Criando usuário admin padrão...");
         const cpf = await cpfClean(adminCpf);
         const hashedPassword = await hashPassword(adminPassword);
 
-        const [createdAdmin] = await db.insert(users).values({
-            name: "administrator",
-            surname: "system",
-            username: adminUsername,
-            password: hashedPassword,
-            roleId: administratorRole.id,
-            primaryCompanyId: defaultMotherId,
-            cpf: cpf,
-            active: true,
-            passwordChangeRequired: true,
-        }).returning({ id: users.id });
+        await db.transaction(async (tx) => {
+            const [createdAdmin] = await tx
+                .insert(users)
+                .values({
+                    name: "administrator",
+                    surname: "system",
+                    username: adminUsername,
+                    password: hashedPassword,
+                    roleId: administratorRole.id,
+                    primaryCompanyId: defaultMotherId,
+                    cpf: cpf,
+                    active: true,
+                    passwordChangeRequired: true,
+                })
+                .returning({ id: users.id });
 
-        await db.insert(userCompanies).values({
-            userId: createdAdmin.id,
-            companyId: defaultMotherId,
-            isDefault: true,
+            await tx.insert(userCompanies).values({
+                userId: createdAdmin.id,
+                companyId: defaultMotherId,
+                isDefault: true,
+            });
         });
         console.log("✅ Usuário admin criado e vinculado à Mother Company padrão.");
     }

@@ -3,7 +3,43 @@
 Registro das alterações relevantes do backend. Toda mudança de rota, contrato,
 permissão, banco, produção ou auditoria deve ser adicionada aqui.
 
+## 2026-11-26
+
+- **Módulo Financeiro — Fase 1 (`0020_financial_module_phase1.sql`, `/finance/*`, `MODULO_FINANCEIRO.md`, `MODULO_CONTABILIDADE.md`):**
+  - Documentação normativa e arquitetural adicionada em `MODULO_FINANCEIRO.md` e `MODULO_CONTABILIDADE.md`.
+  - Migration idempotente `drizzle/0020_financial_module_phase1.sql` criando `financial_accounts`, `financial_categories`, `cost_centers`, `financial_entries`, `financial_settlements` (*append-only*) e `financial_idempotency_keys` com valores em centavos `bigint` e constraints de integridade.
+  - Utilitários de aritmética exata (`src/lib/finance/money.ts`), CSV anti-formula injection (`src/lib/finance/csv.ts`), idempotência (`src/lib/finance/idempotency.ts`) e seed padrão PME/SaaS (`src/lib/finance/defaultCategories.ts`, integrado a `src/database/seed.ts`).
+  - Novas rotas em `/finance/*` (`accounts`, `categories`, `cost-centers`, `entries`, `entries/from-service/:serviceId`, `entries/:id/settle`, `settlements/:id/reverse`, `reports/cashflow`, `reports/aging`, `reports/export`) com RBAC restrito (`colaborator` bloqueado em 403), locks `SELECT ... FOR UPDATE`, `Idempotency-Key` (liberado também no CORS em `src/policies/cors.ts`) e auditoria LGPD para exportação CSV em `src/app.ts`.
+  - Campos bancários/PIX/segredos adicionados ao `redact` do Pino em `src/config/logger.ts`; suíte de testes unitários e de integração adicionada em `src/tests/finance.test.ts`.
+
+- **Correções pontuais pós-revisão de segurança (`logger.ts`, `infra/`, `seed.ts`, `adminLgpd.route.ts`, `SECURITY.md`):**
+  - `src/config/logger.ts`: substituída trava booleana por `inFlightFlush` em `createAxiomLoggerStream` (evitando busy-loop em `flush()` durante shutdown) e adicionada validação `resolveSafeAxiomUrl` exigindo `https://` em produção para `AXIOM_URL`, com novos testes em `src/tests/infra.test.ts`.
+  - `infra/deploy-off-vm.sh`: substituído IP público real da VM pelo placeholder `ubuntu@seu-servidor.exemplo`.
+  - `infra/nginx-backend-pfm.conf`: adicionados `limit_req_zone`/`limit_conn_zone` (com limite mais estrito em `/public/(login|password|company-requests)`) e `proxy_set_header X-Forwarded-For $remote_addr;`.
+  - `src/router/private/admin/lgpd/adminLgpd.route.ts`: adicionado `deletedExpiredIncidents` em `cleanupResponseSchema` para manter o retorno completo de `POST /admin/lgpd/cleanup`.
+  - `src/database/seed.ts`: `startSeed()` agora verifica se `administrator.system` já existe antes de exigir `ADMIN_DEFAULT_PASSWORD` e `CPFADMIN`, bloqueia senha placeholder em produção e envolve a criação em `db.transaction`.
+  - `SECURITY.md`: seção 13 adicionada com padrões OWASP/fiscais para módulos financeiros e contábeis futuros e checklist das correções pontuais atualizado.
+
 ## 2026-11-25
+
+- **Tooling VPS/Edge, Limpeza e Testes (`infra/`, `package.json`, `compose.production.yaml`, `src/tests/infra.test.ts`):**
+  - Removido pacote `@axiomhq/pino` não mais utilizado em `package.json`/`bun.lock`; `BACKEND_IMAGE` parametrizável adicionado em `compose.production.yaml` e `infra` excluído de `.dockerignore`.
+  - Adicionados `infra/vps-tune-oci-micro.sh` (swap/ZRAM, `sysctl`, rotação Docker e cron semanal), `infra/nginx-backend-pfm.conf` (proxy reverso com keepalive, streaming de PDF e bloqueio de bots na borda) e `infra/deploy-off-vm.sh` (build local + deploy via SSH sem build na VPS).
+  - Adicionada suíte `src/tests/infra.test.ts` cobrindo stream nativo Axiom (batching, cap de 500 eventos, tolerância a falhas) e resolução de `pdf.worker*.mjs`; documentação sincronizada em `SECURITY.md` e `README.md`.
+
+### Infraestrutura, Docker e Performance (Oracle Cloud Micro / 1 GB RAM)
+
+- **Imagem Docker enxuta (`Dockerfile`, `.dockerignore`, `package.json`):**
+  - Migrado base para `oven/bun:1-alpine`, build com `--minify`, cache mount do BuildKit e cópia apenas de `dist/server.js` e `dist/pdf.worker.min.mjs` no estágio `production` (sem `node_modules` nem `chown` duplicando camadas).
+  - Ampliado `.dockerignore` para excluir metadados de migrations, testes, docs, PDFs/planilhas e arquivos de compose/Docker do contexto de build.
+- **Produção Compose e Tuning PostgreSQL (`compose.production.yaml`):**
+  - Adicionados limites ajustados para `VM.Standard.E2.1.Micro` (1 GB RAM): `postgres` (`mem_limit: 256m`, `shared_buffers=64MB`, `max_connections=30`, `effective_cache_size=192MB`, `work_mem=2MB`) e `backend` (`mem_limit: 384m`, `read_only: true`, `tmpfs: /tmp`, `stop_grace_period: 15s`, rotação `json-file` 10MBx3).
+  - Healthcheck em produção otimizado com `wget` a cada `60s`.
+- **Runtime, Logs e PDF (`src/config/logger.ts`, `src/server.ts`, `src/database/index.ts`, `createNf.pdf.ts`, `getNfFile.controller.ts`):**
+  - Substituído worker thread `@axiomhq/pino` por stream Pino nativo com buffer limitado (500 eventos, flush em lote via `fetch`) e `flushLogger()`.
+  - Adicionado graceful shutdown (`SIGTERM`/`SIGINT`) encerrando Fastify, pool PostgreSQL (`closeDatabase`) e logs; pool configurável via `DB_POOL_MAX` (padrão `8`, `idle_timeout: 20`, `max_lifetime: 1800`).
+  - `validateNfPdf` resolve `dist/pdf.worker.min.mjs` com fallback para `node_modules` e define `disableFontFace: true`; `getNfFileController` usa streaming (`createReadStream`) em vez de carregar PDFs inteiros em memória.
+  - Novas variáveis opcionais documentadas em `.env.example`: `DB_POOL_MAX` e `AXIOM_URL`.
 
 ### Segurança e Hardening (OWASP — Rodadas P0 e P1)
 

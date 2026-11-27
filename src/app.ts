@@ -100,6 +100,7 @@ app.addHook("onResponse", async (request, reply) => {
             urlPath.startsWith("/admin/company-requests") ||
             urlPath === "/admin/system/clients" ||
             urlPath === "/account/privacy/export" ||
+            urlPath === "/finance/reports/export" ||
             ((urlPath.startsWith("/notes/") || urlPath.startsWith("/nf/")) &&
                 urlPath.endsWith("/file")));
 

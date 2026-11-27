@@ -30,6 +30,7 @@ export const corsOptions: FastifyCorsOptions = {
     allowedHeaders: [
         "Content-Type",
         "Authorization",
+        "Idempotency-Key",
         "x-company-id",
         "x-view-scope",
     ],

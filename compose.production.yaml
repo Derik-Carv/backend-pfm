@@ -1,13 +1,53 @@
+x-logging: &default-logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "3"
+
 services:
     postgres:
         restart: always
+        security_opt:
+            - no-new-privileges:true
         ports: !override []
+        mem_limit: 256m
+        memswap_limit: 512m
+        pids_limit: 128
+        shm_size: 64m
+        logging: *default-logging
         environment:
             POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
             POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+        command:
+            - postgres
+            - -c
+            - shared_buffers=64MB
+            - -c
+            - effective_cache_size=192MB
+            - -c
+            - work_mem=2MB
+            - -c
+            - maintenance_work_mem=32MB
+            - -c
+            - max_connections=30
+            - -c
+            - wal_buffers=2MB
+            - -c
+            - min_wal_size=32MB
+            - -c
+            - max_wal_size=128MB
+            - -c
+            - checkpoint_completion_target=0.9
+            - -c
+            - random_page_cost=1.1
+            - -c
+            - effective_io_concurrency=200
+            - -c
+            - log_min_duration_statement=1000
 
     backend:
+        image: ${BACKEND_IMAGE:-backend-pfm:prod}
         build:
             target: production
         restart: always
@@ -15,8 +55,16 @@ services:
             - no-new-privileges:true
         cap_drop:
             - ALL
-        mem_limit: 512m
-        pids_limit: 256
+        read_only: true
+        tmpfs:
+            - /tmp:rw,noexec,nosuid,size=64m
+        mem_limit: 384m
+        memswap_limit: 768m
+        pids_limit: 128
+        stop_grace_period: 15s
+        logging: *default-logging
+        environment:
+            DB_POOL_MAX: ${DB_POOL_MAX:-8}
         ports: !override
             - "127.0.0.1:${PORT:?PORT is required}:${PORT:?PORT is required}"
         volumes: !override
@@ -24,11 +72,11 @@ services:
         command:
             ["bun", "run", "dist/server.js"]
         healthcheck:
-            test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/public/health'); if (!r.ok) process.exit(1)"]
-            interval: 30s
+            test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$${PORT:-3000}/public/health || exit 1"]
+            interval: 60s
             timeout: 5s
             retries: 3
-            start_period: 20s
+            start_period: 15s
 
 volumes:
     nf_archives:

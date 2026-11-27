@@ -3,20 +3,20 @@
 > **CONSULTA OBRIGATÓRIA:**
 > Este documento (`SECURITY.md`) é referência permanente de segurança do **Backend PFM** e **deve ser consultado antes de implementar ou alterar** qualquer rota, schema Zod, middleware, repositório Drizzle, upload de arquivo, envio de e-mail, integração externa, variável de ambiente ou configuração de deploy/Docker.
 >
-> Base oficial: [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/index.html) | Última revisão: `2026-11-25`.
+> Base oficial: [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/index.html) | Última revisão: `2026-11-26`.
 
 ---
 
 ## Stack Coberta por Este Guia
 
 - **Runtime e Linguagem:** Bun 1.x + TypeScript 5.9 (`strict`).
-- **Framework HTTP e Contratos:** Fastify v5 + Zod 4 (`fastify-type-provider-zod`) + Swagger/OpenAPI (apenas em desenvolvimento).
+- **Framework HTTP e Contratos:** Fastify v5 + Zod 4 (`fastify-type-provider-zod`) + Swagger/OpenAPI (carregado dinamicamente apenas em desenvolvimento).
 - **Banco de Dados e ORM:** PostgreSQL 16+ + Drizzle ORM (`postgres.js`).
-- **Autenticação e Sessão:** `@fastify/jwt` (tokens de 30 min) + Argon2id (`Bun.password`) + verificação de e-mail/OTP (`email_verification_codes`).
+- **Autenticação e Sessão:** `@fastify/jwt` (HS256, 30 min, revogação via `token_version`) + Argon2id (`Bun.password`) + verificação de e-mail/OTP (`email_verification_codes`).
 - **Autorização e Multi-Tenancy:** RBAC (`allRoles`) + contexto hierárquico matriz/filial (`x-company-id`, `x-view-scope`) + isolamento `colaborator`/`bundled`.
-- **Upload, Arquivos e E-mail:** `@fastify/multipart` + `pdfjs-dist` (PDFs de NF em `archives/`) + `nodemailer` (SMTP).
-- **Segurança de Borda e Observabilidade:** `@fastify/cors`, `@fastify/helmet`, `@fastify/rate-limit`, Pino + Axiom (`@axiomhq/pino`) + auditoria LGPD (`audit_logs`, `legal_acceptances`, `security_incidents`).
-- **Infraestrutura e Integrações:** Docker / Docker Compose + Nginx + HTTPS (Oracle Cloud VM) + futura integração NFS-e ADN (XML/API externa).
+- **Upload, Arquivos e E-mail:** `@fastify/multipart` + `pdfjs-dist` (PDFs de NF em `archives/` particionados por `companyId`) + `nodemailer` (SMTP).
+- **Segurança de Borda e Observabilidade:** `@fastify/cors`, `@fastify/helmet`, `@fastify/rate-limit`, Pino + envio nativo em lote para Axiom (`src/config/logger.ts`) + auditoria LGPD (`audit_logs`, `legal_acceptances`, `security_incidents`).
+- **Infraestrutura, Testes e Evolução Financeira/Fiscal:** Docker / Docker Compose (`read_only` + `USER bun`), Nginx (`infra/`), Oracle Cloud VM, suíte `bun test` (`src/tests/`), futura integração NFS-e ADN (`IMPLEMENTACAO_NFSE_ADN.md`) e futuros módulos de **Financeiro, Contabilidade e Pagamentos**.
 
 ---
 
@@ -31,7 +31,9 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 - [ ] Uploads validam tamanho máximo, tipo MIME e assinatura real do arquivo (`%PDF-`), usando nomes/caminhos seguros dentro de `archives/`?
 - [ ] Dados inseridos em HTML de e-mails (`nodemailer`) estão escapados e cabeçalhos (`to`, `subject`) bloqueiam quebras de linha (`\r`, `\n`)?
 - [ ] Erros retornados ao cliente não expõem stack trace, queries SQL, caminhos locais ou detalhes de infraestrutura?
-- [ ] Segredos, tokens, senhas, CPFs e códigos OTP estão redigidos nos logs (Pino) e fora do controle de versão (`.env`, `archives/`)?
+- [ ] Segredos, tokens, senhas, CPFs, chaves PIX, dados bancários e códigos OTP estão redigidos nos logs (Pino) e fora do controle de versão (`.env`, `archives/`, scripts em `infra/` sem IPs/chaves reais)?
+- [ ] Operações financeiras/contábeis usam aritmética exata (sem `Number` flutuante), transação + lock/máquina de estados, `Idempotency-Key`, partidas dobradas/estorno *append-only* e recálculo 100% server-side?
+- [ ] Webhooks de pagamento/banco validam assinatura HMAC sobre *raw body* (`timingSafeEqual`) + anti-replay, e exportações CSV/XLSX neutralizam fórmulas (`=`, `+`, `-`, `@`)?
 - [ ] Novas dependências foram auditadas (`bun audit`) e não introduzem vulnerabilidades conhecidas?
 - [ ] Mudanças de rota, permissão, auditoria ou produção foram documentadas em `CHANGELOG.md`?
 
@@ -49,11 +51,12 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 | **API REST, Zod e TypeScript/JS** | [REST Security](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html), [REST Assessment](https://cheatsheetseries.owasp.org/cheatsheets/REST_Assessment_Cheat_Sheet.html), [Input Validation](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html), [Mass Assignment](https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html), [JavaScript and TypeScript Security](https://cheatsheetseries.owasp.org/cheatsheets/JavaScript_and_TypeScript_Security_Cheat_Sheet.html), [Prototype Pollution Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Prototype_Pollution_Prevention_Cheat_Sheet.html), [Nodejs Security](https://cheatsheetseries.owasp.org/cheatsheets/Nodejs_Security_Cheat_Sheet.html) | `src/app.ts`, `src/router/**/**.schemas.ts`, `src/router/private/admin/data/` |
 | **PostgreSQL e Drizzle ORM** | [SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html), [Query Parameterization](https://cheatsheetseries.owasp.org/cheatsheets/Query_Parameterization_Cheat_Sheet.html), [Database Security](https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html), [Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html) | `src/database/index.ts`, `src/database/schema/schema.ts`, `src/database/tables/*` |
 | **Upload de PDFs, Paths e E-mail HTML** | [File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html), [Path Traversal Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Path_Traversal_Prevention_Cheat_Sheet.html), [Cross-Site Scripting Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html) | `src/app.ts`, `src/router/private/NF/`, `archives/`, `src/lib/nodemailer/nodemailer.ts` |
-| **Headers, CORS e TLS/Proxy** | [HTTP Headers](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html), [CORS Security](https://cheatsheetseries.owasp.org/cheatsheets/CORS_Security_Cheat_Sheet.html), [HSTS](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Strict_Transport_Security_Cheat_Sheet.html), [Transport Layer Security](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html), [Transport Layer Protection](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html) | `src/policies/cors.ts`, `src/policies/helmet.ts`, `src/app.ts`, Nginx / Oracle Cloud |
-| **Rate Limit, Bots e DoS** | [Denial of Service](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html), [Bot Management and Anti-Automation](https://cheatsheetseries.owasp.org/cheatsheets/Bot_Management_and_Anti-Automation_Cheat_Sheet.html) | `src/policies/rateLimit.ts`, `src/router/**/**.options.ts`, Nginx |
+| **Headers, CORS e TLS/Proxy** | [HTTP Headers](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html), [CORS Security](https://cheatsheetseries.owasp.org/cheatsheets/CORS_Security_Cheat_Sheet.html), [HSTS](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Strict_Transport_Security_Cheat_Sheet.html), [Transport Layer Security](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html), [Transport Layer Protection](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html) | `src/policies/cors.ts`, `src/policies/helmet.ts`, `src/app.ts`, `infra/nginx-backend-pfm.conf` |
+| **Rate Limit, Bots e DoS** | [Denial of Service](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html), [Bot Management and Anti-Automation](https://cheatsheetseries.owasp.org/cheatsheets/Bot_Management_and_Anti-Automation_Cheat_Sheet.html) | `src/policies/rateLimit.ts`, `src/router/**/**.options.ts`, `infra/nginx-backend-pfm.conf` |
 | **Logs, Auditoria, Erros e LGPD** | [Logging](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html), [Logging Vocabulary](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Vocabulary_Cheat_Sheet.html), [Error Handling](https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html), [User Privacy Protection](https://cheatsheetseries.owasp.org/cheatsheets/User_Privacy_Protection_Cheat_Sheet.html) | `src/config/logger.ts`, `src/lib/lgpd/*`, `src/app.ts`, `src/router/error.schema.ts` |
 | **Segredos e Criptografia** | [Secrets Management](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html), [Cryptographic Storage](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html), [Key Management](https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html) | `.env`, `.env.example`, `src/lib/hash.ts`, `src/lib/jwt/jwt.ts` |
-| **Docker, Dependências e CI/CD** | [Docker Security](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html), [NodeJS Docker](https://cheatsheetseries.owasp.org/cheatsheets/NodeJS_Docker_Cheat_Sheet.html), [NPM Security](https://cheatsheetseries.owasp.org/cheatsheets/NPM_Security_Cheat_Sheet.html), [Vulnerable Dependency Management](https://cheatsheetseries.owasp.org/cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.html), [Software Supply Chain Security](https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html), [CI/CD Security](https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html) | `Dockerfile`, `compose.yaml`, `compose.production.yaml`, `package.json`, `bun.lock` |
+| **Docker, Dependências e CI/CD** | [Docker Security](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html), [NodeJS Docker](https://cheatsheetseries.owasp.org/cheatsheets/NodeJS_Docker_Cheat_Sheet.html), [NPM Security](https://cheatsheetseries.owasp.org/cheatsheets/NPM_Security_Cheat_Sheet.html), [Vulnerable Dependency Management](https://cheatsheetseries.owasp.org/cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.html), [Software Supply Chain Security](https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html), [CI/CD Security](https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html) | `Dockerfile`, `compose.yaml`, `compose.production.yaml`, `infra/deploy-off-vm.sh`, `infra/vps-tune-oci-micro.sh`, `package.json`, `bun.lock` |
+| **Financeiro, Contabilidade & Pagamentos** | [Transaction Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html), [Third-Party Payment Gateway Integration](https://cheatsheetseries.owasp.org/cheatsheets/Third_Party_Payment_Gateway_Integration_Cheat_Sheet.html), [Webhook Security](https://cheatsheetseries.owasp.org/cheatsheets/Webhook_Security_Cheat_Sheet.html), [Business Logic Security](https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html), [Cryptographic Storage](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html), [Key Management](https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html) | Futuros módulos de contas a pagar/receber, conciliação bancária, ledger contábil, PIX/boletos e fechamento de período |
 | **NFS-e ADN / XML / Mobile / IA** | [SSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html), [XML Security](https://cheatsheetseries.owasp.org/cheatsheets/XML_Security_Cheat_Sheet.html), [XXE Prevention](https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html), [Webhook Security](https://cheatsheetseries.owasp.org/cheatsheets/Webhook_Security_Cheat_Sheet.html), [Mobile Application Security](https://cheatsheetseries.owasp.org/cheatsheets/Mobile_Application_Security_Cheat_Sheet.html), [Secure Code Review](https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html), [Threat Modeling](https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html), [Abuse Case](https://cheatsheetseries.owasp.org/cheatsheets/Abuse_Case_Cheat_Sheet.html), [Attack Surface Analysis](https://cheatsheetseries.owasp.org/cheatsheets/Attack_Surface_Analysis_Cheat_Sheet.html), [Secure Coding with AI](https://cheatsheetseries.owasp.org/cheatsheets/Secure_Coding_with_AI_Cheat_Sheet.html) | Futura integração NFS-e ADN (`IMPLEMENTACAO_NFSE_ADN.md`), clientes mobile/web, fluxo de desenvolvimento |
 
 > **Nota sobre itens do índice OWASP fora de escopo:** Guias específicos de outras linguagens/frameworks (Django, Laravel, Symfony, Ruby on Rails, .NET, Java/JAAS, PHP), orquestradores não usados (Kubernetes, Serverless), protocolos ausentes (GraphQL, gRPC, SAML, LDAP, NoSQL) e nichos não aplicáveis (Automotive, Drone, Browser Extensions) não fazem parte da stack atual deste backend. Caso um frontend web/React ou integração OAuth2/Passkey seja adicionado ao ecossistema, consulte também `React_Security_Cheat_Sheet`, `Web_Frontend_Security_Cheat_Sheet`, `OAuth2_Cheat_Sheet` e `Passkey_Security_Cheat_Sheet`.
@@ -151,13 +154,14 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 
 ### 7. Headers HTTP, CORS, TLS/HSTS e Proxy Reverso (Nginx)
 
-- **Trust Proxy correto:** Configurar `trustProxy` na instância do Fastify em `src/app.ts` usando `TRUST_PROXY_HOPS` (ex.: `1` quando atrás de um único Nginx local) e **usar `request.ip` do Fastify** em vez de confiar manualmente no header `x-forwarded-for` (que pode ser forjado se não for sanitizado pelo proxy).
+- **Trust Proxy correto:** Configurar `trustProxy` na instância do Fastify em `src/app.ts` usando `TRUST_PROXY` (ex.: `1` quando atrás de um único Nginx local) e **usar `request.ip` do Fastify** em vez de confiar manualmente no header `x-forwarded-for` (que pode ser forjado se não for sobrescrito pelo proxy). Quando o Nginx receber tráfego direto da internet (sem CDN/WAF na frente), preferir `proxy_set_header X-Forwarded-For $remote_addr;` em vez de `$proxy_add_x_forwarded_for` para impedir spoofing de IP pelo cliente.
 - **CORS restritivo em produção (`src/policies/cors.ts`):**
   - Nunca usar `*` em produção quando `credentials: true` estiver ativo. Definir `CORS_ORIGIN` com as origens exatas permitidas (HTTPS).
   - Avaliar se requisições sem `Origin` (clientes mobile nativos/curl) devem receber `Access-Control-Allow-Origin`: apps mobile nativos não exigem CORS; apenas navegadores aplicam Same-Origin Policy.
-- **Headers de segurança (`@fastify/helmet` + Nginx):**
-  - Ativar `HSTS` (`Strict-Transport-Security: max-age=31536000; includeSubDomains`) em produção (no Nginx ou no Helmet atrás de HTTPS).
-  - Manter `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` ou `SAMEORIGIN`, `Referrer-Policy: no-referrer` (ou `strict-origin-when-cross-origin`) e CSP adequada para endpoints que retornam HTML/arquivos.
+- **Headers de segurança e borda (`@fastify/helmet` + `infra/nginx-backend-pfm.conf`):**
+  - Ativar `HSTS` (`Strict-Transport-Security: max-age=31536000; includeSubDomains`) em produção (no Nginx e no Helmet atrás de HTTPS).
+  - Manter `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` (ou `strict-origin-when-cross-origin`), `limit_req_zone`/`limit_conn_zone` no Nginx contra flood e CSP adequada.
+  - **Cuidado com `gzip` (BREACH):** se no futuro a API passar a autenticar via cookies `HttpOnly` com respostas que refletem entrada do usuário + segredo/token CSRF no corpo, desabilitar `gzip` nas rotas autenticadas ou mascarar o token CSRF por requisição.
 - **Superfície mínima em produção:**
   - Manter `@fastify/swagger` e `@fastify/swagger-ui` (`/docs`) habilitados apenas quando `NODE_ENV !== "production"`.
   - Expor a porta da aplicação apenas em `127.0.0.1` (`compose.production.yaml`), delegando terminação TLS 1.2+/1.3 ao Nginx.
@@ -205,10 +209,10 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 
 - **Container não-root (`Dockerfile`):**
   - O estágio `production` deve executar o processo como usuário sem privilégios (`USER bun`), garantindo permissão de escrita apenas no volume necessário (`archives/`).
-  - Manter multi-stage build (`oven/bun:1-slim`) contendo apenas `dist/` e dependências de produção (`bun install --production --frozen-lockfile`).
+  - Manter multi-stage build (`oven/bun:1-alpine`) contendo apenas `dist/` (bundle minificado + `pdf.worker.min.mjs`), sem `node_modules` nem devDependencies.
 - **Hardening de runtime (`compose.production.yaml`):**
   - Manter `ports` da API vinculados exclusivamente a `127.0.0.1` e PostgreSQL sem porta publicada no host.
-  - Avaliar adicionar `security_opt: ["no-new-privileges:true"]`, `cap_drop: ["ALL"]` e `read_only: true` (com `tmpfs` se necessário e volume específico em `/usr/src/app/archives`).
+  - Manter `security_opt: ["no-new-privileges:true"]`, `cap_drop: ["ALL"]`, `read_only: true` com `tmpfs` em `/tmp`, `mem_limit`/`pids_limit` ajustados e volume específico em `/usr/src/app/archives`.
 - **Gestão de dependências e Supply Chain:**
   - Sempre usar `--frozen-lockfile` em builds e deploys para evitar instalação silenciosa de versões não revisadas.
   - Executar `bun audit` regularmente (há script `security:update`, mas atualizações em produção devem passar por revisão de lockfile, `typecheck`, `build` e testes antes do deploy).
@@ -232,9 +236,68 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 
 ---
 
+### 13. Padrões Obrigatórios para Futuras Implementações de Financeiro, Contabilidade, Pagamentos e Fiscal
+
+Todo módulo futuro envolvendo **contas a pagar/receber, fluxo de caixa, conciliação bancária, lançamentos contábeis, plano de contas, DRE/balancete, PIX/boletos, webhooks de pagamento ou NFS-e ADN** deve seguir os 6 pilares abaixo desde o design do schema Drizzle:
+
+#### 13.1 Integridade Contábil, Partidas Dobradas e Imutabilidade
+
+- **Modelo *Append-Only* (Razão Imutável):** Lançamentos contábeis e movimentações financeiras confirmadas **nunca** sofrem `DELETE` físico nem `UPDATE` retroativo em valor, conta, data de competência ou centro de custo. Correções e cancelamentos devem gerar um **lançamento de estorno / ajuste** referenciando o registro original (`reversedEntryId`), preservando rastreabilidade total.
+- **Partidas Dobradas (*Double-Entry*):** Cada lançamento contábil deve ser gravado em `db.transaction` validando no servidor que `SUM(débitos) === SUM(créditos)` (diferença exatamente `0`) e que todas as contas pertencem ao mesmo escopo autorizado do tenant.
+- **Fechamento de Competência (`accounting_periods`):** Controlar períodos contábeis (`open` → `closing` → `closed` / `locked`). Rejeitar na camada de UseCase e via constraint/trigger no PostgreSQL qualquer lançamento ou estorno em período fechado; eventual reabertura deve exigir papel privilegiado + justificativa obrigatória + registro em `audit_logs`.
+- **Aritmética Exata (Zero `Number` Flutuante):** Usar `numeric(14, 2)` (ou `numeric(18, 4)` para alíquotas/unitários) no PostgreSQL e operar no TypeScript exclusivamente com **`BigInt` em centavos/milésimos** ou biblioteca decimal fixa — nunca usar soma/multiplicação/rateio em ponto flutuante IEEE-754 (`Number`), nem aceitar valores negativos não previstos (ex.: quantidade/preço/desconto > bruto).
+- **Integridade de Trilha Financeira:** Registrar `createdBy`, `approvedBy`, `companyId`, `requestId` e timestamp em UTC em toda tabela financeira; para livros fiscais/contábeis críticos, considerar hash encadeado (`prevHash` + SHA-256 canônico) por empresa/período para detecção de adulteração.
+
+#### 13.2 Autorização Transacional, Segregação de Funções (SoD) e Idempotência
+
+- **Segregação de Funções (*Maker-Checker*):** Quem cria uma ordem de pagamento, alteração de chave PIX/conta bancária ou ajuste contábil de alto valor **não pode** ser o mesmo usuário que aprova (`approvedBy !== createdBy`), respeitando alçadas configuráveis por valor e tenant.
+- **Autorização por Transação (`Transaction_Authorization_Cheat_Sheet`):** Operações críticas (liberação de pagamento/PIX, alteração de dados bancários de favorecido/empresa, upload/troca de certificado A1, reabertura de período contábil) devem exigir reconfirmação de credencial/OTP vinculada explicitamente ao **resumo da operação** (valor, favorecido/chave, conta destino e nonce único de uso único com TTL curto), impedindo que um token de sessão reutilizado aprove outra transação.
+- **Máquina de Estados e Locks no Banco (`Business_Logic_Security_Cheat_Sheet`):**
+  - Modelar status no servidor (`draft` → `pending_approval` → `approved` → `scheduled` → `paid` / `failed` / `cancelled`) e validar transições permitidas via `UPDATE ... WHERE id = $1 AND company_id IN (...) AND status = $expected RETURNING *` (com `SELECT ... FOR UPDATE` quando envolver saldo ou limite de crédito) para impedir **race conditions / gasto duplo**.
+  - **Sempre recalcular no servidor** totais, impostos (ISS, retenções), juros, multas e descontos; jamais aceitar `totalAmount`, `netAmount` ou `status` calculados pelo frontend.
+- **Idempotência Obrigatória:** Endpoints de criação de pagamento, baixa, emissão de boleto/PIX ou emissão de NFS-e devem exigir header/chave `Idempotency-Key` com índice único composto `(company_id, endpoint, idempotency_key)` + comparação do hash SHA-256 do payload (retornando `409` se a mesma chave for reutilizada com corpo diferente).
+
+#### 13.3 Gateways de Pagamento, PIX, Boletos, Webhooks e Bancos
+
+- **Confirmação Server-to-Server (`Third_Party_Payment_Gateway_Integration_Cheat_Sheet`):** Nunca marcar título, fatura ou pedido como `paid` com base em redirect, callback de UI ou payload vindo do app mobile/navegador. A baixa ocorre **somente** via consulta autenticada na API do provedor/banco ou webhook criptograficamente verificado.
+- **Segurança de Webhooks (`Webhook_Security_Cheat_Sheet`):**
+  - Verificar assinatura HMAC (ex.: HMAC-SHA256) sobre o **raw body** exato usando `crypto.timingSafeEqual` (configurar parser no Fastify preservando o raw body apenas nas rotas de webhook).
+  - Implementar **anti-replay**: rejeitar eventos com timestamp fora da janela (ex.: `±5 minutos`) e persistir `provider + eventId` em tabela com `UNIQUE` antes de processar.
+  - Validar valor, moeda, status e `companyId` no banco antes de baixar títulos; sempre responder rapidamente (`2xx`) após enfileirar/gravar de forma idempotente para evitar tempestade de retentativas e DoS.
+- **Minimização PCI-DSS e Dados Bancários:** Nunca armazenar número completo de cartão (PAN), CVV ou trilha magnética (usar tokenização do gateway). Dados bancários de favorecidos (PIX/agência/conta) devem ser validados por tenant e ter alteração auditada/notificada.
+- **Chamadas de Saída (Bancos / Open Finance / SEFAZ ADN):** Aplicar allowlist estrita de domínios HTTPS, desabilitar redirects abertos, usar mTLS quando exigido (Padrão Nacional NFS-e / PIX BACEN) e aplicar timeouts curtos + circuit breaker.
+
+#### 13.4 Importação de Extratos (OFX/CNAB/XML) e Exportação Contábil (CSV/XLSX)
+
+- **Importação de Arquivos Bancários e Fiscais (OFX, CNAB 240/400, XML NF-e/NFS-e):**
+  - Limitar tamanho de arquivo, quantidade de linhas e tempo de parsing; validar estrutura por schema antes de processar.
+  - Em parsers XML/OFX SGML/XML, **desabilitar completamente DTD e entidades externas (XXE)** e limitar profundidade de tags.
+  - Garantir **deduplicação na conciliação bancária** (chave única por `(bank_account_id, external_fitid)` ou hash determinístico dos campos da transação) para impedir importação duplicada de receitas/despesas.
+- **Prevenção a *CSV / Formula Injection* em Exportações:**
+  - Em qualquer exportação CSV/TSV/XLSX (extratos, DRE, razão, relatórios de clientes/NFs), prefixar com apóstrofo (`'`) ou neutralizar células cujo conteúdo (após espaços iniciais) comece com `=`, `+`, `-`, `@`, `\t` (`0x09`) ou `\r` (`0x0D`), impedindo execução de fórmulas maliciosas ao abrir no Excel/LibreOffice.
+
+#### 13.5 Certificados Digitais A1 (e-CNPJ), Segredos por Tenant e Logs Financeiros
+
+- **Armazenamento Cifrado de Certificados e Segredos Bancários (`Cryptographic_Storage_Cheat_Sheet` + `Key_Management_Cheat_Sheet`):**
+  - Arquivos `.pfx`/`.p12`, senhas de certificado A1, `client_secret` de APIs bancárias e `webhook_secret` por empresa devem ser armazenados no banco cifrados via **Envelope Encryption (`AES-256-GCM`)**: DEK aleatória por registro (ou por tenant) + IV/nonce aleatório de 96 bits via `crypto.randomBytes(12)` (nunca reutilizar IV com a mesma chave) + `AAD` vinculando `companyId` e `recordId` + chave mestra (KEK) vinda exclusivamente de ambiente/KMS fora do banco, com `key_version` para rotação sem downtime.
+  - Nunca gravar o `.pfx` descriptografado ou a chave privada em disco/logs/`/tmp`; manter o `Buffer` em memória apenas durante a assinatura XMLDsig ou handshake mTLS.
+- **Redação de Logs Financeiros (`src/config/logger.ts`):**
+  - Antes de ativar rotas financeiras/bancárias, adicionar ao `sharedRedact` do Pino todos os campos sensíveis novos: `pixKey`, `bankAccount`, `agency`, `accountNumber`, `certPassword`, `pfx`, `privateKey`, `clientSecret`, `webhookSecret`, `accessToken`, `refreshToken`, `authorizationCode` (em `body.*`, `*.campo` e raiz).
+
+#### 13.6 RBAC Contábil Multi-Tenant e Retenção Legal vs. LGPD
+
+- **Separação de Papéis Financeiro vs. Contábil:**
+  - Avaliar papel dedicado `accountant` / `auditor` (somente leitura contábil/fiscal + fechamento/exportação SPED/DRE) distinto de `finance` (contas a pagar/receber) e de `company_admin` (gestão de usuários e alçadas), mantendo `colaborator` totalmente bloqueado de qualquer endpoint financeiro/contábil.
+- **Consolidação Matriz/Filial (`x-view-scope=consolidated`):**
+  - Em relatórios contábeis consolidados (DRE, balanço, fluxo de caixa), identificar e tratar explicitamente transferências *intercompany* entre matriz e filiais da mesma árvore para não inflar receitas/despesas nem misturar saldos bancários.
+- **Retenção Legal vs. LGPD:**
+  - Livros contábeis, comprovantes fiscais, guias de impostos e registros financeiros vinculados a obrigações tributárias/trabalhistas/cíveis devem respeitar guarda legal mínima de **5 a 10 anos** (conforme CTN/legislação aplicável), sendo preservados de exclusão destrutiva na anonimização LGPD (Art. 16, I da Lei nº 13.709/2018) com minimização dos dados pessoais acessórios.
+
+---
+
 ## Diagnóstico Atual do Projeto (Status vs. Backlog de Hardening)
 
-*Estado atualizado em `2026-11-25` após aplicação das rodadas P0, P1 e P2/P3 de segurança:*
+*Estado atualizado em `2026-11-26` após revisão geral de segurança do backend, frontend e arquivos em `infra/`:*
 
 ### Controles implementados e verificados
 
@@ -242,17 +305,22 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 - Revalidação de usuário/role ativos, bloqueio de `passwordChangeRequired` no servidor (sincronizado no frontend), validação de `x-company-id` e isolamento multi-tenant *fail-closed* (`src/middlewares/auth.middleware.ts`, `src/lib/tenant.ts`, repositórios).
 - Escopo restrito de `company_admin` por matriz/filial e troca atômica de empresa sem vínculo residual (`src/router/private/companies/`).
 - Restrição de `colaborator` em `/clients` (`bundled` ativos + CPF mascarado) e restrição de mutações globais em `/types` ao `administrator`.
-- Proteção contra Path Traversal em `archives/` (`src/lib/archivePath.ts`, `src/router/private/NF/sendEmailNf/`, `getNfFile.controller.ts`), limites no `@fastify/multipart` (`10 MB`, `1 arquivo`), magic bytes `%PDF-`, limite de 20 páginas e timeout no `pdfjs-dist`.
+- Proteção contra Path Traversal em `archives/` (`src/lib/archivePath.ts`, `src/router/private/NF/sendEmailNf/`, `getNfFile.controller.ts` com streaming `createReadStream`), limites no `@fastify/multipart` (`10 MB`, `1` arquivo), magic bytes `%PDF-`, limite de `20` páginas, `disableFontFace: true` e timeout no `pdfjs-dist`.
 - Escape HTML e sanitização de headers no Nodemailer (`src/lib/nodemailer/nodemailer.ts`), verificação atômica e cooldown de OTP (`emailVerificationCodes.repository.ts`), verificação OTP antes de checagens de conflito no onboarding público e timing protection no login (`login.usecase.ts`).
 - Allowlist de escrita em `/admin/data/:table`, transação atômica na aprovação/rejeição de empresas, update atômico de serviços, validação de CPF corrigida (`src/utils/checkCpf.ts`) e remoção de Mass Assignment de `id`/`cancelDate`/`pathFile`.
-- `trustProxy` configurado com `request.ip`, filtro de `404` públicos fora de `audit_logs`, auditoria de `/notes/:id/file`, Swagger carregado dinamicamente apenas fora de produção (`devDependencies`), error handler global, redação Pino com wildcards (`src/config/logger.ts`), timeouts no PostgreSQL (`src/database/index.ts`), `demoSeed` bloqueado em produção, limpeza de `security_incidents` (5 anos) em `retention.ts`, container não-root (`USER bun`), hardened Compose e CSP/headers no frontend (`nginx.conf`, `vercel.json`).
-- Suíte de testes automatizados de segurança (`bun test` em `src/tests/security.test.ts`).
+- `trustProxy` configurado com `request.ip`, filtro de `404` públicos fora de `audit_logs`, auditoria de `/notes/:id/file`, Swagger carregado dinamicamente apenas fora de produção (`devDependencies`), error handler global, redação Pino com wildcards + stream nativo em lote para Axiom com timeout de 5s (`src/config/logger.ts`), graceful shutdown (`src/server.ts`), timeouts no PostgreSQL (`src/database/index.ts`), `demoSeed` bloqueado em produção e limpeza de `security_incidents` (5 anos) em `retention.ts`.
+- Imagem de produção `oven/bun:1-alpine` sem `node_modules` e sem root (`USER bun`), `compose.production.yaml` com `read_only: true`, `tmpfs` em `/tmp`, `no-new-privileges:true`, `cap_drop: ALL` e limites de memória/PIDs, CSP/headers no frontend com `connect-src` restrito em `nginx.conf` e `vercel.json`, e `infra/nginx-backend-pfm.conf` bloqueando scans comuns na borda com `limit_req_zone`/`limit_conn_zone` e `X-Forwarded-For $remote_addr`.
+- Correções pontuais da revisão de `2026-11-26` implementadas e verificadas:
+  - `src/config/logger.ts`: `flush()` aguarda `inFlightFlush` (eliminando busy-loop no shutdown) e `resolveSafeAxiomUrl` exige `https://` em produção para `AXIOM_URL`.
+  - `infra/deploy-off-vm.sh`: removido IP real da VM e substituído por placeholder `ubuntu@seu-servidor.exemplo`.
+  - `src/router/private/admin/lgpd/adminLgpd.route.ts` e `frontend-pfm/src/services/privacy.ts`: exposto `deletedExpiredIncidents` no retorno de `POST /admin/lgpd/cleanup`.
+  - `src/database/seed.ts`: checagem de `administrator.system` antes de exigir `ADMIN_DEFAULT_PASSWORD`/`CPFADMIN`, bloqueio de senha placeholder em produção e inserção atômica em transação.
+- Suíte de testes automatizados (`bun test`: 18 testes passando em `src/tests/security.test.ts` e `src/tests/infra.test.ts`).
 
-> **Aviso operacional de deploy (volume `nf_archives`):** Como o container de produção do backend agora executa como `USER bun`, se o volume `nf_archives` já existir na VM com dono `root:root`, execute `docker compose -f compose.yaml -f compose.production.yaml run --rm --user root backend chown -R bun:bun /usr/src/app/archives` e rode a migration `drizzle/0019_user_token_version.sql` ao atualizar a produção.
+> **Aviso operacional de deploy (volume `nf_archives`):** Como o container de produção do backend executa como `USER bun`, se o volume `nf_archives` já existir na VM com dono `root:root`, execute `docker compose -f compose.yaml -f compose.production.yaml run --rm --user root backend chown -R bun:bun /usr/src/app/archives` e aplique a migration `drizzle/0019_user_token_version.sql` ao atualizar a produção.
 
 ### Evoluções estruturais recomendadas (Médio Prazo)
 
-1. **Sessão Web via Cookie `HttpOnly; Secure; SameSite` + Refresh Token rotativo:** substituir o armazenamento de JWT em `localStorage` no frontend web, com proteção CSRF.
-2. **MFA (TOTP ou Passkeys):** segundo fator obrigatório para contas `administrator` e `company_admin`.
+1. **Sessão Web via Cookie `HttpOnly; Secure; SameSite` + Refresh Token rotativo:** substituir o armazenamento de JWT em `localStorage` no frontend web, com proteção CSRF (e remover `gzip` em respostas JSON autenticadas sensíveis se usar cookies).
+2. **MFA (TOTP ou Passkeys):** segundo fator obrigatório para contas `administrator`, `company_admin` e usuários com alçada de aprovação financeira/contábil.
 3. **Menor privilégio no PostgreSQL + `NOT NULL` em `company_id`:** separar usuário DML da aplicação da conta de migrations e aplicar `NOT NULL` nas FKs de tenant após backfill.
-4. **Bloqueio de bots na borda (Nginx/Cloudflare):** rejeitar scans comuns (`POST /`, `/vpnsvc/*`, `/.env`) diretamente no Nginx antes do Fastify.

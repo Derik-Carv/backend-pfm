@@ -1,5 +1,7 @@
 import {
+    bigint,
     boolean,
+    char,
     integer,
     numeric,
     pgTable,
@@ -556,5 +558,302 @@ export const nfRelations = relations(nf, ({ one }) => ({
     company: one(companies, {
         fields: [nf.companyId],
         references: [companies.id],
+    }),
+}));
+
+export const financialAccounts = pgTable(
+    "financial_accounts",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id")
+            .notNull()
+            .references(() => companies.id),
+        name: text("name").notNull(),
+        type: text("type").notNull(),
+        bankCode: varchar("bank_code", { length: 10 }),
+        agencyMasked: text("agency_masked"),
+        accountMasked: text("account_masked"),
+        initialBalanceCents: bigint("initial_balance_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        initialBalanceDate: date("initial_balance_date", { mode: "string" }).notNull(),
+        currentBalanceCents: bigint("current_balance_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        active: boolean("active").default(true).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("financial_accounts_company_idx").on(table.companyId),
+        index("financial_accounts_company_active_idx").on(table.companyId, table.active),
+    ],
+);
+
+export const financialCategories = pgTable(
+    "financial_categories",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id")
+            .notNull()
+            .references(() => companies.id),
+        parentId: uuid("parent_id").references((): any => financialCategories.id),
+        code: varchar("code", { length: 30 }).notNull(),
+        name: text("name").notNull(),
+        kind: text("kind").notNull(),
+        dreGroup: text("dre_group"),
+        isSystem: boolean("is_system").default(false).notNull(),
+        active: boolean("active").default(true).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("financial_categories_company_idx").on(table.companyId),
+        uniqueIndex("financial_categories_company_code_uidx").on(
+            table.companyId,
+            table.code,
+        ),
+    ],
+);
+
+export const costCenters = pgTable(
+    "cost_centers",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id")
+            .notNull()
+            .references(() => companies.id),
+        code: varchar("code", { length: 20 }).notNull(),
+        name: text("name").notNull(),
+        active: boolean("active").default(true).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("cost_centers_company_idx").on(table.companyId),
+        uniqueIndex("cost_centers_company_code_uidx").on(table.companyId, table.code),
+    ],
+);
+
+export const financialEntries = pgTable(
+    "financial_entries",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id")
+            .notNull()
+            .references(() => companies.id),
+        entryType: text("entry_type").notNull(),
+        status: text("status").notNull(),
+        description: text("description").notNull(),
+        documentNumber: text("document_number"),
+        notes: text("notes"),
+        clientId: uuid("client_id").references(() => clients.id),
+        counterpartyName: text("counterparty_name"),
+        counterpartyDocument: text("counterparty_document"),
+        serviceId: uuid("service_id").references(() => services.id),
+        nfId: uuid("nf_id").references(() => nf.id),
+        categoryId: uuid("category_id")
+            .notNull()
+            .references(() => financialCategories.id),
+        costCenterId: uuid("cost_center_id").references(() => costCenters.id),
+        competenceDate: date("competence_date", { mode: "string" }).notNull(),
+        issueDate: date("issue_date", { mode: "string" }).notNull(),
+        dueDate: date("due_date", { mode: "string" }).notNull(),
+        paidAt: timestamp("paid_at"),
+        originalAmountCents: bigint("original_amount_cents", {
+            mode: "bigint",
+        }).notNull(),
+        discountCents: bigint("discount_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        interestCents: bigint("interest_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        fineCents: bigint("fine_cents", { mode: "bigint" }).default(0n).notNull(),
+        netAmountCents: bigint("net_amount_cents", { mode: "bigint" }).notNull(),
+        settledAmountCents: bigint("settled_amount_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        installmentNumber: integer("installment_number").default(1).notNull(),
+        totalInstallments: integer("total_installments").default(1).notNull(),
+        installmentGroupId: uuid("installment_group_id"),
+        isIntercompany: boolean("is_intercompany").default(false).notNull(),
+        counterpartyCompanyId: uuid("counterparty_company_id").references(
+            () => companies.id,
+        ),
+        createdBy: uuid("created_by")
+            .notNull()
+            .references(() => users.id),
+        cancelledBy: uuid("cancelled_by").references(() => users.id),
+        cancelledAt: timestamp("cancelled_at"),
+        cancelReason: text("cancel_reason"),
+        idempotencyKey: varchar("idempotency_key", { length: 128 }),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at")
+            .defaultNow()
+            .notNull()
+            .$onUpdateFn(() => new Date()),
+    },
+    (table) => [
+        index("financial_entries_company_status_due_idx").on(
+            table.companyId,
+            table.entryType,
+            table.status,
+            table.dueDate,
+        ),
+        index("financial_entries_company_competence_idx").on(
+            table.companyId,
+            table.competenceDate,
+        ),
+        index("financial_entries_service_idx").on(table.serviceId),
+        index("financial_entries_nf_idx").on(table.nfId),
+        index("financial_entries_client_idx").on(table.clientId),
+        uniqueIndex("financial_entries_company_idemp_uidx")
+            .on(table.companyId, table.idempotencyKey, table.installmentNumber)
+            .where(sql`${table.idempotencyKey} IS NOT NULL`),
+    ],
+);
+
+export const financialSettlements = pgTable(
+    "financial_settlements",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id")
+            .notNull()
+            .references(() => companies.id),
+        entryId: uuid("entry_id")
+            .notNull()
+            .references(() => financialEntries.id),
+        accountId: uuid("account_id")
+            .notNull()
+            .references(() => financialAccounts.id),
+        settlementType: text("settlement_type").notNull(),
+        reversedSettlementId: uuid("reversed_settlement_id").references(
+            (): any => financialSettlements.id,
+        ),
+        paymentMethod: text("payment_method").notNull(),
+        settledAt: timestamp("settled_at").notNull(),
+        principalCents: bigint("principal_cents", { mode: "bigint" }).notNull(),
+        interestCents: bigint("interest_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        fineCents: bigint("fine_cents", { mode: "bigint" }).default(0n).notNull(),
+        discountCents: bigint("discount_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        gatewayFeeCents: bigint("gateway_fee_cents", { mode: "bigint" })
+            .default(0n)
+            .notNull(),
+        totalSettledCents: bigint("total_settled_cents", { mode: "bigint" }).notNull(),
+        externalProvider: text("external_provider"),
+        externalTxId: text("external_tx_id"),
+        idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+        createdBy: uuid("created_by")
+            .notNull()
+            .references(() => users.id),
+        notes: text("notes"),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => [
+        index("financial_settlements_company_settled_idx").on(
+            table.companyId,
+            table.settledAt,
+        ),
+        index("financial_settlements_entry_idx").on(table.entryId),
+        index("financial_settlements_account_idx").on(table.accountId),
+        uniqueIndex("financial_settlements_reversed_uidx")
+            .on(table.reversedSettlementId)
+            .where(sql`${table.reversedSettlementId} IS NOT NULL`),
+        uniqueIndex("financial_settlements_company_idemp_uidx").on(
+            table.companyId,
+            table.idempotencyKey,
+        ),
+    ],
+);
+
+export const financialIdempotencyKeys = pgTable(
+    "financial_idempotency_keys",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .$defaultFn(() => uuidv7()),
+        companyId: uuid("company_id")
+            .notNull()
+            .references(() => companies.id),
+        endpoint: text("endpoint").notNull(),
+        idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+        requestHash: char("request_hash", { length: 64 }).notNull(),
+        responseStatus: integer("response_status").notNull(),
+        responseBody: text("response_body").notNull(),
+        createdBy: uuid("created_by")
+            .notNull()
+            .references(() => users.id),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (table) => [
+        uniqueIndex("financial_idempotency_keys_scope_uidx").on(
+            table.companyId,
+            table.endpoint,
+            table.idempotencyKey,
+        ),
+        index("financial_idempotency_keys_created_idx").on(table.createdAt),
+    ],
+);
+
+export const financialEntriesRelations = relations(financialEntries, ({ one, many }) => ({
+    company: one(companies, {
+        fields: [financialEntries.companyId],
+        references: [companies.id],
+    }),
+    client: one(clients, {
+        fields: [financialEntries.clientId],
+        references: [clients.id],
+    }),
+    service: one(services, {
+        fields: [financialEntries.serviceId],
+        references: [services.id],
+    }),
+    nf: one(nf, {
+        fields: [financialEntries.nfId],
+        references: [nf.id],
+    }),
+    category: one(financialCategories, {
+        fields: [financialEntries.categoryId],
+        references: [financialCategories.id],
+    }),
+    costCenter: one(costCenters, {
+        fields: [financialEntries.costCenterId],
+        references: [costCenters.id],
+    }),
+    settlements: many(financialSettlements),
+}));
+
+export const financialSettlementsRelations = relations(financialSettlements, ({ one }) => ({
+    entry: one(financialEntries, {
+        fields: [financialSettlements.entryId],
+        references: [financialEntries.id],
+    }),
+    account: one(financialAccounts, {
+        fields: [financialSettlements.accountId],
+        references: [financialAccounts.id],
     }),
 }));

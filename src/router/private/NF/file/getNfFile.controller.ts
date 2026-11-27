@@ -1,3 +1,4 @@
+import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -49,16 +50,21 @@ export async function getNfFileController(
             return reply.status(404).send({ message: "NF file not found" });
         }
 
-        const file = await fs.readFile(filePath);
+        const stat = await fs.stat(filePath);
+        if (!stat.isFile()) {
+            return reply.status(404).send({ message: "NF file not found" });
+        }
+
         const fileName = path.basename(filePath).replace(/["\\\r\n]/g, "_");
         reply.header("Content-Type", "application/pdf");
+        reply.header("Content-Length", String(stat.size));
         reply.header("X-Content-Type-Options", "nosniff");
         reply.header(
             "Content-Disposition",
             `${download ? "attachment" : "inline"}; filename="${fileName}"`,
         );
         reply.header("Cache-Control", "private, no-store");
-        return reply.send(file);
+        return reply.send(createReadStream(filePath));
     } catch (error) {
         if (error instanceof z.ZodError) {
             return reply.status(400).send({ message: "Invalid NF file request" });

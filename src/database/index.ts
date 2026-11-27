@@ -10,9 +10,16 @@ if (!databaseUrl) {
     );
 }
 
+const parsedPoolMax = Number(process.env.DB_POOL_MAX);
+const maxConnections =
+    Number.isInteger(parsedPoolMax) && parsedPoolMax >= 2 && parsedPoolMax <= 50
+        ? parsedPoolMax
+        : 8;
+
 const queryClient = postgres(databaseUrl, {
-    max: 10,
-    idle_timeout: 30, // set the idle timeout for connections in seconds
+    max: maxConnections,
+    idle_timeout: 20,
+    max_lifetime: 60 * 30,
     connect_timeout: 10,
     connection: {
         statement_timeout: 15000,
@@ -20,3 +27,7 @@ const queryClient = postgres(databaseUrl, {
 });
 
 export const db = drizzle(queryClient, { schema });
+
+export async function closeDatabase() {
+    await queryClient.end({ timeout: 5 });
+}

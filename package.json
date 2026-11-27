@@ -10,7 +10,7 @@
         "dc:prod": "docker compose -f compose.yaml -f compose.production.yaml up -d --build",
         "dcreset": "docker compose down && docker compose up --build",
         "start": "bun run src/server.ts",
-        "build": "NODE_ENV=production bun build ./src/server.ts --outdir ./dist --target bun",
+        "build": "NODE_ENV=production bun build ./src/server.ts --outdir ./dist --target bun --minify && cp node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs dist/pdf.worker.min.mjs",
         "test": "bun test",
         "typecheck": "tsc --noEmit",
         "preview": "bun run dist/server.js",
@@ -34,7 +34,6 @@
         "typescript": "^5.9.3"
     },
     "dependencies": {
-        "@axiomhq/pino": "^2.0.0",
         "@fastify/cors": "^11.3.1",
         "@fastify/helmet": "^13.2.0",
         "@fastify/jwt": "^10.2.6",

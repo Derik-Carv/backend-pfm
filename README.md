@@ -90,14 +90,22 @@ Use um `.env` de produção com credenciais fortes e um `AXIOM_TOKEN` configurad
 bun run dc:prod
 ```
 
-O compose de produção:
+O compose de produção (`compose.production.yaml`):
 
-- usa a imagem `production` sem hot reload;
-- não monta o código-fonte como volume;
-- não expõe o PostgreSQL publicamente;
-- reinicia os serviços automaticamente;
-- aplica o schema antes de iniciar a aplicação;
-- verifica a saúde da API.
+- usa imagem `oven/bun:1-alpine` enxuta (`dist/` minificado, sem `node_modules` e sem hot reload);
+- executa o backend como usuário `bun` com filesystem `read_only: true`, `cap_drop: ALL`, limites de RAM/PIDs e rotação de logs;
+- não monta o código-fonte como volume (apenas `nf_archives:/usr/src/app/archives`);
+- não expõe o PostgreSQL publicamente e aplica tuning para VPS de 1 GB RAM;
+- reinicia os serviços automaticamente com graceful shutdown (`SIGTERM`);
+- verifica a saúde da API via `wget` em `/public/health`.
+
+> Em produção, aplique migrations explicitamente (`bunx drizzle-kit push` / SQL de `drizzle/`) antes de subir a nova versão.
+
+Tooling de infraestrutura em `infra/`:
+
+- `infra/vps-tune-oci-micro.sh`: script idempotente para configurar swap (`2G`), ZRAM opcional, `sysctl`, rotação global do Docker e limpeza semanal de imagens na VM Oracle Cloud `VM.Standard.E2.1.Micro`;
+- `infra/nginx-backend-pfm.conf`: modelo de proxy reverso Nginx com TLS 1.2/1.3, gzip, streaming de PDFs e bloqueio de scans/bots na borda;
+- `infra/deploy-off-vm.sh`: compila a imagem localmente e envia por SSH (`docker save | gzip`) para a VM sem consumir RAM de build na VPS.
 
 Comandos operacionais:
 

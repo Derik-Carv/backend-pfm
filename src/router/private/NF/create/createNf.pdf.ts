@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -52,19 +53,31 @@ function normalizePdfMoney(value: string) {
     return Number(value.replace(/\./g, "").replace(",", "."));
 }
 
-export async function validateNfPdf(file: File, data: NfCreateInput) {
-    const rawBuffer = Buffer.from(await file.arrayBuffer());
-    assertValidPdfBuffer(rawBuffer);
-
-    pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(
+export function resolvePdfWorkerSrc(): string {
+    const candidates = [
+        path.join(process.cwd(), "dist/pdf.worker.min.mjs"),
+        path.join(
+            process.cwd(),
+            "node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+        ),
         path.join(
             process.cwd(),
             "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
         ),
-    ).href;
+    ];
+    const resolved = candidates.find((candidate) => existsSync(candidate)) ?? candidates[2];
+    return pathToFileURL(resolved).href;
+}
+
+export async function validateNfPdf(file: File, data: NfCreateInput) {
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
+    assertValidPdfBuffer(rawBuffer);
+
+    pdfjs.GlobalWorkerOptions.workerSrc = resolvePdfWorkerSrc();
     const loadingTask = pdfjs.getDocument({
         data: new Uint8Array(rawBuffer),
         useWorkerFetch: false,
+        disableFontFace: true,
     });
 
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;

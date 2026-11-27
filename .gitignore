@@ -11,6 +11,7 @@ drizzle/*
 !drizzle/0017_lgpd_compliance.sql
 !drizzle/0018_lgpd_incidents_and_client_anon.sql
 !drizzle/0019_user_token_version.sql
+!drizzle/0020_financial_module_phase1.sql
 !drizzle/meta/
 drizzle/meta/*
 !drizzle/meta/0010_snapshot.json

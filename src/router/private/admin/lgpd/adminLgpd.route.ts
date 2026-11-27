@@ -38,6 +38,7 @@ const cleanupResponseSchema = z.object({
     scrubbedRequestHashes: z.number(),
     deletedRejectedRequests: z.number(),
     deletedExpiredAuditLogs: z.number(),
+    deletedExpiredIncidents: z.number(),
 });
 
 const incidentItemSchema = z.object({

@@ -10,6 +10,7 @@ import { typeRoutes } from "./private/type/type.route";
 import { movimentationRoutes } from "./private/movimentation/movimentation.route";
 import { accountRoutes } from "./private/account/account.route";
 import { companiesRoutes } from "./private/companies/companies.route";
+import { financeRoutes } from "./private/finance/finance.route";
 
 export async function appRoutes(app: FastifyInstance) {
     app.register(publicRoutes, { prefix: "/public" });
@@ -24,4 +25,5 @@ export async function appRoutes(app: FastifyInstance) {
     app.register(movimentationRoutes, { prefix: "/movimentations" });
     app.register(accountRoutes, { prefix: "/account" });
     app.register(companiesRoutes, { prefix: "/companies" });
+    app.register(financeRoutes, { prefix: "/finance" });
 }
