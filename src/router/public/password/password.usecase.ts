@@ -17,14 +17,20 @@ export async function usecaseForgotPassword(data: ForgotPasswordInput) {
     if (user) {
         const code = generateSixDigitCode();
         const codesRepo = new EmailVerificationCodesRepository();
-        await codesRepo.createCode(data.email, "password_reset", code, 15);
+        try {
+            await codesRepo.createCode(data.email, "password_reset", code, 15);
 
-        await sendVerificationCodeEmail({
-            to: data.email,
-            code,
-            purpose: "password_reset",
-            recipientName: user.name,
-        });
+            await sendVerificationCodeEmail({
+                to: data.email,
+                code,
+                purpose: "password_reset",
+                recipientName: user.name,
+            });
+        } catch (error) {
+            if (!(error instanceof Error && error.message === "OTP_COOLDOWN_ACTIVE")) {
+                throw error;
+            }
+        }
     }
 
     // Resposta uniforme para evitar enumeração de contas

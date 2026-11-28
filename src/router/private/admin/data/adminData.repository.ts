@@ -191,6 +191,9 @@ export async function createAdminRecord(
 ) {
     const table = tableFor(tableName);
     const data = await preparePayload(tableName, payload);
+    if (Object.keys(data).length === 0) {
+        throw new Error("EMPTY_ADMIN_PAYLOAD");
+    }
     const [record] = await db
         .insert(table)
         // The table is selected from a closed, validated admin table map.
@@ -206,6 +209,9 @@ export async function updateAdminRecord(
 ) {
     const table = tableFor(tableName);
     const data = await preparePayload(tableName, payload);
+    if (Object.keys(data).length === 0) {
+        throw new Error("EMPTY_ADMIN_PAYLOAD");
+    }
     const updateData =
         tableName === "users" && "password" in data
             ? { ...data, tokenVersion: sql`${users.tokenVersion} + 1` }

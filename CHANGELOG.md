@@ -3,7 +3,18 @@
 Registro das alterações relevantes do backend. Toda mudança de rota, contrato,
 permissão, banco, produção ou auditoria deve ser adicionada aqui.
 
-## 2026-11-26
+## [0.13.3] - 2026-11-28
+
+- **Versionamento SemVer e Rastreabilidade:**
+  - Definida versão unificada `0.13.3` em `package.json` (`src/config/version.ts`), exposta em `/public/health` e no Swagger (`src/app.ts`), alinhada ao histórico completo de marcos (`0.1.0` a `0.13.2` + blindagem P1/P2/P3).
+
+- **Blindagem P1, P2 e P3 pós-testes de estresse (`finance`, `public`, `account`, `lgpd`, `adminData`, `frontend-pfm`):**
+  - **P1:** validado escopo intercompany ao mesmo `motherId` em `createEntries`; removida sobrescrita manual de `counterpartyName`/`counterpartyDocument` em `PATCH /finance/entries/:id`, bloqueada troca de `clientId` após baixa parcial e exigido cliente ativo e não anonimizado; protegidos `kind`/`dreGroup`/`parentId` em categorias `isSystem` e adicionada detecção de ciclos em `parentId`; adicionada validação real de calendário UTC em `isoDateSchema` + `diffDaysIso` + faixa de datas no CSV; habilitado `allowNegative` para saldo inicial negativo em `createAccount`.
+  - **P2:** erros de aritmética financeira convertidos para `400`; colisão de `Idempotency-Key` entre endpoints e concorrência `23505` tratados como `409` / replay seguro no repositório e com chave estável para retries em `frontend-pfm/src/FinancePanel.tsx`; validada correspondência Serviço ↔ NF ↔ Cliente em `/finance/entries` e `/from-service/:serviceId`; eliminados oráculos de enumeração (`409`/`429`) em `POST /public/company-requests/request-code` e `POST /public/password/forgot`.
+  - **P3:** adicionados `Cache-Control: private, no-store` e `rateLimitProfiles.sensitive` em `GET /finance/reports/export` (e `Cache-Control: private, no-store` em `/account/privacy/*`), limpeza automática de `financial_idempotency_keys` (> 30 dias) em `retention.ts` (`deletedExpiredIdempotencyKeys` em `/admin/lgpd/cleanup` e `frontend-pfm/src/services/privacy.ts`), e retorno `400 EMPTY_ADMIN_PAYLOAD` em `/admin/data/:table` sem campos graváveis.
+  - Adicionados testes de regressão P1, P2 e P3 em `src/tests/finance.test.ts` e atualizado `SECURITY.md`.
+
+## [0.12.0] - 2026-11-26
 
 - **Módulo Financeiro — Fase 1 (`0020_financial_module_phase1.sql`, `/finance/*`, `MODULO_FINANCEIRO.md`, `MODULO_CONTABILIDADE.md`):**
   - Documentação normativa e arquitetural adicionada em `MODULO_FINANCEIRO.md` e `MODULO_CONTABILIDADE.md`.
@@ -20,7 +31,7 @@ permissão, banco, produção ou auditoria deve ser adicionada aqui.
   - `src/database/seed.ts`: `startSeed()` agora verifica se `administrator.system` já existe antes de exigir `ADMIN_DEFAULT_PASSWORD` e `CPFADMIN`, bloqueia senha placeholder em produção e envolve a criação em `db.transaction`.
   - `SECURITY.md`: seção 13 adicionada com padrões OWASP/fiscais para módulos financeiros e contábeis futuros e checklist das correções pontuais atualizado.
 
-## 2026-11-25
+## [0.11.0] - 2026-11-25
 
 - **Tooling VPS/Edge, Limpeza e Testes (`infra/`, `package.json`, `compose.production.yaml`, `src/tests/infra.test.ts`):**
   - Removido pacote `@axiomhq/pino` não mais utilizado em `package.json`/`bun.lock`; `BACKEND_IMAGE` parametrizável adicionado em `compose.production.yaml` e `infra` excluído de `.dockerignore`.
@@ -64,7 +75,7 @@ permissão, banco, produção ou auditoria deve ser adicionada aqui.
   - Transação atômica na aprovação/rejeição de solicitações de empresa, update único em `editService`, remoção de `id` opcional em `serviceCreateBaseSchema` e rate limit `sensitive` em `/account/password`, `/account/privacy/export` e `/account/privacy/anonymize`.
   - Removidos pacotes não usados/dev de `dependencies` em `package.json` (`@fastify/swagger*` carregado dinamicamente em dev), adicionados `connect_timeout`/`statement_timeout` no pool PostgreSQL, bloqueio de `demoSeed` em produção, redação Pino com wildcards, CORS/Helmet reforçados, expurgo de `security_incidents` (5 anos) em `retention.ts` e suíte `src/tests/security.test.ts` (`bun test`).
 
-## 2026-11-01
+## [0.5.0] - 2026-11-01
 
 ### Produção e observabilidade
 
@@ -103,6 +114,24 @@ permissão, banco, produção ou auditoria deve ser adicionada aqui.
 
 - Corrigido o healthcheck do PostgreSQL para usar `POSTGRES_USER` e
   `POSTGRES_DB` configurados no ambiente, inclusive em produção.
+
+## Histórico de Marcos (`0.1.0` – `0.13.2`)
+
+| Versão | Marco |
+| --- | --- |
+| `0.1.0` | Base da API (`Bun`, `Fastify`, `Drizzle`, `Zod`, `JWT`, `Helmet`, `Rate Limit`, `Users/Roles`, `Seed`, `Axiom`) |
+| `0.2.0` | Domínio de Clientes, Serviços, Status, vínculo `bundled` (colaborador) e Dashboard Home |
+| `0.3.0` | Menu de Serviços/Clientes, edição, paginação global e injeção de dependências |
+| `0.4.0` | Notas Fiscais (criação, anexo, desativação lógica), Tipos e Movimentações |
+| `0.5.0` | Primeiro lançamento em produção integrado ao frontend (`01/11/2026`) |
+| `0.6.0` | Validação de PDF de NF com `pdfjs-dist`, preview, reanexo e reativação |
+| `0.7.0` | Envio de Notas Fiscais por e-mail com anexo PDF (`Nodemailer`) |
+| `0.8.0` | Evolução BI no frontend (filtros cruzados, drill-down e Master-Detail) |
+| `0.9.0` | Multi-Tenant hierárquico (Matriz/Filiais), onboarding OTP e recuperação de senha |
+| `0.10.0` | Conformidade LGPD completa (ANPD Res. 15/18/19, auditoria, DPO) e rebranding para PFM |
+| `0.11.0` | Hardening OWASP (`token_version`, guards tenant/PDF, CSP, container não-root) |
+| `0.12.0` | Módulo Financeiro — Fase 1 (`0020_financial_module_phase1.sql`) e infra VPS 1 GB |
+| `0.13.0` – `0.13.2` | Apresentação Pública & Demonstrativo Interativo (`frontend-pfm`) |
 
 ## Como registrar uma nova alteração
 

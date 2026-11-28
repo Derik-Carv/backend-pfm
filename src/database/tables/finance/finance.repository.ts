@@ -49,6 +49,59 @@ export class FinanceDomainError extends Error {
     }
 }
 
+const MONETARY_ERROR_MESSAGES: Record<string, string> = {
+    INVALID_MONETARY_AMOUNT: "Valor monetário inválido.",
+    INVALID_CENTS_INTEGER: "Valor em centavos deve ser inteiro.",
+    NET_AMOUNT_MUST_BE_POSITIVE:
+        "O valor líquido do título deve ser maior que zero após descontos.",
+    INVALID_INSTALLMENTS: "Quantidade de parcelas inválida.",
+    INSTALLMENT_AMOUNT_TOO_SMALL:
+        "O valor líquido é muito baixo para ser dividido nesta quantidade de parcelas.",
+    MONETARY_OVERFLOW: "Valor monetário excede o limite suportado.",
+};
+
+function runMonetaryCalculation<T>(fn: () => T): T {
+    try {
+        return fn();
+    } catch (err) {
+        const code = err instanceof Error ? err.message : "";
+        const friendly = MONETARY_ERROR_MESSAGES[code];
+        if (friendly) {
+            throw new FinanceDomainError(400, code, friendly);
+        }
+        throw err;
+    }
+}
+
+function getPgUniqueViolationConstraint(err: unknown): string | null {
+    if (!err || typeof err !== "object") {
+        return null;
+    }
+    const record = err as {
+        code?: unknown;
+        constraint_name?: unknown;
+        constraint?: unknown;
+        cause?: {
+            code?: unknown;
+            constraint_name?: unknown;
+            constraint?: unknown;
+        };
+    };
+    if (record.code === "23505") {
+        return String(
+            record.constraint_name ?? record.constraint ?? "unique_violation",
+        );
+    }
+    if (record.cause?.code === "23505") {
+        return String(
+            record.cause.constraint_name ??
+                record.cause.constraint ??
+                "unique_violation",
+        );
+    }
+    return null;
+}
+
 export function todayIsoUtc(): string {
     return new Date().toISOString().slice(0, 10);
 }
@@ -102,6 +155,9 @@ export function addMonthsIsoDateWithFixedDay(
 export function diffDaysIso(laterIso: string, earlierIso: string): number {
     const laterMs = Date.parse(`${laterIso}T00:00:00Z`);
     const earlierMs = Date.parse(`${earlierIso}T00:00:00Z`);
+    if (Number.isNaN(laterMs) || Number.isNaN(earlierMs)) {
+        throw new FinanceDomainError(400, "INVALID_DATE", "Data inválida.");
+    }
     return Math.floor((laterMs - earlierMs) / 86_400_000);
 }
 
@@ -240,7 +296,9 @@ export class FinanceRepository {
         initialBalanceCents: number;
         initialBalanceDate: string;
     }) {
-        const initialCents = intToCents(input.initialBalanceCents);
+        const initialCents = intToCents(input.initialBalanceCents, {
+            allowNegative: true,
+        });
         const [created] = await db
             .insert(financialAccounts)
             .values({
@@ -396,21 +454,32 @@ export class FinanceRepository {
             );
         }
 
-        const [created] = await db
-            .insert(financialCategories)
-            .values({
-                companyId: input.companyId,
-                parentId: input.parentId ?? null,
-                code: input.code,
-                name: input.name,
-                kind: input.kind,
-                dreGroup: input.dreGroup ?? null,
-                isSystem: false,
-                active: true,
-            })
-            .returning();
+        try {
+            const [created] = await db
+                .insert(financialCategories)
+                .values({
+                    companyId: input.companyId,
+                    parentId: input.parentId ?? null,
+                    code: input.code,
+                    name: input.name,
+                    kind: input.kind,
+                    dreGroup: input.dreGroup ?? null,
+                    isSystem: false,
+                    active: true,
+                })
+                .returning();
 
-        return created;
+            return created;
+        } catch (err) {
+            if (getPgUniqueViolationConstraint(err)) {
+                throw new FinanceDomainError(
+                    409,
+                    "CATEGORY_CODE_CONFLICT",
+                    "Já existe uma categoria financeira com este código.",
+                );
+            }
+            throw err;
+        }
     }
 
     async updateCategory(
@@ -443,11 +512,19 @@ export class FinanceRepository {
             );
         }
 
-        if (existing.isSystem && input.active === false) {
+        if (
+            existing.isSystem &&
+            (input.active === false ||
+                (input.kind !== undefined && input.kind !== existing.kind) ||
+                (input.dreGroup !== undefined &&
+                    input.dreGroup !== existing.dreGroup) ||
+                (input.parentId !== undefined &&
+                    input.parentId !== existing.parentId))
+        ) {
             throw new FinanceDomainError(
                 409,
                 "SYSTEM_CATEGORY_PROTECTED",
-                "Categorias padrão do sistema não podem ser desativadas.",
+                "Categorias padrão do sistema não permitem alterar classificação, hierarquia ou desativação.",
             );
         }
 
@@ -459,22 +536,37 @@ export class FinanceRepository {
                     "Categoria não pode ser pai de si mesma.",
                 );
             }
-            const [parent] = await db
-                .select({ id: financialCategories.id })
+            const companyCategories = await db
+                .select({
+                    id: financialCategories.id,
+                    parentId: financialCategories.parentId,
+                })
                 .from(financialCategories)
-                .where(
-                    and(
-                        eq(financialCategories.id, input.parentId),
-                        eq(financialCategories.companyId, existing.companyId),
-                    ),
-                )
-                .limit(1);
-            if (!parent) {
+                .where(eq(financialCategories.companyId, existing.companyId));
+
+            const parentMap = new Map(
+                companyCategories.map((c) => [c.id, c.parentId]),
+            );
+            if (!parentMap.has(input.parentId)) {
                 throw new FinanceDomainError(
                     404,
                     "PARENT_CATEGORY_NOT_FOUND",
                     "Categoria pai não encontrada nesta empresa.",
                 );
+            }
+
+            const visited = new Set<string>();
+            let cursor: string | null = input.parentId;
+            while (cursor) {
+                if (cursor === id || visited.has(cursor)) {
+                    throw new FinanceDomainError(
+                        400,
+                        "CATEGORY_CYCLE_DETECTED",
+                        "A hierarquia de categorias não pode formar ciclos.",
+                    );
+                }
+                visited.add(cursor);
+                cursor = parentMap.get(cursor) ?? null;
             }
         }
 
@@ -531,17 +623,28 @@ export class FinanceRepository {
             );
         }
 
-        const [created] = await db
-            .insert(costCenters)
-            .values({
-                companyId: input.companyId,
-                code: input.code,
-                name: input.name,
-                active: true,
-            })
-            .returning();
+        try {
+            const [created] = await db
+                .insert(costCenters)
+                .values({
+                    companyId: input.companyId,
+                    code: input.code,
+                    name: input.name,
+                    active: true,
+                })
+                .returning();
 
-        return created;
+            return created;
+        } catch (err) {
+            if (getPgUniqueViolationConstraint(err)) {
+                throw new FinanceDomainError(
+                    409,
+                    "COST_CENTER_CODE_CONFLICT",
+                    "Já existe um centro de custo com este código.",
+                );
+            }
+            throw err;
+        }
     }
 
     async updateCostCenter(
@@ -823,6 +926,7 @@ export class FinanceRepository {
 
     async createEntries(input: {
         companyId: string;
+        motherId: string;
         userId: string;
         idempotencyKey: string;
         endpoint: string;
@@ -851,7 +955,8 @@ export class FinanceRepository {
     }) {
         const requestHash = hashIdempotencyPayload(input.rawPayloadForHash);
 
-        return db.transaction(async (tx) => {
+        try {
+            return await db.transaction(async (tx) => {
             const [existingIdemp] = await tx
                 .select()
                 .from(financialIdempotencyKeys)
@@ -939,6 +1044,7 @@ export class FinanceRepository {
                         eq(clients.id, input.clientId),
                         eq(clients.companyId, input.companyId),
                         eq(clients.active, true),
+                        sql`${clients.anonymizedAt} IS NULL`,
                     ),
                 )
                 .limit(1);
@@ -959,7 +1065,7 @@ export class FinanceRepository {
 
             if (input.serviceId) {
                 const [service] = await tx
-                    .select({ id: services.id })
+                    .select({ id: services.id, clientId: services.clientId })
                     .from(services)
                     .where(
                         and(
@@ -973,6 +1079,13 @@ export class FinanceRepository {
                         404,
                         "SERVICE_NOT_FOUND",
                         "Serviço não encontrado nesta empresa.",
+                    );
+                }
+                if (service.clientId !== input.clientId) {
+                    throw new FinanceDomainError(
+                        409,
+                        "SERVICE_CLIENT_MISMATCH",
+                        "O serviço informado pertence a outro cliente.",
                     );
                 }
             }
@@ -996,35 +1109,87 @@ export class FinanceRepository {
                         "Nota fiscal não encontrada ou inativa nesta empresa.",
                     );
                 }
+                if (note.thirdPartyClientId !== input.clientId) {
+                    throw new FinanceDomainError(
+                        409,
+                        "NF_CLIENT_MISMATCH",
+                        "A nota fiscal informada pertence a outro cliente.",
+                    );
+                }
+                if (input.serviceId && note.servicesId !== input.serviceId) {
+                    throw new FinanceDomainError(
+                        409,
+                        "NF_SERVICE_MISMATCH",
+                        "A nota fiscal informada pertence a outro serviço.",
+                    );
+                }
+            }
+
+            if (!input.isIntercompany && input.counterpartyCompanyId) {
+                throw new FinanceDomainError(
+                    400,
+                    "COUNTERPARTY_REQUIRES_INTERCOMPANY",
+                    "Empresa contraparte só pode ser informada em lançamentos intercompany.",
+                );
             }
 
             if (input.counterpartyCompanyId) {
+                if (input.counterpartyCompanyId === input.companyId) {
+                    throw new FinanceDomainError(
+                        400,
+                        "INVALID_COUNTERPARTY_COMPANY",
+                        "A empresa contraparte deve ser diferente da empresa ativa.",
+                    );
+                }
                 const [cpCompany] = await tx
                     .select({ id: companies.id })
                     .from(companies)
-                    .where(eq(companies.id, input.counterpartyCompanyId))
+                    .where(
+                        and(
+                            eq(companies.id, input.counterpartyCompanyId),
+                            eq(companies.active, true),
+                            or(
+                                eq(companies.id, input.motherId),
+                                eq(companies.motherId, input.motherId),
+                            ),
+                        ),
+                    )
                     .limit(1);
                 if (!cpCompany) {
                     throw new FinanceDomainError(
                         404,
                         "COUNTERPARTY_COMPANY_NOT_FOUND",
-                        "Empresa contraparte não encontrada.",
+                        "Empresa contraparte não encontrada neste grupo empresarial.",
                     );
                 }
             }
 
-            const originalCents = intToCents(input.originalAmountCents, {
-                positive: true,
-            });
-            const discountCents = intToCents(input.discountCents);
-            const interestCents = intToCents(input.interestCents);
-            const fineCents = intToCents(input.fineCents);
-
-            const totalNetCents = calculateEntryNetCents({
-                originalAmountCents: originalCents,
+            const {
+                originalCents,
                 discountCents,
                 interestCents,
                 fineCents,
+                totalNetCents,
+            } = runMonetaryCalculation(() => {
+                const orig = intToCents(input.originalAmountCents, {
+                    positive: true,
+                });
+                const disc = intToCents(input.discountCents);
+                const intr = intToCents(input.interestCents);
+                const fine = intToCents(input.fineCents);
+                const net = calculateEntryNetCents({
+                    originalAmountCents: orig,
+                    discountCents: disc,
+                    interestCents: intr,
+                    fineCents: fine,
+                });
+                return {
+                    originalCents: orig,
+                    discountCents: disc,
+                    interestCents: intr,
+                    fineCents: fine,
+                    totalNetCents: net,
+                };
             });
 
             const today = todayIsoUtc();
@@ -1085,9 +1250,11 @@ export class FinanceRepository {
                         "Informe o dia do mês de vencimento (1 a 31) para lançamentos parcelados.",
                     );
                 }
-                const parts = splitAmountIntoInstallments(
-                    totalNetCents,
-                    input.totalInstallments,
+                const parts = runMonetaryCalculation(() =>
+                    splitAmountIntoInstallments(
+                        totalNetCents,
+                        input.totalInstallments,
+                    ),
                 );
                 for (let idx = 0; idx < parts.length; idx++) {
                     const partDueDate = addMonthsIsoDateWithFixedDay(
@@ -1174,6 +1341,43 @@ export class FinanceRepository {
                 payload: responsePayload,
             };
         });
+        } catch (err) {
+            if (getPgUniqueViolationConstraint(err)) {
+                const [existingIdemp] = await db
+                    .select()
+                    .from(financialIdempotencyKeys)
+                    .where(
+                        and(
+                            eq(financialIdempotencyKeys.companyId, input.companyId),
+                            eq(financialIdempotencyKeys.endpoint, input.endpoint),
+                            eq(
+                                financialIdempotencyKeys.idempotencyKey,
+                                input.idempotencyKey,
+                            ),
+                        ),
+                    )
+                    .limit(1);
+
+                if (existingIdemp && existingIdemp.requestHash === requestHash) {
+                    return {
+                        replayed: true,
+                        statusCode: existingIdemp.responseStatus,
+                        payload: JSON.parse(existingIdemp.responseBody) as {
+                            message: string;
+                            entries: ReturnType<typeof serializeEntry>[];
+                            warnings?: string[];
+                        },
+                    };
+                }
+
+                throw new FinanceDomainError(
+                    409,
+                    "IDEMPOTENCY_KEY_CONFLICT",
+                    "Idempotency-Key já utilizada em outra operação ou com payload diferente.",
+                );
+            }
+            throw err;
+        }
     }
 
     async updateEntry(
@@ -1184,9 +1388,7 @@ export class FinanceRepository {
             description?: string;
             documentNumber?: string | null;
             notes?: string | null;
-            clientId?: string | null;
-            counterpartyName?: string | null;
-            counterpartyDocument?: string | null;
+            clientId?: string;
             categoryId?: string;
             costCenterId?: string | null;
             competenceDate?: string;
@@ -1236,6 +1438,7 @@ export class FinanceRepository {
                 input.issueDate !== undefined ||
                 input.dueDate !== undefined ||
                 input.categoryId !== undefined ||
+                input.clientId !== undefined ||
                 input.status !== undefined;
 
             if (existing.settledAmountCents > 0n && hasMonetaryOrScheduleChange) {
@@ -1288,14 +1491,30 @@ export class FinanceRepository {
                 }
             }
 
-            if (input.clientId) {
+            let resolvedCounterparty:
+                | {
+                      clientId: string;
+                      counterpartyName: string;
+                      counterpartyDocument: string | null;
+                  }
+                | undefined;
+
+            if (input.clientId !== undefined) {
                 const [cli] = await tx
-                    .select({ id: clients.id })
+                    .select({
+                        id: clients.id,
+                        tradeName: clients.tradeName,
+                        registeredCompanyName: clients.registeredCompanyName,
+                        cnpj: clients.cnpj,
+                        cpf: clients.cpf,
+                    })
                     .from(clients)
                     .where(
                         and(
                             eq(clients.id, input.clientId),
                             eq(clients.companyId, existing.companyId),
+                            eq(clients.active, true),
+                            sql`${clients.anonymizedAt} IS NULL`,
                         ),
                     )
                     .limit(1);
@@ -1303,34 +1522,53 @@ export class FinanceRepository {
                     throw new FinanceDomainError(
                         404,
                         "CLIENT_NOT_FOUND",
-                        "Cliente não encontrado nesta empresa.",
+                        "Cliente/Fornecedor não encontrado ou inativo nesta empresa.",
                     );
                 }
+                resolvedCounterparty = {
+                    clientId: cli.id,
+                    counterpartyName: cli.tradeName || cli.registeredCompanyName,
+                    counterpartyDocument: cli.cnpj
+                        ? cli.cnpj
+                        : cli.cpf && cli.cpf.length >= 4
+                          ? `***.***.***-${cli.cpf.slice(-2)}`
+                          : null,
+                };
             }
 
-            const nextOriginal =
-                input.originalAmountCents !== undefined
-                    ? intToCents(input.originalAmountCents, { positive: true })
-                    : existing.originalAmountCents;
-            const nextDiscount =
-                input.discountCents !== undefined
-                    ? intToCents(input.discountCents)
-                    : existing.discountCents;
-            const nextInterest =
-                input.interestCents !== undefined
-                    ? intToCents(input.interestCents)
-                    : existing.interestCents;
-            const nextFine =
-                input.fineCents !== undefined
-                    ? intToCents(input.fineCents)
-                    : existing.fineCents;
+            const { nextOriginal, nextDiscount, nextInterest, nextFine, nextNet } =
+                runMonetaryCalculation(() => {
+                    const orig =
+                        input.originalAmountCents !== undefined
+                            ? intToCents(input.originalAmountCents, { positive: true })
+                            : existing.originalAmountCents;
+                    const disc =
+                        input.discountCents !== undefined
+                            ? intToCents(input.discountCents)
+                            : existing.discountCents;
+                    const intr =
+                        input.interestCents !== undefined
+                            ? intToCents(input.interestCents)
+                            : existing.interestCents;
+                    const fine =
+                        input.fineCents !== undefined
+                            ? intToCents(input.fineCents)
+                            : existing.fineCents;
 
-            const nextNet = calculateEntryNetCents({
-                originalAmountCents: nextOriginal,
-                discountCents: nextDiscount,
-                interestCents: nextInterest,
-                fineCents: nextFine,
-            });
+                    const net = calculateEntryNetCents({
+                        originalAmountCents: orig,
+                        discountCents: disc,
+                        interestCents: intr,
+                        fineCents: fine,
+                    });
+                    return {
+                        nextOriginal: orig,
+                        nextDiscount: disc,
+                        nextInterest: intr,
+                        nextFine: fine,
+                        nextNet: net,
+                    };
+                });
 
             const nextDueDate = input.dueDate ?? existing.dueDate;
             const today = todayIsoUtc();
@@ -1357,12 +1595,13 @@ export class FinanceRepository {
                         ? { documentNumber: input.documentNumber }
                         : {}),
                     ...(input.notes !== undefined ? { notes: input.notes } : {}),
-                    ...(input.clientId !== undefined ? { clientId: input.clientId } : {}),
-                    ...(input.counterpartyName !== undefined
-                        ? { counterpartyName: input.counterpartyName }
-                        : {}),
-                    ...(input.counterpartyDocument !== undefined
-                        ? { counterpartyDocument: input.counterpartyDocument }
+                    ...(resolvedCounterparty
+                        ? {
+                              clientId: resolvedCounterparty.clientId,
+                              counterpartyName: resolvedCounterparty.counterpartyName,
+                              counterpartyDocument:
+                                  resolvedCounterparty.counterpartyDocument,
+                          }
                         : {}),
                     ...(input.categoryId !== undefined
                         ? { categoryId: input.categoryId }
@@ -1468,7 +1707,8 @@ export class FinanceRepository {
         const endpoint = `POST /finance/entries/${input.entryId}/settle`;
         const requestHash = hashIdempotencyPayload(input.rawPayloadForHash);
 
-        return db.transaction(async (tx) => {
+        try {
+            return await db.transaction(async (tx) => {
             // 1. Lock entry first (deadlock prevention: always entry -> account)
             const [entry] = await tx
                 .select()
@@ -1527,6 +1767,25 @@ export class FinanceRepository {
                     409,
                     "ENTRY_NOT_SETTLEABLE",
                     `Título em status '${entry.status}' não aceita novas baixas.`,
+                );
+            }
+
+            const [reusedSettlementKey] = await tx
+                .select({ id: financialSettlements.id })
+                .from(financialSettlements)
+                .where(
+                    and(
+                        eq(financialSettlements.companyId, entry.companyId),
+                        eq(financialSettlements.idempotencyKey, input.idempotencyKey),
+                    ),
+                )
+                .limit(1);
+
+            if (reusedSettlementKey) {
+                throw new FinanceDomainError(
+                    409,
+                    "IDEMPOTENCY_KEY_CONFLICT",
+                    "Idempotency-Key já utilizada em outra baixa ou estorno.",
                 );
             }
 
@@ -1665,6 +1924,39 @@ export class FinanceRepository {
                 payload: responsePayload,
             };
         });
+        } catch (err) {
+            if (getPgUniqueViolationConstraint(err)) {
+                const [existingIdemp] = await db
+                    .select()
+                    .from(financialIdempotencyKeys)
+                    .where(
+                        and(
+                            inArray(financialIdempotencyKeys.companyId, input.companyIds),
+                            eq(financialIdempotencyKeys.endpoint, endpoint),
+                            eq(
+                                financialIdempotencyKeys.idempotencyKey,
+                                input.idempotencyKey,
+                            ),
+                        ),
+                    )
+                    .limit(1);
+
+                if (existingIdemp && existingIdemp.requestHash === requestHash) {
+                    return {
+                        replayed: true,
+                        statusCode: existingIdemp.responseStatus,
+                        payload: JSON.parse(existingIdemp.responseBody),
+                    };
+                }
+
+                throw new FinanceDomainError(
+                    409,
+                    "IDEMPOTENCY_KEY_CONFLICT",
+                    "Idempotency-Key já utilizada em outra operação ou com payload diferente.",
+                );
+            }
+            throw err;
+        }
     }
 
     async reverseSettlement(input: {
@@ -1679,7 +1971,8 @@ export class FinanceRepository {
         const endpoint = `POST /finance/settlements/${input.settlementId}/reverse`;
         const requestHash = hashIdempotencyPayload(input.rawPayloadForHash);
 
-        return db.transaction(async (tx) => {
+        try {
+            return await db.transaction(async (tx) => {
             const [original] = await tx
                 .select()
                 .from(financialSettlements)
@@ -1732,6 +2025,25 @@ export class FinanceRepository {
                     409,
                     "CANNOT_REVERSE_REVERSAL",
                     "Um lançamento de estorno não pode ser estornado novamente.",
+                );
+            }
+
+            const [reusedSettlementKey] = await tx
+                .select({ id: financialSettlements.id })
+                .from(financialSettlements)
+                .where(
+                    and(
+                        eq(financialSettlements.companyId, original.companyId),
+                        eq(financialSettlements.idempotencyKey, input.idempotencyKey),
+                    ),
+                )
+                .limit(1);
+
+            if (reusedSettlementKey) {
+                throw new FinanceDomainError(
+                    409,
+                    "IDEMPOTENCY_KEY_CONFLICT",
+                    "Idempotency-Key já utilizada em outra baixa ou estorno.",
                 );
             }
 
@@ -1865,6 +2177,39 @@ export class FinanceRepository {
                 payload: responsePayload,
             };
         });
+        } catch (err) {
+            if (getPgUniqueViolationConstraint(err)) {
+                const [existingIdemp] = await db
+                    .select()
+                    .from(financialIdempotencyKeys)
+                    .where(
+                        and(
+                            inArray(financialIdempotencyKeys.companyId, input.companyIds),
+                            eq(financialIdempotencyKeys.endpoint, endpoint),
+                            eq(
+                                financialIdempotencyKeys.idempotencyKey,
+                                input.idempotencyKey,
+                            ),
+                        ),
+                    )
+                    .limit(1);
+
+                if (existingIdemp && existingIdemp.requestHash === requestHash) {
+                    return {
+                        replayed: true,
+                        statusCode: existingIdemp.responseStatus,
+                        payload: JSON.parse(existingIdemp.responseBody),
+                    };
+                }
+
+                throw new FinanceDomainError(
+                    409,
+                    "IDEMPOTENCY_KEY_CONFLICT",
+                    "Idempotency-Key já utilizada em outra operação ou com payload diferente.",
+                );
+            }
+            throw err;
+        }
     }
 
     // -------------------- Reports --------------------
@@ -2171,6 +2516,13 @@ export class FinanceRepository {
         entryType?: EntryType;
         excludeIntercompany: boolean;
     }) {
+        if (input.from && input.to && input.from > input.to) {
+            throw new FinanceDomainError(
+                400,
+                "INVALID_DATE_RANGE",
+                "Data inicial não pode ser maior que a data final.",
+            );
+        }
         const conditions = [inArray(financialEntries.companyId, input.companyIds)];
         if (input.from) {
             conditions.push(gte(financialEntries.dueDate, input.from));

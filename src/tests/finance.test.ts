@@ -32,12 +32,16 @@ import {
     calculateSettlementTotals,
     centsToDecimalString,
     computeEntryStatusAfterSettlement,
+    intToCents,
     parseDecimalToCents,
     splitAmountIntoInstallments,
 } from "@/lib/finance/money";
 import {
     createEntryBodySchema,
+    isoDateSchema,
+    isValidIsoCalendarDate,
     listEntriesQuerySchema,
+    updateEntryBodySchema,
 } from "@/router/private/finance/finance.schemas";
 import { eq, inArray, or } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
@@ -248,6 +252,27 @@ describe("Security Controls: Logger Redact & Zod Schemas", () => {
 
         expect(listEntriesQuerySchema.safeParse({ limit: 500 }).success).toBe(false);
     });
+
+    it("validates real calendar dates, signed cents allowNegative, and locked entry updates (P1)", () => {
+        expect(isValidIsoCalendarDate("2024-02-29")).toBe(true);
+        expect(isValidIsoCalendarDate("2026-11-27")).toBe(true);
+        expect(isValidIsoCalendarDate("2026-99-99")).toBe(false);
+        expect(isValidIsoCalendarDate("2026-02-31")).toBe(false);
+        expect(isValidIsoCalendarDate("2026-04-31")).toBe(false);
+        expect(isoDateSchema.safeParse("2026-02-30").success).toBe(false);
+
+        expect(intToCents(-50000, { allowNegative: true })).toBe(-50000n);
+        expect(() => intToCents(-1)).toThrow("INVALID_MONETARY_AMOUNT");
+
+        const strippedUpdate = updateEntryBodySchema.parse({
+            description: "Atualizada",
+            counterpartyName: "Forjado",
+            counterpartyDocument: "11122233344",
+        }) as Record<string, unknown>;
+        expect(strippedUpdate.counterpartyName).toBeUndefined();
+        expect(strippedUpdate.counterpartyDocument).toBeUndefined();
+        expect(updateEntryBodySchema.safeParse({ clientId: null }).success).toBe(false);
+    });
 });
 
 describe("Finance Module Phase 1 Integration (PostgreSQL + Fastify)", () => {
@@ -413,6 +438,7 @@ describe("Finance Module Phase 1 Integration (PostgreSQL + Fastify)", () => {
     });
 
     afterAll(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 150));
         const companyIds = [companyAId, companyBId].filter(Boolean);
         const userIds = [
             financeUserId,
@@ -820,5 +846,397 @@ describe("Finance Module Phase 1 Integration (PostgreSQL + Fastify)", () => {
             },
         });
         expect(crossHeader.statusCode).toBe(403);
+    });
+
+    it("enforces P1, P2 and P3 security & integrity hardening regressions", async () => {
+        const catsRes = await app.inject({
+            method: "GET",
+            url: "/finance/categories",
+            remoteAddress: "198.51.100.201",
+            headers: { authorization: `Bearer ${financeToken}` },
+        });
+        const revCat = catsRes
+            .json()
+            .categories.find((c: { code: string }) => c.code === "1.01");
+
+        // P1: Negative initial balance for credit_card succeeds (201) instead of 500
+        const creditAccRes = await app.inject({
+            method: "POST",
+            url: "/finance/accounts",
+            remoteAddress: "198.51.100.202",
+            headers: { authorization: `Bearer ${financeToken}` },
+            payload: {
+                name: "Cartão Corporativo Teste",
+                type: "credit_card",
+                initialBalanceCents: -50000,
+                initialBalanceDate: "2026-11-01",
+            },
+        });
+        expect(creditAccRes.statusCode).toBe(201);
+        expect(creditAccRes.json().account.currentBalanceCents).toBe(-50000);
+        const creditAccId = creditAccRes.json().account.id as string;
+
+        // P1: Cross-tenant counterpartyCompanyId returns 404 (no oracle) & non-intercompany returns 400
+        const crossCp = await app.inject({
+            method: "POST",
+            url: "/finance/entries",
+            remoteAddress: "198.51.100.203",
+            headers: {
+                authorization: `Bearer ${financeToken}`,
+                "idempotency-key": `reg-cross-cp-${suffix}`,
+            },
+            payload: {
+                entryType: "receivable",
+                description: "Tentativa intercompany indevida",
+                clientId: clientAId,
+                categoryId: revCat.id,
+                competenceDate: "2026-11-01",
+                issueDate: "2026-11-01",
+                dueDate: "2026-11-28",
+                originalAmountCents: 10000,
+                isIntercompany: true,
+                counterpartyCompanyId: companyBId,
+            },
+        });
+        expect(crossCp.statusCode).toBe(404);
+
+        const missingFlagCp = await app.inject({
+            method: "POST",
+            url: "/finance/entries",
+            remoteAddress: "198.51.100.204",
+            headers: {
+                authorization: `Bearer ${financeToken}`,
+                "idempotency-key": `reg-flag-cp-${suffix}`,
+            },
+            payload: {
+                entryType: "receivable",
+                description: "Contraparte sem flag",
+                clientId: clientAId,
+                categoryId: revCat.id,
+                competenceDate: "2026-11-01",
+                issueDate: "2026-11-01",
+                dueDate: "2026-11-28",
+                originalAmountCents: 10000,
+                isIntercompany: false,
+                counterpartyCompanyId: companyBId,
+            },
+        });
+        expect(missingFlagCp.statusCode).toBe(400);
+
+        // P1: System category kind mutation blocked (409) and parentId cycle blocked (400)
+        const sysCatPatch = await app.inject({
+            method: "PATCH",
+            url: `/finance/categories/${revCat.id}`,
+            remoteAddress: "198.51.100.205",
+            headers: { authorization: `Bearer ${financeToken}` },
+            payload: { kind: "operating_expense" },
+        });
+        expect(sysCatPatch.statusCode).toBe(409);
+
+        const c1 = await app.inject({
+            method: "POST",
+            url: "/finance/categories",
+            remoteAddress: "198.51.100.206",
+            headers: { authorization: `Bearer ${financeToken}` },
+            payload: { code: `R1.${suffix.slice(-4)}`, name: "Cat Reg 1", kind: "operating_expense" },
+        });
+        const c2 = await app.inject({
+            method: "POST",
+            url: "/finance/categories",
+            remoteAddress: "198.51.100.207",
+            headers: { authorization: `Bearer ${financeToken}` },
+            payload: { code: `R2.${suffix.slice(-4)}`, name: "Cat Reg 2", kind: "operating_expense" },
+        });
+        const c1Id = c1.json().category.id as string;
+        const c2Id = c2.json().category.id as string;
+        expect(
+            (
+                await app.inject({
+                    method: "PATCH",
+                    url: `/finance/categories/${c1Id}`,
+                    remoteAddress: "198.51.100.208",
+                    headers: { authorization: `Bearer ${financeToken}` },
+                    payload: { parentId: c2Id },
+                })
+            ).statusCode,
+        ).toBe(200);
+        expect(
+            (
+                await app.inject({
+                    method: "PATCH",
+                    url: `/finance/categories/${c2Id}`,
+                    remoteAddress: "198.51.100.209",
+                    headers: { authorization: `Bearer ${financeToken}` },
+                    payload: { parentId: c1Id },
+                })
+            ).statusCode,
+        ).toBe(400);
+
+        // P1: Invalid calendar dates rejected with 400
+        expect(
+            (
+                await app.inject({
+                    method: "GET",
+                    url: "/finance/reports/aging?referenceDate=2026-99-99",
+                    remoteAddress: "198.51.100.210",
+                    headers: { authorization: `Bearer ${financeToken}` },
+                })
+            ).statusCode,
+        ).toBe(400);
+        expect(
+            (
+                await app.inject({
+                    method: "GET",
+                    url: "/finance/reports/cashflow?from=2026-02-31&to=2026-03-01",
+                    remoteAddress: "198.51.100.211",
+                    headers: { authorization: `Bearer ${financeToken}` },
+                })
+            ).statusCode,
+        ).toBe(400);
+
+        // P1: Inactive/anonymized client blocked and post-settlement client change blocked
+        const [anonClient] = await db
+            .insert(clients)
+            .values({
+                companyId: companyAId,
+                registeredCompanyName: `Anon Reg ${suffix}`,
+                tradeName: `Anon Reg ${suffix}`,
+                cpf: `ANON-${suffix.slice(-8)}`,
+                active: false,
+                anonymizedAt: new Date(),
+            })
+            .returning();
+
+        const [secondClient] = await db
+            .insert(clients)
+            .values({
+                companyId: companyAId,
+                registeredCompanyName: `Cliente Reg 2 ${suffix}`,
+                tradeName: `Cliente Reg 2 ${suffix}`,
+                cnpj: `66${suffix.slice(-12)}`,
+                active: true,
+            })
+            .returning();
+
+        const regEntry1 = await app.inject({
+            method: "POST",
+            url: "/finance/entries",
+            remoteAddress: "198.51.100.212",
+            headers: {
+                authorization: `Bearer ${financeToken}`,
+                "idempotency-key": `reg-entry-1-${suffix}`,
+            },
+            payload: {
+                entryType: "receivable",
+                description: "Regressão Contraparte",
+                clientId: clientAId,
+                categoryId: revCat.id,
+                competenceDate: "2026-11-01",
+                issueDate: "2026-11-01",
+                dueDate: "2026-11-28",
+                originalAmountCents: 20000,
+            },
+        });
+        const regEntry2 = await app.inject({
+            method: "POST",
+            url: "/finance/entries",
+            remoteAddress: "198.51.100.213",
+            headers: {
+                authorization: `Bearer ${financeToken}`,
+                "idempotency-key": `reg-entry-2-${suffix}`,
+            },
+            payload: {
+                entryType: "receivable",
+                description: "Regressão Idempotência",
+                clientId: clientAId,
+                categoryId: revCat.id,
+                competenceDate: "2026-11-01",
+                issueDate: "2026-11-01",
+                dueDate: "2026-11-28",
+                originalAmountCents: 20000,
+            },
+        });
+        const regEntry1Id = regEntry1.json().entries[0].id as string;
+        const regEntry2Id = regEntry2.json().entries[0].id as string;
+
+        expect(
+            (
+                await app.inject({
+                    method: "PATCH",
+                    url: `/finance/entries/${regEntry1Id}`,
+                    remoteAddress: "198.51.100.214",
+                    headers: { authorization: `Bearer ${financeToken}` },
+                    payload: { clientId: anonClient.id },
+                })
+            ).statusCode,
+        ).toBe(404);
+
+        const sharedSettleKey = `reg-shared-settle-${suffix}`;
+        expect(
+            (
+                await app.inject({
+                    method: "POST",
+                    url: `/finance/entries/${regEntry1Id}/settle`,
+                    remoteAddress: "198.51.100.215",
+                    headers: {
+                        authorization: `Bearer ${financeToken}`,
+                        "idempotency-key": sharedSettleKey,
+                    },
+                    payload: {
+                        accountId: creditAccId,
+                        paymentMethod: "pix",
+                        principalCents: 5000,
+                    },
+                })
+            ).statusCode,
+        ).toBe(201);
+
+        expect(
+            (
+                await app.inject({
+                    method: "PATCH",
+                    url: `/finance/entries/${regEntry1Id}`,
+                    remoteAddress: "198.51.100.216",
+                    headers: { authorization: `Bearer ${financeToken}` },
+                    payload: { clientId: secondClient.id },
+                })
+            ).statusCode,
+        ).toBe(409);
+
+        // P2: Cross-entry reuse of Idempotency-Key in settle returns 409 (not 500)
+        expect(
+            (
+                await app.inject({
+                    method: "POST",
+                    url: `/finance/entries/${regEntry2Id}/settle`,
+                    remoteAddress: "198.51.100.217",
+                    headers: {
+                        authorization: `Bearer ${financeToken}`,
+                        "idempotency-key": sharedSettleKey,
+                    },
+                    payload: {
+                        accountId: creditAccId,
+                        paymentMethod: "pix",
+                        principalCents: 5000,
+                    },
+                })
+            ).statusCode,
+        ).toBe(409);
+
+        // P2: Domain monetary math violations return 400 (not 500)
+        expect(
+            (
+                await app.inject({
+                    method: "POST",
+                    url: "/finance/entries",
+                    remoteAddress: "198.51.100.218",
+                    headers: {
+                        authorization: `Bearer ${financeToken}`,
+                        "idempotency-key": `reg-disc-${suffix}`,
+                    },
+                    payload: {
+                        entryType: "receivable",
+                        description: "Desconto excedente",
+                        clientId: clientAId,
+                        categoryId: revCat.id,
+                        competenceDate: "2026-11-01",
+                        issueDate: "2026-11-01",
+                        dueDate: "2026-11-28",
+                        originalAmountCents: 1000,
+                        discountCents: 1500,
+                    },
+                })
+            ).statusCode,
+        ).toBe(400);
+
+        expect(
+            (
+                await app.inject({
+                    method: "POST",
+                    url: "/finance/entries",
+                    remoteAddress: "198.51.100.219",
+                    headers: {
+                        authorization: `Bearer ${financeToken}`,
+                        "idempotency-key": `reg-tiny-${suffix}`,
+                    },
+                    payload: {
+                        entryType: "receivable",
+                        description: "Parcela sub-centavo",
+                        clientId: clientAId,
+                        categoryId: revCat.id,
+                        competenceDate: "2026-11-01",
+                        issueDate: "2026-11-01",
+                        dueDate: "2026-11-28",
+                        originalAmountCents: 10,
+                        totalInstallments: 20,
+                        installmentDueDay: 10,
+                    },
+                })
+            ).statusCode,
+        ).toBe(400);
+
+        // P2: Cross-service NF linking mismatch blocked (409)
+        const [otherService] = await db
+            .insert(services)
+            .values({
+                companyId: companyAId,
+                serviceName: "Serviço Secundário",
+                price: "500.00",
+                initialDate: "2026-11-01",
+                clientId: clientAId,
+                details: "Outro serviço",
+                active: true,
+            })
+            .returning();
+
+        expect(
+            (
+                await app.inject({
+                    method: "POST",
+                    url: `/finance/entries/from-service/${otherService.id}`,
+                    remoteAddress: "198.51.100.220",
+                    headers: {
+                        authorization: `Bearer ${financeToken}`,
+                        "idempotency-key": `reg-nf-mismatch-${suffix}`,
+                    },
+                    payload: { nfId: nfAId },
+                })
+            ).statusCode,
+        ).toBe(409);
+
+        // P2: Public request-code returns uniform 200 without email/CNPJ oracle
+        const pubExistingEmail = await app.inject({
+            method: "POST",
+            url: "/public/company-requests/request-code",
+            remoteAddress: "198.51.100.221",
+            payload: {
+                email: `fintest.fin.${suffix}@example.test`,
+                name: "Probe",
+            },
+        });
+        expect(pubExistingEmail.statusCode).toBe(200);
+
+        const pubExistingCnpj = await app.inject({
+            method: "POST",
+            url: "/public/company-requests/request-code",
+            remoteAddress: "198.51.100.222",
+            payload: {
+                email: `unused.${suffix}@example.test`,
+                cnpj: `88${suffix.slice(-12)}`,
+                name: "Probe",
+            },
+        });
+        expect(pubExistingCnpj.statusCode).toBe(200);
+        expect(pubExistingEmail.json().message).toBe(pubExistingCnpj.json().message);
+
+        // P3: Export endpoint returns private, no-store Cache-Control header
+        const exportP3 = await app.inject({
+            method: "GET",
+            url: "/finance/reports/export",
+            remoteAddress: "198.51.100.223",
+            headers: { authorization: `Bearer ${financeToken}` },
+        });
+        expect(exportP3.statusCode).toBe(200);
+        expect(exportP3.headers["cache-control"]).toBe("private, no-store");
     });
 });

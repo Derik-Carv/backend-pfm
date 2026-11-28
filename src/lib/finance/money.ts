@@ -48,14 +48,21 @@ export function centsToSafeNumber(cents: bigint): number {
 }
 
 /**
- * Converte inteiro validado para BigInt garantindo valor >= 0 (ou > 0 quando exigido).
+ * Converte inteiro validado para BigInt garantindo valor >= 0 (ou > 0 quando exigido,
+ * ou negativo quando allowNegative === true).
  */
-export function intToCents(value: number, opts?: { positive?: boolean }): bigint {
+export function intToCents(
+    value: number,
+    opts?: { positive?: boolean; allowNegative?: boolean },
+): bigint {
     if (!Number.isSafeInteger(value)) {
         throw new Error("INVALID_CENTS_INTEGER");
     }
     const cents = BigInt(value);
-    if (opts?.positive ? cents <= 0n : cents < 0n) {
+    if (opts?.positive && cents <= 0n) {
+        throw new Error("INVALID_MONETARY_AMOUNT");
+    }
+    if (!opts?.positive && !opts?.allowNegative && cents < 0n) {
         throw new Error("INVALID_MONETARY_AMOUNT");
     }
     return cents;

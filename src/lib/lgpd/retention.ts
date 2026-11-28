@@ -4,6 +4,7 @@ import {
     auditLogs,
     companyRegistrationRequests,
     emailVerificationCodes,
+    financialIdempotencyKeys,
     legalAcceptances,
     securityIncidents,
 } from "@/database/schema/schema";
@@ -12,6 +13,7 @@ export async function runLgpdRetentionCleanup() {
     const now = Date.now();
     const otpCutoff = new Date(now - 24 * 60 * 60 * 1000);
     const rejectedCutoff = new Date(now - 90 * 24 * 60 * 60 * 1000);
+    const idempotencyCutoff = new Date(now - 30 * 24 * 60 * 60 * 1000);
     const auditLogCutoff = new Date(now - 5 * 365 * 24 * 60 * 60 * 1000);
 
     // 1. Expurga códigos OTP expirados ou já consumidos há mais de 24h
@@ -68,16 +70,22 @@ export async function runLgpdRetentionCleanup() {
     }
 
     // 4. Expurga logs de auditoria e incidentes de segurança com mais de 5 anos
-    const [deletedAuditLogs, deletedIncidents] = await Promise.all([
-        db
-            .delete(auditLogs)
-            .where(lt(auditLogs.createdAt, auditLogCutoff))
-            .returning({ id: auditLogs.id }),
-        db
-            .delete(securityIncidents)
-            .where(lt(securityIncidents.createdAt, auditLogCutoff))
-            .returning({ id: securityIncidents.id }),
-    ]);
+    // e chaves de idempotência financeira expiradas (> 30 dias)
+    const [deletedAuditLogs, deletedIncidents, deletedIdempotencyKeys] =
+        await Promise.all([
+            db
+                .delete(auditLogs)
+                .where(lt(auditLogs.createdAt, auditLogCutoff))
+                .returning({ id: auditLogs.id }),
+            db
+                .delete(securityIncidents)
+                .where(lt(securityIncidents.createdAt, auditLogCutoff))
+                .returning({ id: securityIncidents.id }),
+            db
+                .delete(financialIdempotencyKeys)
+                .where(lt(financialIdempotencyKeys.createdAt, idempotencyCutoff))
+                .returning({ id: financialIdempotencyKeys.id }),
+        ]);
 
     return {
         deletedOtpCodes: deletedOtp.length,
@@ -85,6 +93,7 @@ export async function runLgpdRetentionCleanup() {
         deletedRejectedRequests,
         deletedExpiredAuditLogs: deletedAuditLogs.length,
         deletedExpiredIncidents: deletedIncidents.length,
+        deletedExpiredIdempotencyKeys: deletedIdempotencyKeys.length,
     };
 }
 

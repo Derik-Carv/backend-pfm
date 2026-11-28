@@ -1,3 +1,4 @@
+import { rateLimitProfiles } from "@/policies/rateLimit";
 import { errorResponseSchema } from "@/router/error.schema";
 import {
     accountsListResponseSchema,
@@ -245,6 +246,9 @@ export const agingReportOptions = {
 };
 
 export const exportReportOptions = {
+    config: {
+        rateLimit: rateLimitProfiles.sensitive,
+    },
     schema: {
         tags: ["Finance"],
         summary: "Exportar títulos financeiros em CSV sanitizado (anti-formula injection)",
@@ -253,6 +257,7 @@ export const exportReportOptions = {
             400: errorResponseSchema,
             401: errorResponseSchema,
             403: errorResponseSchema,
+            429: errorResponseSchema,
             500: errorResponseSchema,
         },
     },

@@ -297,7 +297,7 @@ Todo módulo futuro envolvendo **contas a pagar/receber, fluxo de caixa, concili
 
 ## Diagnóstico Atual do Projeto (Status vs. Backlog de Hardening)
 
-*Estado atualizado em `2026-11-26` após revisão geral de segurança do backend, frontend e arquivos em `infra/`:*
+*Estado atualizado em `2026-11-27` após revisão geral de segurança, testes de estresse locais e blindagem em rodadas P1, P2 e P3:*
 
 ### Controles implementados e verificados
 
@@ -315,7 +315,11 @@ Todo módulo futuro envolvendo **contas a pagar/receber, fluxo de caixa, concili
   - `infra/deploy-off-vm.sh`: removido IP real da VM e substituído por placeholder `ubuntu@seu-servidor.exemplo`.
   - `src/router/private/admin/lgpd/adminLgpd.route.ts` e `frontend-pfm/src/services/privacy.ts`: exposto `deletedExpiredIncidents` no retorno de `POST /admin/lgpd/cleanup`.
   - `src/database/seed.ts`: checagem de `administrator.system` antes de exigir `ADMIN_DEFAULT_PASSWORD`/`CPFADMIN`, bloqueio de senha placeholder em produção e inserção atômica em transação.
-- Suíte de testes automatizados (`bun test`: 18 testes passando em `src/tests/security.test.ts` e `src/tests/infra.test.ts`).
+- Blindagens P1/P2/P3 da auditoria de `2026-11-27` implementadas e verificadas:
+  - **P1 (`finance`):** vínculo intercompany restrito ao mesmo grupo econômico (`motherId`, eliminando oráculo cross-tenant), bloqueio de alteração de contraparte pós-baixa e derivação autoritativa a partir de cliente ativo não anonimizado (`updateEntry`), proteção de `kind`/`dreGroup`/`parentId` em categorias de sistema + detecção de ciclos em `parentId`, validação estrita de calendário em `isoDateSchema` / `diffDaysIso` / exportação CSV, e suporte explícito a saldo inicial negativo em contas bancárias/cartões (`intToCents(..., { allowNegative: true })`).
+  - **P2 (`finance`, `public`, `frontend-pfm`):** conversão de erros matemáticos de domínio para HTTP `400`, tratamento de colisão `23505` / reuso cross-endpoint de `Idempotency-Key` como `409` ou replay seguro (+ chave estável em retries no `FinancePanel.tsx`), consistência estrita Serviço ↔ NF ↔ Cliente em `/finance/entries` e `/from-service/:serviceId`, e respostas uniformes `200` em `/public/company-requests/request-code` e `/public/password/forgot` (eliminando oráculos de enumeração de e-mail, CNPJ e cooldown).
+  - **P3 (`finance`, `account`, `lgpd`, `adminData`):** `Cache-Control: private, no-store` e rate limit `sensitive` em `GET /finance/reports/export` (e `Cache-Control: private, no-store` nas rotas `/account/privacy/*`), expurgo de `financial_idempotency_keys` após 30 dias em `retention.ts` (exposto em `/admin/lgpd/cleanup`), e rejeição com `400` de payloads vazios/fora da allowlist em `/admin/data/:table`.
+- Suíte de testes automatizados (`bun test`: 28 testes base + regressões P1/P2/P3 em `src/tests/finance.test.ts`, `src/tests/security.test.ts` e `src/tests/infra.test.ts`).
 
 > **Aviso operacional de deploy (volume `nf_archives`):** Como o container de produção do backend executa como `USER bun`, se o volume `nf_archives` já existir na VM com dono `root:root`, execute `docker compose -f compose.yaml -f compose.production.yaml run --rm --user root backend chown -R bun:bun /usr/src/app/archives` e aplique a migration `drizzle/0019_user_token_version.sql` ao atualizar a produção.
 

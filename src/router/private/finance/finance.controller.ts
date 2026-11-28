@@ -36,6 +36,7 @@ function getTenantContext(request: FastifyRequest): TenantRequestContext {
     }
     return {
         activeCompanyId: request.tenant.activeCompanyId,
+        motherId: request.tenant.motherId,
         accessibleCompanyIds: request.tenant.accessibleCompanyIds,
         isConsolidated: request.tenant.isConsolidated,
         userId: request.user.id,
@@ -411,6 +412,7 @@ export async function exportReportController(
                 'attachment; filename="financeiro-export.csv"',
             )
             .header("X-Content-Type-Options", "nosniff")
+            .header("Cache-Control", "private, no-store")
             .send(csv);
     } catch (err) {
         return handleFinanceError(err, request, reply);

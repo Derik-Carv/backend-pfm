@@ -1,4 +1,5 @@
 import fastify from "fastify";
+import { APP_VERSION } from "@/config/version";
 import cors from "@fastify/cors";
 import { corsOptions } from "./policies/cors";
 import helmet from "@fastify/helmet";
@@ -194,7 +195,7 @@ if (isDev) {
             info: {
                 title: "API Principal Backend",
                 description: "Documentation for API Backend",
-                version: "1.0.0",
+                version: APP_VERSION,
             },
         },
         transform: (document) => {

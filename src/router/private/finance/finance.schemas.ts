@@ -1,9 +1,30 @@
 import { z } from "zod";
 
 export const uuidSchema = z.string().uuid();
+
+export function isValidIsoCalendarDate(value: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+    }
+    const [yearStr, monthStr, dayStr] = value.split("-");
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    const day = Number(dayStr);
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+        return false;
+    }
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return (
+        parsed.getUTCFullYear() === year &&
+        parsed.getUTCMonth() === month - 1 &&
+        parsed.getUTCDate() === day
+    );
+}
+
 export const isoDateSchema = z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato YYYY-MM-DD");
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato YYYY-MM-DD")
+    .refine(isValidIsoCalendarDate, "Data de calendário inválida");
 
 export const positiveCentsSchema = z
     .number()
@@ -320,9 +341,7 @@ export const updateEntryBodySchema = z.object({
     description: z.string().trim().min(2).max(240).optional(),
     documentNumber: z.string().trim().max(80).nullable().optional(),
     notes: z.string().trim().max(1000).nullable().optional(),
-    clientId: uuidSchema.nullable().optional(),
-    counterpartyName: z.string().trim().max(160).nullable().optional(),
-    counterpartyDocument: z.string().trim().max(20).nullable().optional(),
+    clientId: uuidSchema.optional(),
     categoryId: uuidSchema.optional(),
     costCenterId: uuidSchema.nullable().optional(),
     competenceDate: isoDateSchema.optional(),

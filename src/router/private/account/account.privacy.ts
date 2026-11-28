@@ -259,7 +259,10 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
                     a.documentVersion === LEGAL_PRIVACY_VERSION,
             );
 
-            return reply.status(200).send({
+            return reply
+                .status(200)
+                .header("Cache-Control", "private, no-store")
+                .send({
                 user: {
                     id: user.id,
                     name: user.name,
@@ -355,7 +358,10 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
                 await db.insert(legalAcceptances).values(toInsert);
             }
 
-            return reply.status(200).send({
+            return reply
+                .status(200)
+                .header("Cache-Control", "private, no-store")
+                .send({
                 message: "Aceite registrado com sucesso.",
                 legalAcceptanceRequired: false,
                 acceptedAt,
@@ -396,7 +402,10 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
                 return reply.status(404).send({ message: "User not found" });
             }
 
-            return reply.status(200).send({
+            return reply
+                .status(200)
+                .header("Cache-Control", "private, no-store")
+                .send({
                 message: "Dados cadastrais atualizados com sucesso.",
                 user: updated,
             });
@@ -457,7 +466,10 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
                         .limit(100),
                 ]);
 
-            return reply.status(200).send({
+            return reply
+                .status(200)
+                .header("Cache-Control", "private, no-store")
+                .send({
                 exportedAt: new Date().toISOString(),
                 legalNotice:
                     "Exportação em conformidade com o Art. 18, incisos II e V da LGPD (Lei nº 13.709/2018).",
@@ -571,7 +583,10 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
                 statusCode: 200,
             });
 
-            return reply.status(200).send({
+            return reply
+                .status(200)
+                .header("Cache-Control", "private, no-store")
+                .send({
                 message: "Conta anonimizada e desativada com sucesso.",
                 anonymizedAt,
                 fiscalRetentionNotice:

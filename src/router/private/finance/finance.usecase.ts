@@ -8,11 +8,16 @@ import {
 import { buildCsv } from "@/lib/finance/csv";
 import { ensureDefaultFinancialCategories } from "@/lib/finance/defaultCategories";
 import { extractIdempotencyKey } from "@/lib/finance/idempotency";
-import { centsToDecimalString, parseDecimalToCents } from "@/lib/finance/money";
+import {
+    centsToDecimalString,
+    centsToSafeNumber,
+    parseDecimalToCents,
+} from "@/lib/finance/money";
 import { and, eq } from "drizzle-orm";
 
 export interface TenantRequestContext {
     activeCompanyId: string;
+    motherId: string;
     accessibleCompanyIds: string[];
     isConsolidated: boolean;
     userId: string;
@@ -254,6 +259,7 @@ export class FinanceUseCase {
         const idempotencyKey = this.assertIdempotencyKey(rawIdempotencyKey);
         return this.repo.createEntries({
             companyId: tenant.activeCompanyId,
+            motherId: tenant.motherId,
             userId: tenant.userId,
             idempotencyKey,
             endpoint: "POST /finance/entries",
@@ -324,7 +330,18 @@ export class FinanceUseCase {
             resolvedCategoryId = defaultRevCat.id;
         }
 
-        const serviceCents = parseDecimalToCents(service.price);
+        let serviceCents: bigint;
+        let serviceAmountNumber: number;
+        try {
+            serviceCents = parseDecimalToCents(service.price);
+            serviceAmountNumber = centsToSafeNumber(serviceCents);
+        } catch {
+            throw new FinanceDomainError(
+                400,
+                "INVALID_SERVICE_PRICE",
+                "O valor do serviço é inválido para gerar título financeiro.",
+            );
+        }
         if (serviceCents <= 0n) {
             throw new FinanceDomainError(
                 400,
@@ -356,6 +373,16 @@ export class FinanceUseCase {
                     "Nota fiscal vinculada não encontrada ou inativa.",
                 );
             }
+            if (
+                note.servicesId !== service.id ||
+                note.thirdPartyClientId !== service.clientId
+            ) {
+                throw new FinanceDomainError(
+                    409,
+                    "NF_SERVICE_MISMATCH",
+                    "A nota fiscal informada não pertence a este serviço/cliente.",
+                );
+            }
             documentNumber = note.numberNf ?? null;
             issueDate = body.issueDate ?? note.emissionDate;
             const nfCents = parseDecimalToCents(note.totalValue);
@@ -374,6 +401,7 @@ export class FinanceUseCase {
 
         const result = await this.repo.createEntries({
             companyId: tenant.activeCompanyId,
+            motherId: tenant.motherId,
             userId: tenant.userId,
             idempotencyKey,
             endpoint: `POST /finance/entries/from-service/${serviceId}`,
@@ -391,7 +419,7 @@ export class FinanceUseCase {
             competenceDate,
             issueDate,
             dueDate,
-            originalAmountCents: Number(serviceCents),
+            originalAmountCents: serviceAmountNumber,
             discountCents: 0,
             interestCents: 0,
             fineCents: 0,

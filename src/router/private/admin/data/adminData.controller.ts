@@ -90,6 +90,11 @@ export async function createAdminRecordController(
                 message: "Password must be between 8 and 128 characters",
             });
         }
+        if (error instanceof Error && error.message === "EMPTY_ADMIN_PAYLOAD") {
+            return reply.status(400).send({
+                message: "No valid writable fields provided",
+            });
+        }
         request.log.error({ err: error }, "Error while creating administrative record");
         return reply.status(409).send({
             message: "Record could not be created",
@@ -116,6 +121,11 @@ export async function updateAdminRecordController(
         if (error instanceof Error && error.message === "INVALID_ADMIN_PASSWORD_LENGTH") {
             return reply.status(400).send({
                 message: "Password must be between 8 and 128 characters",
+            });
+        }
+        if (error instanceof Error && error.message === "EMPTY_ADMIN_PAYLOAD") {
+            return reply.status(400).send({
+                message: "No valid writable fields provided",
             });
         }
         request.log.error({ err: error }, "Error while updating administrative record");

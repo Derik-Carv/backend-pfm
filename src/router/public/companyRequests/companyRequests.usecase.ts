@@ -25,6 +25,12 @@ import type {
     RequestCompanyCodeInput,
 } from "./companyRequests.schemas";
 
+const UNIFORM_COMPANY_CODE_RESPONSE = {
+    message:
+        "Se os dados informados estiverem disponíveis para solicitação, você receberá um código de verificação por e-mail em instantes.",
+    expiresInMinutes: 15,
+};
+
 export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
     const [existingUserByEmail] = await db
         .select({ id: users.id })
@@ -32,7 +38,7 @@ export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
         .where(sql`lower(${users.email}) = ${data.email}`)
         .limit(1);
     if (existingUserByEmail) {
-        throw new Error("EMAIL_ALREADY_EXISTS");
+        return UNIFORM_COMPANY_CODE_RESPONSE;
     }
 
     const [pendingEmailReq] = await db
@@ -46,7 +52,7 @@ export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
         )
         .limit(1);
     if (pendingEmailReq) {
-        throw new Error("REQUEST_ALREADY_PENDING");
+        return UNIFORM_COMPANY_CODE_RESPONSE;
     }
 
     if (data.cnpj) {
@@ -58,7 +64,7 @@ export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
                 .where(eq(companies.cnpj, cleanedCnpj))
                 .limit(1);
             if (existingCompany) {
-                throw new Error("COMPANY_CNPJ_ALREADY_EXISTS");
+                return UNIFORM_COMPANY_CODE_RESPONSE;
             }
 
             const [pendingCnpjReq] = await db
@@ -72,14 +78,21 @@ export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
                 )
                 .limit(1);
             if (pendingCnpjReq) {
-                throw new Error("REQUEST_ALREADY_PENDING");
+                return UNIFORM_COMPANY_CODE_RESPONSE;
             }
         }
     }
 
     const code = generateSixDigitCode();
     const codesRepo = new EmailVerificationCodesRepository();
-    await codesRepo.createCode(data.email, "company_register", code, 15);
+    try {
+        await codesRepo.createCode(data.email, "company_register", code, 15);
+    } catch (error) {
+        if (error instanceof Error && error.message === "OTP_COOLDOWN_ACTIVE") {
+            return UNIFORM_COMPANY_CODE_RESPONSE;
+        }
+        throw error;
+    }
 
     await sendVerificationCodeEmail({
         to: data.email,
@@ -88,10 +101,7 @@ export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
         recipientName: data.name,
     });
 
-    return {
-        message: "Verification code sent to email",
-        expiresInMinutes: 15,
-    };
+    return UNIFORM_COMPANY_CODE_RESPONSE;
 }
 
 export async function usecaseCreateCompanyRequest(
