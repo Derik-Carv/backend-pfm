@@ -9,6 +9,14 @@ services:
         restart: always
         security_opt:
             - no-new-privileges:true
+        cap_drop:
+            - ALL
+        cap_add:
+            - CHOWN
+            - DAC_OVERRIDE
+            - FOWNER
+            - SETGID
+            - SETUID
         ports: !override []
         mem_limit: 256m
         memswap_limit: 512m

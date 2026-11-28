@@ -5,6 +5,7 @@ import {
     buildSafeNfArchivePath,
     resolveSafeArchivePath,
 } from "@/lib/archivePath";
+import { sanitizeLegalControllerDocument } from "@/lib/lgpd/legal.constants";
 import { escapeHtml, sanitizeHeaderValue } from "@/lib/nodemailer/nodemailer";
 import { hasTenantAccess, isValidUuid } from "@/lib/tenant";
 import { assertValidPdfBuffer } from "@/router/private/NF/create/createNf.pdf";
@@ -152,5 +153,28 @@ describe("Critical Input Schemas", () => {
                 roleName: "finance",
             }).success,
         ).toBe(false);
+    });
+});
+
+describe("Legal Controller Document Sanitization", () => {
+    it("masks 11-digit personal CPFs while keeping CNPJs and descriptive labels intact", () => {
+        expect(sanitizeLegalControllerDocument("529.982.247-25")).toBe(
+            "***.982.247-**",
+        );
+        expect(sanitizeLegalControllerDocument("52998224725")).toBe(
+            "***.982.247-**",
+        );
+        expect(sanitizeLegalControllerDocument("12.345.678/0001-99")).toBe(
+            "12.345.678/0001-99",
+        );
+        expect(
+            sanitizeLegalControllerDocument(
+                "Pessoa Física (sob solicitação ao DPO)",
+            ),
+        ).toBe("Pessoa Física (sob solicitação ao DPO)");
+        expect(sanitizeLegalControllerDocument(null)).toBeNull();
+        expect(sanitizeLegalControllerDocument(undefined)).toBeNull();
+        expect(sanitizeLegalControllerDocument("")).toBeNull();
+        expect(sanitizeLegalControllerDocument("   ")).toBeNull();
     });
 });

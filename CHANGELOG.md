@@ -3,6 +3,14 @@
 Registro das alterações relevantes do backend. Toda mudança de rota, contrato,
 permissão, banco, produção ou auditoria deve ser adicionada aqui.
 
+## [0.14.1] - 2026-11-28
+
+- **Hardening pós-revisão de segurança em produção:**
+  - **LGPD (`src/lib/lgpd/legal.constants.ts`, `.env.example`):** adicionada `sanitizeLegalControllerDocument` em `getLegalMetadata()` (`GET /public/legal`) para mascarar automaticamente CPFs pessoais de 11 dígitos (`***.XXX.XXX-**`), preservando CNPJs (14 dígitos) e textos descritivos, com testes unitários adicionados em `src/tests/security.test.ts`.
+  - **Nginx Edge (`infra/nginx-backend-pfm.conf`):** adicionado `server_tokens off;` também no bloco HTTP (porta 80), removida duplicação de headers de segurança com `@fastify/helmet` via `proxy_hide_header` (`Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`), incluído `/server-status` na regra de descarte `444` e ajustada sintaxe `listen 443 ssl http2;` compatível com Nginx 1.18+ (Ubuntu 22.04).
+  - **Containers & Supply Chain (`Dockerfile`, `compose.yaml`, `compose.production.yaml`):** fixadas tags exatas `oven/bun:1.4.5-alpine` e `postgres:16.15-alpine`, e adicionado `cap_drop: [ALL]` com `cap_add` mínimo (`CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SETGID`, `SETUID`) ao serviço `postgres`.
+  - **Dependências (`bun audit fix`):** verificado que os 3 avisos moderados (`esbuild` em `drizzle-kit`, `glob`/`minimatch` em `@fastify/swagger-ui` e `tap`) afetam apenas `devDependencies` e permanecem bloqueados pelas faixas semver dos pacotes pais (fora do bundle de produção `dist/server.js`).
+
 ## [0.14.0] - 2026-11-28
 
 - **Contas Pessoais (CPF, `0021_personal_cpf_accounts.sql`):**

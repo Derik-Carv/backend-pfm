@@ -17,6 +17,20 @@ export function maskCpf(cpf: string | null | undefined): string {
     return "***";
 }
 
+export function sanitizeLegalControllerDocument(
+    document: string | null | undefined,
+): string | null {
+    const trimmed = document?.trim();
+    if (!trimmed) return null;
+
+    const digits = trimmed.replace(/\D/g, "");
+    if (digits.length === 11) {
+        return maskCpf(digits);
+    }
+
+    return trimmed;
+}
+
 export function getLegalMetadata() {
     const dpoName =
         process.env.DPO_NAME?.trim() ||
@@ -31,7 +45,9 @@ export function getLegalMetadata() {
             name:
                 process.env.LEGAL_CONTROLLER_NAME?.trim() ||
                 "PFM",
-            document: process.env.LEGAL_CONTROLLER_DOCUMENT?.trim() || null,
+            document: sanitizeLegalControllerDocument(
+                process.env.LEGAL_CONTROLLER_DOCUMENT,
+            ),
             address: process.env.LEGAL_CONTROLLER_ADDRESS?.trim() || null,
             jurisdiction:
                 process.env.LEGAL_CONTROLLER_JURISDICTION?.trim() || "Brasil",
