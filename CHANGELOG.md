@@ -3,6 +3,14 @@
 Registro das alterações relevantes do backend. Toda mudança de rota, contrato,
 permissão, banco, produção ou auditoria deve ser adicionada aqui.
 
+## [0.14.2] - 2026-11-28
+
+- **Sincronização da borda de produção (Nginx) e hardening de PDF:**
+  - **Nginx (`infra/nginx-backend-pfm.conf`):** adicionados `server_tokens off;` global e um `default_server` catch-all na porta 80 que descarta (`444`) acessos por IP bruto ou `Host` desconhecido, espelhando o que foi aplicado na VPS (`/etc/nginx/conf.d/pfm-security.conf`, com remoção de `sites-enabled/default`).
+  - **Produção sincronizada:** o Nginx da VPS passou a usar as zonas `pfm_api_general`/`pfm_api_sensitive`/`pfm_conn_per_ip`, `X-Forwarded-For $remote_addr` (anti-spoofing), headers de segurança únicos e descarte de `/server-status`.
+  - **PDF (`createNf.pdf.ts`):** `getDocument` agora define `enableXfa: false` explicitamente (defesa em profundidade contra conteúdo ativo XFA). Verificado que `pdfjs-dist` 6.5.438 não possui caminho de `eval`/`new Function` (CVE-2024-4367 corrigida desde 4.2.67). Confirmado que a ausência de `@napi-rs/canvas` só afeta renderização gráfica, não a extração de texto usada na validação de NFS-e.
+  - **`SECURITY.md`:** registrada a regressão "deriva entre template Nginx do git e a VPS" na consulta obrigatória.
+
 ## [0.14.1] - 2026-11-28
 
 - **Hardening pós-revisão de segurança em produção:**

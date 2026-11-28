@@ -78,6 +78,9 @@ export async function validateNfPdf(file: File, data: NfCreateInput) {
         data: new Uint8Array(rawBuffer),
         useWorkerFetch: false,
         disableFontFace: true,
+        // Defense-in-depth: never parse XFA (active form content). pdf.js 6.x has
+        // no eval/new Function code path (CVE-2024-4367 fixed since 4.2.67).
+        enableXfa: false,
     });
 
     let timeoutHandle: ReturnType<typeof setTimeout> | undefined;

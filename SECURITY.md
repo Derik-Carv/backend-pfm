@@ -55,6 +55,9 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 3. **Divergência na política de senhas em novos schemas (`adminPassword` / `password`):**
    - *O que aconteceu:* `createCompanyRequestBodySchema` voltou a usar `.trim()` e `.max(100)` em `adminPassword`, divergindo do padrão (`8..128` caracteres sem `.trim()` para cadastro/reset e `6..128` sem `.trim()` no login).
    - *Regra inviolável:* Nunca aplique `.trim()` em campos de senha e padronize `min(8).max(128)` em criação/redefinição.
+4. **Deriva entre `infra/nginx-backend-pfm.conf` (git) e o Nginx real da VPS:**
+   - *O que aconteceu:* Até a `v0.14.1`, o Nginx de produção nunca recebeu as zonas `limit_req`/`limit_conn` nem `X-Forwarded-For $remote_addr` que já existiam no repositório: continuava com `$proxy_add_x_forwarded_for` (IP forjável pelo cliente), sem rate limit na borda e com o site `default` ativo na porta 80 expondo `nginx/1.18.0 (Ubuntu)`.
+   - *Regra inviolável:* Toda alteração em `infra/` só está concluída quando aplicada **e verificada na VPS** (`sudo nginx -t && sudo systemctl reload nginx`, seguido de checagem passiva: header `Server: nginx` sem versão, `429` em rajada em `/public/password`, headers sem duplicação). Preserve as linhas `# managed by Certbot` ao sincronizar o template.
 
 ### Falhas Criadas em Novas Implementações (PF/CPF, Financeiro e Migrations)
 
