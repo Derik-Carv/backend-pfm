@@ -46,6 +46,22 @@ import {
 import { eq, inArray, or } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 
+function makeValidCnpj(seed12: string): string {
+    const base = seed12.replace(/\D/g, "").slice(0, 12).padEnd(12, "1");
+    const calc = (digits: string, weights: number[]) => {
+        const sum = weights.reduce(
+            (acc, weight, idx) => acc + Number(digits[idx]) * weight,
+            0,
+        );
+        const rem = sum % 11;
+        return rem < 2 ? 0 : 11 - rem;
+    };
+    const d1 = calc(base, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+    const withD1 = `${base}${d1}`;
+    const d2 = calc(withD1, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+    return `${withD1}${d2}`;
+}
+
 describe("Finance Domain Pure Money Math", () => {
     it("avoids binary float inaccuracies when parsing decimals and summing cents", () => {
         const a = parseDecimalToCents("0.10");
@@ -230,7 +246,7 @@ describe("Security Controls: Logger Redact & Zod Schemas", () => {
                 dueDate: "2026-11-10",
                 originalAmountCents: 15000,
             }).success,
-        ).toBe(false);
+        ).toBe(true);
 
         expect(
             createEntryBodySchema.safeParse({
@@ -266,11 +282,11 @@ describe("Security Controls: Logger Redact & Zod Schemas", () => {
 
         const strippedUpdate = updateEntryBodySchema.parse({
             description: "Atualizada",
-            counterpartyName: "Forjado",
             counterpartyDocument: "11122233344",
+            settledAmountCents: 99999,
         }) as Record<string, unknown>;
-        expect(strippedUpdate.counterpartyName).toBeUndefined();
         expect(strippedUpdate.counterpartyDocument).toBeUndefined();
+        expect(strippedUpdate.settledAmountCents).toBeUndefined();
         expect(updateEntryBodySchema.safeParse({ clientId: null }).success).toBe(false);
     });
 });
@@ -299,12 +315,13 @@ describe("Finance Module Phase 1 Integration (PostgreSQL + Fastify)", () => {
         const allDbRoles = await db.select().from(roles);
         const roleByName = new Map(allDbRoles.map((r) => [r.name, r.id]));
 
+        const compACnpj = makeValidCnpj(`88${suffix.slice(-10)}`);
         const [compA] = await db
             .insert(companies)
             .values({
                 registeredCompanyName: `FinTest Matrix ${suffix}`,
                 tradeName: `FinTest Matrix ${suffix}`,
-                cnpj: `88${suffix.slice(-12)}`,
+                cnpj: compACnpj,
                 active: true,
             })
             .returning();
@@ -938,14 +955,14 @@ describe("Finance Module Phase 1 Integration (PostgreSQL + Fastify)", () => {
             url: "/finance/categories",
             remoteAddress: "198.51.100.206",
             headers: { authorization: `Bearer ${financeToken}` },
-            payload: { code: `R1.${suffix.slice(-4)}`, name: "Cat Reg 1", kind: "operating_expense" },
+            payload: { name: "Cat Reg 1", kind: "operating_expense" },
         });
         const c2 = await app.inject({
             method: "POST",
             url: "/finance/categories",
             remoteAddress: "198.51.100.207",
             headers: { authorization: `Bearer ${financeToken}` },
-            payload: { code: `R2.${suffix.slice(-4)}`, name: "Cat Reg 2", kind: "operating_expense" },
+            payload: { name: "Cat Reg 2", kind: "operating_expense" },
         });
         const c1Id = c1.json().category.id as string;
         const c2Id = c2.json().category.id as string;
@@ -1216,13 +1233,19 @@ describe("Finance Module Phase 1 Integration (PostgreSQL + Fastify)", () => {
         });
         expect(pubExistingEmail.statusCode).toBe(200);
 
+        const [compAInfo] = await db
+            .select({ cnpj: companies.cnpj })
+            .from(companies)
+            .where(eq(companies.id, companyAId))
+            .limit(1);
+
         const pubExistingCnpj = await app.inject({
             method: "POST",
             url: "/public/company-requests/request-code",
             remoteAddress: "198.51.100.222",
             payload: {
                 email: `unused.${suffix}@example.test`,
-                cnpj: `88${suffix.slice(-12)}`,
+                cnpj: compAInfo.cnpj,
                 name: "Probe",
             },
         });

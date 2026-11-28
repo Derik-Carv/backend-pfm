@@ -16,6 +16,7 @@ export const rejectCompanyRequestBodySchema = z
 
 export const adminCompanyRequestItemSchema = z.object({
     id: z.string().uuid(),
+    accountType: z.enum(["business", "personal"]).optional(),
     registeredCompanyName: z.string(),
     tradeName: z.string(),
     cnpj: z.string(),
@@ -44,6 +45,7 @@ export const approveCompanyRequestResponseSchema = z.object({
     message: z.string(),
     company: z.object({
         id: z.string().uuid(),
+        accountType: z.enum(["business", "personal"]).optional(),
         registeredCompanyName: z.string(),
         tradeName: z.string(),
         cnpj: z.string(),

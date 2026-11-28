@@ -3,6 +3,24 @@
 Registro das alterações relevantes do backend. Toda mudança de rota, contrato,
 permissão, banco, produção ou auditoria deve ser adicionada aqui.
 
+## [0.14.0] - 2026-11-28
+
+- **Contas Pessoais (CPF, `0021_personal_cpf_accounts.sql`):**
+  - Suporte a contas pessoais (`account_type = 'personal'`) com criação atômica e liberação imediata após confirmação OTP no e-mail (`/public/company-requests`), preservando a fila de aprovação do Admin SaaS para contas empresariais (`business` / CNPJ).
+  - Validação matemática Módulo-11 de CPF e CNPJ (`src/utils/checkCnpj.ts`, `cpfValidateNormal`) com anti-enumeração em `usecaseRequestCompanyCode` (validação antes das consultas ao banco), mascaramento LGPD de CPF (`maskTenantDocument`) em `/companies/*`, `/account/privacy/*` e `/admin/*`.
+  - Isolamento estrito de contas PF: bloqueio `403` em `/nf/*`, `/notes/*`, `/movimentations/*`, `/companies/branches` e `/companies/users`; `isConsolidated` forçado para `false`; categorias financeiras pessoais padrão em `defaultCategories.ts` e lançamentos em `/finance/entries` sem obrigatoriedade de `clientId` (com suporte opcional a `counterpartyName`, mantendo `CLIENT_REQUIRED` para contas PJ).
+  - Anonimização LGPD (`POST /account/privacy/anonymize`) estendida para anonimizar tenant pessoal e `company_registration_requests` (`ANON-%`), com incremento de `token_version`.
+
+- **Códigos Automáticos e Preferência Manual (`0022_company_manual_finance_codes.sql`):**
+  - Geração automática sequencial de códigos para Centros de Custo (`CC-01`, `CC-02`...) e Categorias Financeiras (por natureza e tipo de conta), com bloqueio `403 MANUAL_CODE_NOT_ENABLED` por padrão.
+  - Adicionada preferência administrativa `allow_manual_finance_codes` (`PATCH /companies/me/settings` e atualização pelo Admin SaaS) para habilitar codificação manual em integrações externas.
+
+- **Revisão de Segurança e Hardening — Contas Pessoais (CPF) e Códigos Financeiros Manuais/Automáticos:**
+  - **Anti-enumeração (`companyRequests.usecase.ts`):** validação matemática de CPF/CNPJ movida para antes das consultas ao banco em `usecaseRequestCompanyCode`, eliminando divergência `200` vs `400` para e-mails cadastrados; tratamento de colisão concorrente PostgreSQL (`23505`) na auto-aprovação PF; remoção de `.trim()` e alinhamento `8..128` em `adminPassword` (`companyRequests.schemas.ts`) + limpeza de branches duplicados em `companyRequests.controller.ts`.
+  - **LGPD & Privacidade (`account.privacy.ts`, `0021_personal_cpf_accounts.sql`, `system.usecase.ts`):** anonimização completa de `company_registration_requests` (com atualização de `company_reg_req_document_length_chk` para aceitar `ANON-%`), incremento de `token_version` ao anonimizar usuário e aplicação de `maskTenantDocument` nas filiais em `usecaseGetCascadeHierarchy`.
+  - **Escopo PF e Integridade Financeira (`movimentation.route.ts`, `companies.controller.ts`, `finance.repository.ts`):** bloqueio de `/movimentations` para contas pessoais (`403`), remoção de bloco `403` morto em `GET /companies/branches` (retornando `200 []`), bloqueio de edição de `counterpartyName` após baixa parcial (`409 ENTRY_HAS_SETTLEMENTS`) e proteção contra overflow de banda (`CATEGORY_CODE_BAND_EXHAUSTED`) no gerador automático de categorias.
+  - **Governança (`SECURITY.md`, `CLAUDE.md`, `personalAccount.test.ts`):** criada seção obrigatória pré-implementação em `SECURITY.md` documentando todas as regressões recorrentes e novas armadilhas (referenciada em `CLAUDE.md`) e adicionados testes de regressão em `src/tests/personalAccount.test.ts`.
+
 ## [0.13.3] - 2026-11-28
 
 - **Versionamento SemVer e Rastreabilidade:**

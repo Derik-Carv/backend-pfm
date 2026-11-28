@@ -139,9 +139,12 @@ export async function authMiddleware(
         }
     }
 
+    const accountType: "business" | "personal" =
+        targetCompany.accountType === "personal" ? "personal" : "business";
     const isMother = targetCompany.motherId === null;
     const motherId = isMother ? targetCompany.id : targetCompany.motherId!;
     const isConsolidated =
+        accountType === "business" &&
         requestedViewScope === "consolidated" &&
         isMother &&
         role.name !== "colaborator";
@@ -155,6 +158,8 @@ export async function authMiddleware(
 
     request.tenant = {
         activeCompanyId: targetCompany.id,
+        accountType,
+        allowManualFinanceCodes: Boolean(targetCompany.allowManualFinanceCodes),
         isMother,
         motherId,
         accessibleCompanyIds,

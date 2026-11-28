@@ -3,7 +3,7 @@
 > **Atenção para qualquer IA ou agente de desenvolvimento:**
 > Este documento é a fonte definitiva de verdade (Single Source of Truth) sobre a arquitetura, regras de negócio, bibliotecas, padrões de design e regras invioláveis deste projeto. **Leia com atenção antes de sugerir ou executar qualquer alteração.**
 >
-> **Consulta de Segurança Obrigatória:** Leia e siga também [`SECURITY.md`](./SECURITY.md) (padrões OWASP Cheat Sheet Series aplicados à stack) antes de criar ou alterar qualquer código, rota, schema, query, upload, e-mail ou configuração.
+> **Consulta de Segurança Obrigatória:** Leia e siga [`SECURITY.md`](./SECURITY.md) — em especial o **Checklist Rápido** e a seção **"Consulta Obrigatória Antes de Criar ou Alterar Qualquer Funcionalidade (Regressões & Armadilhas Conhecidas)"** — antes de criar ou alterar qualquer funcionalidade, rota, schema Zod, query Drizzle, migration SQL, upload, e-mail ou configuração.
 
 ---
 
@@ -144,9 +144,9 @@ As roles são restritas e imutáveis:
     - Não coloque queries SQL ou Drizzle diretamente dentro de Controllers ou rotas.
     - Fluxo obrigatório: **Route -> Controller -> UseCase -> Repository (Interface).**
 
-6. **CONSULTA E ADERÊNCIA OBRIGATÓRIA AO `SECURITY.md` (PADRÕES OWASP):**
-    - Antes de implementar ou revisar qualquer funcionalidade, integração externa, endpoint, query, upload, template de e-mail, dependência ou configuração de deploy, **consulte [`SECURITY.md`](./SECURITY.md)**.
-    - O arquivo `SECURITY.md` é documentação permanente obrigatória do repositório (exceção à regra 1 por solicitação explícita do mantenedor) e deve ser mantido atualizado sempre que novas superfícies de ataque, integrações (ex.: NFS-e ADN) ou controles de segurança forem adicionados.
+6. **CONSULTA E ADERÊNCIA OBRIGATÓRIA AO `SECURITY.md` (PADRÕES OWASP + HISTÓRICO DE REGRESSÕES):**
+    - Antes de implementar, planejar ou revisar qualquer nova funcionalidade, integração externa, endpoint, query, migration, upload, template de e-mail, dependência ou configuração de deploy, **consulte obrigatoriamente [`SECURITY.md`](./SECURITY.md)** (incluindo o checklist pré-PR e a seção **"Consulta Obrigatória Antes de Criar ou Alterar Qualquer Funcionalidade"** com falhas recorrentes e armadilhas conhecidas).
+    - O arquivo `SECURITY.md` é documentação permanente obrigatória do repositório (exceção à regra 1 por solicitação explícita do mantenedor) e deve ser atualizado sempre que novas superfícies de ataque, regressões, integrações (ex.: NFS-e ADN) ou controles de segurança forem identificados ou adicionados.
 
 ---
 

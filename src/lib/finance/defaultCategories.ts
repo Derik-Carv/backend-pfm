@@ -93,11 +93,87 @@ export const DEFAULT_FINANCIAL_CATEGORIES: DefaultCategorySeedItem[] = [
     },
 ];
 
+export const PERSONAL_FINANCIAL_CATEGORIES: DefaultCategorySeedItem[] = [
+    {
+        code: "1.01",
+        name: "Salário, Serviços e Renda Principal",
+        kind: "revenue",
+        dreGroup: "gross_revenue",
+    },
+    {
+        code: "1.02",
+        name: "Renda Extra / Reembolsos",
+        kind: "revenue",
+        dreGroup: "gross_revenue",
+    },
+    {
+        code: "2.01",
+        name: "Moradia, Aluguel e Contas da Casa",
+        kind: "operating_expense",
+        dreGroup: "ga_admin",
+    },
+    {
+        code: "2.02",
+        name: "Alimentação e Supermercado",
+        kind: "operating_expense",
+        dreGroup: "ga_admin",
+    },
+    {
+        code: "2.03",
+        name: "Transporte e Combustível",
+        kind: "operating_expense",
+        dreGroup: "ga_admin",
+    },
+    {
+        code: "2.04",
+        name: "Saúde e Farmácia",
+        kind: "operating_expense",
+        dreGroup: "ga_admin",
+    },
+    {
+        code: "2.05",
+        name: "Educação e Cursos",
+        kind: "operating_expense",
+        dreGroup: "ga_admin",
+    },
+    {
+        code: "2.06",
+        name: "Lazer, Viagens e Assinaturas",
+        kind: "operating_expense",
+        dreGroup: "ga_admin",
+    },
+    {
+        code: "2.07",
+        name: "Cartão de Crédito e Parcelamentos",
+        kind: "operating_expense",
+        dreGroup: "ga_admin",
+    },
+    {
+        code: "4.01",
+        name: "Rendimentos Financeiros",
+        kind: "financial_result",
+        dreGroup: "financial_income",
+    },
+    {
+        code: "4.02",
+        name: "Tarifas Bancárias e Juros Pagos",
+        kind: "financial_result",
+        dreGroup: "financial_expense",
+    },
+    {
+        code: "5.01",
+        name: "Outras Despesas e Imprevistos",
+        kind: "operating_expense",
+        dreGroup: "non_operational",
+    },
+];
+
 type DbExecutor = Pick<typeof defaultDb, "select" | "insert">;
 
 export async function ensureDefaultFinancialCategories(
     companyId: string,
     executor: DbExecutor = defaultDb,
+    accountType: "business" | "personal" = "business",
 ): Promise<void> {
     const existing = await executor
         .select({ id: financialCategories.id })
@@ -109,10 +185,15 @@ export async function ensureDefaultFinancialCategories(
         return;
     }
 
+    const seedItems =
+        accountType === "personal"
+            ? PERSONAL_FINANCIAL_CATEGORIES
+            : DEFAULT_FINANCIAL_CATEGORIES;
+
     await executor
         .insert(financialCategories)
         .values(
-            DEFAULT_FINANCIAL_CATEGORIES.map((item) => ({
+            seedItems.map((item) => ({
                 companyId,
                 code: item.code,
                 name: item.name,

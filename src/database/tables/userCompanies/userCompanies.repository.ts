@@ -23,6 +23,8 @@ export class UserCompaniesRepository implements IUserCompaniesRepository {
                 registeredCompanyName: companies.registeredCompanyName,
                 tradeName: companies.tradeName,
                 cnpj: companies.cnpj,
+                accountType: companies.accountType,
+                allowManualFinanceCodes: companies.allowManualFinanceCodes,
                 email: companies.email,
                 phone: companies.phone,
                 motherId: companies.motherId,

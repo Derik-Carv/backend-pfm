@@ -8,13 +8,15 @@ import {
     users,
 } from "@/database/schema/schema";
 import { maskCpf } from "@/lib/lgpd/legal.constants";
+import { maskTenantDocument } from "@/utils/checkCnpj";
 import { sendCompanyRequestDecisionEmail } from "@/lib/nodemailer/nodemailer";
-import { resolveUniqueUsername } from "@/router/private/companies/companies.usecase";
+import { resolveUniqueUsername, serializeCompanySafe } from "@/router/private/companies/companies.usecase";
 import { slugifyCompanyName } from "@/utils/createNick";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 const safeRequestColumns = {
     id: companyRegistrationRequests.id,
+    accountType: companyRegistrationRequests.accountType,
     registeredCompanyName: companyRegistrationRequests.registeredCompanyName,
     tradeName: companyRegistrationRequests.tradeName,
     cnpj: companyRegistrationRequests.cnpj,
@@ -50,6 +52,11 @@ export async function usecaseListCompanyRequests(
 
     return rows.map((row) => ({
         ...row,
+        accountType:
+            row.accountType === "personal"
+                ? ("personal" as const)
+                : ("business" as const),
+        cnpj: maskTenantDocument(row.cnpj, row.accountType),
         adminCpf: maskCpf(row.adminCpf),
     }));
 }
@@ -122,6 +129,8 @@ export async function usecaseApproveCompanyRequest(
                 registeredCompanyName: reqRecord.registeredCompanyName,
                 tradeName: reqRecord.tradeName,
                 cnpj: reqRecord.cnpj,
+                accountType:
+                    reqRecord.accountType === "personal" ? "personal" : "business",
                 email: reqRecord.companyEmail ?? reqRecord.adminEmail,
                 phone: reqRecord.phone,
                 motherId: null,
@@ -184,7 +193,7 @@ export async function usecaseApproveCompanyRequest(
         }
 
         return {
-            company: newCompany,
+            company: serializeCompanySafe(newCompany),
             adminUser: {
                 id: createdAdmin.id,
                 username: createdAdmin.username,
@@ -255,6 +264,11 @@ export async function usecaseRejectCompanyRequest(
 
     return {
         ...updated,
+        accountType:
+            updated.accountType === "personal"
+                ? ("personal" as const)
+                : ("business" as const),
+        cnpj: maskTenantDocument(updated.cnpj, updated.accountType),
         adminCpf: maskCpf(updated.adminCpf),
     };
 }

@@ -39,6 +39,8 @@ function getTenantContext(request: FastifyRequest): TenantRequestContext {
         motherId: request.tenant.motherId,
         accessibleCompanyIds: request.tenant.accessibleCompanyIds,
         isConsolidated: request.tenant.isConsolidated,
+        accountType: request.tenant.accountType,
+        allowManualFinanceCodes: request.tenant.allowManualFinanceCodes,
         userId: request.user.id,
     };
 }

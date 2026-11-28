@@ -3,12 +3,14 @@ import type {
     CreateMotherCompanyInput,
     CreateBranchCompanyInput,
     UpdateCompanyInput,
+    UpdateMyCompanySettingsInput,
     CreateCompanyUserInput,
     UpdateCompanyUserInput,
 } from "./companies.schemas";
 import {
     usecaseCreateMotherCompany,
     usecaseUpdateMotherCompany,
+    usecaseUpdateMyCompanySettings,
     usecaseCreateBranchCompany,
     usecaseUpdateBranchCompany,
     usecaseListMothers,
@@ -17,6 +19,7 @@ import {
     usecaseListCompanyUsers,
     usecaseCreateCompanyUser,
     usecaseUpdateCompanyUser,
+    serializeCompanySafe,
 } from "./companies.usecase";
 import { UsersRepository } from "@/database/tables/users/users.repository";
 
@@ -36,10 +39,13 @@ export async function createMotherCompanyController(
 
         return reply.status(201).send({
             message: "Mother company created successfully",
-            company,
+            company: serializeCompanySafe(company),
             ...(adminUser ? { adminUser } : {}),
         });
     } catch (error: any) {
+        if (error.message === "INVALID_CNPJ") {
+            return reply.status(400).send({ message: "Invalid CNPJ (14 valid digits required)" });
+        }
         if (error.message === "INVALID_CPF") {
             return reply.status(400).send({ message: "Invalid CPF (11 digits required)" });
         }
@@ -78,7 +84,7 @@ export async function updateMotherCompanyController(
 
         return reply.status(200).send({
             message: "Mother company updated successfully",
-            company: updated,
+            company: serializeCompanySafe(updated),
         });
     } catch (error: any) {
         if (error.message === "MOTHER_COMPANY_NOT_FOUND") {
@@ -97,6 +103,12 @@ export async function createBranchCompanyController(
             return reply.status(400).send({ message: "No active mother company context" });
         }
 
+        if (request.user.role !== "administrator" && request.tenant.accountType === "personal") {
+            return reply.status(403).send({
+                message: "Contas pessoais (CPF) não suportam criação de filiais.",
+            });
+        }
+
         if (request.user.role !== "administrator" && !request.tenant.isMother) {
             return reply.status(403).send({
                 message: "Only Mother company admins can create branches",
@@ -111,9 +123,17 @@ export async function createBranchCompanyController(
 
         return reply.status(201).send({
             message: "Branch company created successfully",
-            company: newBranch,
+            company: serializeCompanySafe(newBranch),
         });
     } catch (error: any) {
+        if (error.message === "PERSONAL_ACCOUNT_NOT_ALLOWED") {
+            return reply.status(403).send({
+                message: "Contas pessoais (CPF) não suportam criação de filiais.",
+            });
+        }
+        if (error.message === "INVALID_CNPJ") {
+            return reply.status(400).send({ message: "Invalid CNPJ (14 valid digits required)" });
+        }
         if (error.message === "COMPANY_CNPJ_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "CNPJ already registered" });
         }
@@ -132,6 +152,12 @@ export async function updateBranchCompanyController(
     reply: FastifyReply,
 ) {
     try {
+        if (request.user.role !== "administrator" && request.tenant?.accountType === "personal") {
+            return reply.status(403).send({
+                message: "Contas pessoais (CPF) não suportam filiais.",
+            });
+        }
+
         if (request.user.role !== "administrator" && !request.tenant?.isMother) {
             return reply.status(403).send({
                 message: "Only Mother company admins can update branches",
@@ -147,7 +173,7 @@ export async function updateBranchCompanyController(
 
         return reply.status(200).send({
             message: "Branch company updated successfully",
-            company: updated,
+            company: serializeCompanySafe(updated),
         });
     } catch (error: any) {
         if (error.message === "BRANCH_COMPANY_NOT_FOUND") {
@@ -172,7 +198,7 @@ export async function listMothersController(
         const list = await usecaseListMothers();
         return reply.status(200).send({
             message: "Mothers listed successfully",
-            companies: list,
+            companies: list.map(serializeCompanySafe),
         });
     } catch {
         return reply.status(500).send({ message: "Internal server error" });
@@ -189,18 +215,25 @@ export async function listBranchesController(
             return reply.status(400).send({ message: "No active mother company context" });
         }
 
+        if (request.user.role !== "administrator" && request.tenant?.accountType === "personal") {
+            return reply.status(200).send({
+                message: "Branches listed successfully",
+                companies: [],
+            });
+        }
+
         if (request.user.role !== "administrator" && !request.tenant?.isMother) {
             const activeCompany = request.tenant?.activeCompany;
             return reply.status(200).send({
                 message: "Branches listed successfully",
-                companies: activeCompany && activeCompany.motherId ? [activeCompany] : [],
+                companies: activeCompany && activeCompany.motherId ? [serializeCompanySafe(activeCompany)] : [],
             });
         }
 
         const branches = await usecaseListBranches(motherId, true);
         return reply.status(200).send({
             message: "Branches listed successfully",
-            companies: branches,
+            companies: branches.map(serializeCompanySafe),
         });
     } catch {
         return reply.status(500).send({ message: "Internal server error" });
@@ -227,7 +260,7 @@ export async function getMyCompaniesController(
             activeCompanyId: request.tenant?.activeCompanyId ?? companies[0]?.id,
             isMother: request.tenant ? request.tenant.isMother && isMother : isMother,
             isConsolidated: request.tenant?.isConsolidated ?? false,
-            companies,
+            companies: companies.map(serializeCompanySafe),
         });
     } catch {
         return reply.status(500).send({ message: "Internal server error" });
@@ -242,6 +275,12 @@ export async function listCompanyUsersController(
         const motherId = request.tenant?.motherId;
         if (!motherId) {
             return reply.status(400).send({ message: "No active mother company context" });
+        }
+
+        if (request.user.role !== "administrator" && request.tenant?.accountType === "personal") {
+            return reply.status(403).send({
+                message: "Contas pessoais (CPF) não suportam gestão de equipe adicional.",
+            });
         }
 
         const usersList = await usecaseListCompanyUsers({
@@ -271,6 +310,12 @@ export async function createCompanyUserController(
             return reply.status(400).send({ message: "No active company context" });
         }
 
+        if (request.user.role !== "administrator" && request.tenant?.accountType === "personal") {
+            return reply.status(403).send({
+                message: "Contas pessoais (CPF) não permitem adicionar outros usuários.",
+            });
+        }
+
         const created = await usecaseCreateCompanyUser(
             request.body,
             {
@@ -287,7 +332,11 @@ export async function createCompanyUserController(
             user: created,
         });
     } catch (error: any) {
-        if (error.message === "FORBIDDEN_ROLE" || error.message === "COMPANY_ACCESS_DENIED") {
+        if (
+            error.message === "FORBIDDEN_ROLE" ||
+            error.message === "COMPANY_ACCESS_DENIED" ||
+            error.message === "PERSONAL_ACCOUNT_NOT_ALLOWED"
+        ) {
             return reply.status(403).send({ message: "Access denied" });
         }
         if (error.message === "INVALID_CPF") {
@@ -322,6 +371,12 @@ export async function updateCompanyUserController(
             return reply.status(400).send({ message: "No active company context" });
         }
 
+        if (request.user.role !== "administrator" && request.tenant?.accountType === "personal") {
+            return reply.status(403).send({
+                message: "Contas pessoais (CPF) não suportam gestão de equipe adicional.",
+            });
+        }
+
         const updated = await usecaseUpdateCompanyUser(
             request.params.id,
             request.body,
@@ -346,6 +401,29 @@ export async function updateCompanyUserController(
         }
         if (error.message === "EMAIL_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "Email already registered" });
+        }
+        return reply.status(500).send({ message: "Internal server error" });
+    }
+}
+
+export async function updateMyCompanySettingsController(
+    request: FastifyRequest<{ Body: UpdateMyCompanySettingsInput }>,
+    reply: FastifyReply,
+) {
+    try {
+        const companyId = request.tenant?.activeCompanyId;
+        if (!companyId) {
+            return reply.status(400).send({ message: "No active company context" });
+        }
+
+        const updated = await usecaseUpdateMyCompanySettings(companyId, request.body);
+        return reply.status(200).send({
+            message: "Preferências da conta atualizadas com sucesso",
+            company: serializeCompanySafe(updated),
+        });
+    } catch (error: any) {
+        if (error.message === "COMPANY_NOT_FOUND") {
+            return reply.status(404).send({ message: "Company not found" });
         }
         return reply.status(500).send({ message: "Internal server error" });
     }

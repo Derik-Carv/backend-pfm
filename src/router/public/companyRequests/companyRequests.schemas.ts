@@ -1,14 +1,19 @@
 import { z } from "zod";
 import { cpfClean } from "@/utils/checkCpf";
+import { cnpjClean } from "@/utils/checkCnpj";
+
+export const accountTypeEnum = z.enum(["business", "personal"]);
 
 export const requestCompanyCodeBodySchema = z
     .object({
+        accountType: accountTypeEnum.default("business"),
         email: z
             .string({ message: "Email is required" })
             .trim()
             .email({ message: "Invalid email format" })
             .toLowerCase(),
         cnpj: z.string().trim().optional(),
+        cpf: z.string().trim().optional(),
         name: z.string().trim().min(1).max(100).optional(),
     })
     .strict();
@@ -20,15 +25,14 @@ export const requestCompanyCodeResponseSchema = z.object({
 
 export const createCompanyRequestBodySchema = z
     .object({
-        registeredCompanyName: z.string().trim().min(2).max(200),
-        tradeName: z.string().trim().min(2).max(200),
+        accountType: accountTypeEnum.default("business"),
+        registeredCompanyName: z.string().trim().min(2).max(200).optional(),
+        tradeName: z.string().trim().min(2).max(200).optional(),
         cnpj: z
-            .string({ message: "CNPJ is required" })
+            .string()
             .trim()
-            .transform((val) => val.replace(/\D/g, ""))
-            .refine((val) => val.length === 14, {
-                message: "CNPJ must contain 14 digits",
-            }),
+            .transform((val) => cnpjClean(val))
+            .optional(),
         companyEmail: z.string().trim().email().toLowerCase().optional(),
         phone: z.string().trim().max(30).optional(),
         adminName: z.string().trim().min(2).max(100),
@@ -47,9 +51,8 @@ export const createCompanyRequestBodySchema = z
             }),
         adminPassword: z
             .string()
-            .trim()
             .min(8, { message: "Password must have at least 8 characters" })
-            .max(100),
+            .max(128),
         code: z
             .string({ message: "Verification code is required" })
             .trim()
@@ -63,10 +66,36 @@ export const createCompanyRequestBodySchema = z
             message: "Privacy policy acceptance is required",
         }),
     })
-    .strict();
+    .strict()
+    .superRefine((data, ctx) => {
+        if (data.accountType === "business") {
+            if (!data.registeredCompanyName) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["registeredCompanyName"],
+                    message: "Registered company name is required",
+                });
+            }
+            if (!data.tradeName) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["tradeName"],
+                    message: "Trade name is required",
+                });
+            }
+            if (!data.cnpj || data.cnpj.length !== 14) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["cnpj"],
+                    message: "CNPJ must contain 14 digits",
+                });
+            }
+        }
+    });
 
 export const companyRequestSummarySchema = z.object({
     id: z.string().uuid(),
+    accountType: accountTypeEnum,
     registeredCompanyName: z.string(),
     tradeName: z.string(),
     cnpj: z.string(),
@@ -79,6 +108,8 @@ export const companyRequestSummarySchema = z.object({
 
 export const createCompanyRequestResponseSchema = z.object({
     message: z.string(),
+    autoApproved: z.boolean().optional(),
+    username: z.string().optional(),
     request: companyRequestSummarySchema,
 });
 

@@ -10,6 +10,7 @@ import {
     listCompaniesOptions,
     listBranchesOptions,
     getMyCompaniesOptions,
+    updateMyCompanySettingsOptions,
     listCompanyUsersOptions,
     createCompanyUserOptions,
     updateCompanyUserOptions,
@@ -22,6 +23,7 @@ import {
     listMothersController,
     listBranchesController,
     getMyCompaniesController,
+    updateMyCompanySettingsController,
     listCompanyUsersController,
     createCompanyUserController,
     updateCompanyUserController,
@@ -46,6 +48,7 @@ export async function companiesRoutes(app: FastifyInstance) {
         );
         companyAdminRoutes.post("/branches", createBranchCompanyOptions, createBranchCompanyController);
         companyAdminRoutes.patch("/branches/:id", updateBranchCompanyOptions, updateBranchCompanyController);
+        companyAdminRoutes.patch("/me/settings", updateMyCompanySettingsOptions, updateMyCompanySettingsController);
 
         companyAdminRoutes.get("/users", listCompanyUsersOptions, listCompanyUsersController);
         companyAdminRoutes.post("/users", createCompanyUserOptions, createCompanyUserController);

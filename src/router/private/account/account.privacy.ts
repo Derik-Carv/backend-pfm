@@ -4,6 +4,7 @@ import { db } from "@/database/index";
 import {
     auditLogs,
     companies,
+    companyRegistrationRequests,
     emailVerificationCodes,
     legalAcceptances,
     roles,
@@ -20,6 +21,7 @@ import {
     getLegalMetadata,
     maskCpf,
 } from "@/lib/lgpd/legal.constants";
+import { maskTenantDocument } from "@/utils/checkCnpj";
 import { errorResponseSchema } from "@/router/error.schema";
 
 const legalAcceptanceItemSchema = z.object({
@@ -78,6 +80,7 @@ const privacyMeResponseSchema = z.object({
             id: z.string().uuid(),
             tradeName: z.string(),
             cnpj: z.string(),
+            accountType: z.enum(["business", "personal"]).optional(),
             isMother: z.boolean(),
         }),
     ),
@@ -140,6 +143,7 @@ const privacyExportResponseSchema = z.object({
             id: z.string().uuid(),
             tradeName: z.string(),
             cnpj: z.string(),
+            accountType: z.enum(["business", "personal"]).optional(),
             isMother: z.boolean(),
         }),
     ),
@@ -180,6 +184,7 @@ async function loadUserCompaniesForPrivacy(
             id: companies.id,
             tradeName: companies.tradeName,
             cnpj: companies.cnpj,
+            accountType: companies.accountType,
             motherId: companies.motherId,
         })
         .from(userCompanies)
@@ -193,6 +198,7 @@ async function loadUserCompaniesForPrivacy(
                 id: companies.id,
                 tradeName: companies.tradeName,
                 cnpj: companies.cnpj,
+                accountType: companies.accountType,
                 motherId: companies.motherId,
             })
             .from(companies)
@@ -204,7 +210,11 @@ async function loadUserCompaniesForPrivacy(
     return [...byId.values()].map((c) => ({
         id: c.id,
         tradeName: c.tradeName,
-        cnpj: c.cnpj,
+        cnpj: maskTenantDocument(c.cnpj, c.accountType),
+        accountType:
+            c.accountType === "personal"
+                ? ("personal" as const)
+                : ("business" as const),
         isMother: c.motherId === null,
     }));
 }
@@ -558,8 +568,69 @@ export async function registerAccountPrivacyRoutes(app: FastifyInstance) {
                         cpf: `ANON-${shortId}`,
                         active: false,
                         anonymizedAt,
+                        tokenVersion: sql`${users.tokenVersion} + 1`,
                     })
                     .where(eq(users.id, user.id));
+
+                if (user.primaryCompanyId) {
+                    await tx
+                        .update(companies)
+                        .set({
+                            registeredCompanyName: "Conta Pessoal Anonimizada",
+                            tradeName: "Conta Pessoal Anonimizada",
+                            cnpj: `ANON-${shortId}`,
+                            email: null,
+                            phone: null,
+                            active: false,
+                        })
+                        .where(
+                            and(
+                                eq(companies.id, user.primaryCompanyId),
+                                eq(companies.accountType, "personal"),
+                            ),
+                        );
+                }
+
+                await tx
+                    .update(companyRegistrationRequests)
+                    .set({
+                        registeredCompanyName: "Conta Pessoal Anonimizada",
+                        tradeName: "Conta Pessoal Anonimizada",
+                        cnpj: `ANON-${shortId}`,
+                        companyEmail: null,
+                        phone: null,
+                        adminName: "Usuário Anonimizado",
+                        adminSurname: "LGPD",
+                        adminEmail: `anon_${shortId}@anonymized.invalid`,
+                        adminCpf: `ANON-${shortId}`,
+                        adminPasswordHash: null,
+                        acceptedIp: null,
+                    })
+                    .where(
+                        and(
+                            eq(companyRegistrationRequests.accountType, "personal"),
+                            user.primaryCompanyId
+                                ? sql`(${companyRegistrationRequests.approvedUserId} = ${user.id} OR ${companyRegistrationRequests.approvedCompanyId} = ${user.primaryCompanyId})`
+                                : eq(companyRegistrationRequests.approvedUserId, user.id),
+                        ),
+                    );
+
+                await tx
+                    .update(companyRegistrationRequests)
+                    .set({
+                        adminName: "Usuário Anonimizado",
+                        adminSurname: "LGPD",
+                        adminEmail: `anon_${shortId}@anonymized.invalid`,
+                        adminCpf: `ANON-${shortId}`,
+                        adminPasswordHash: null,
+                        acceptedIp: null,
+                    })
+                    .where(
+                        and(
+                            eq(companyRegistrationRequests.accountType, "business"),
+                            eq(companyRegistrationRequests.approvedUserId, user.id),
+                        ),
+                    );
 
                 if (previousEmail) {
                     await tx

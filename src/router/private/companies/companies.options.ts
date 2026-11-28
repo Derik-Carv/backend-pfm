@@ -3,6 +3,7 @@ import {
     createBranchCompanyBodySchema,
     companyIdParamsSchema,
     updateCompanyBodySchema,
+    updateMyCompanySettingsBodySchema,
     companiesListResponseSchema,
     singleCompanyResponseSchema,
     userAccessibleCompaniesResponseSchema,
@@ -156,6 +157,22 @@ export const updateCompanyUserOptions = {
         body: updateCompanyUserBodySchema,
         response: {
             200: singleCompanyUserResponseSchema,
+            400: errorResponseSchema,
+            401: errorResponseSchema,
+            403: errorResponseSchema,
+            404: errorResponseSchema,
+            500: errorResponseSchema,
+        },
+    },
+};
+
+export const updateMyCompanySettingsOptions = {
+    schema: {
+        tags: ["Companies"],
+        summary: "Atualizar preferências da conta ou empresa ativa",
+        body: updateMyCompanySettingsBodySchema,
+        response: {
+            200: singleCompanyResponseSchema,
             400: errorResponseSchema,
             401: errorResponseSchema,
             403: errorResponseSchema,

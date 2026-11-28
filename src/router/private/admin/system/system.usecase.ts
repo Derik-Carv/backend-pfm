@@ -9,6 +9,7 @@ import {
 } from "@/database/schema/schema";
 import { count, eq, isNull, sql } from "drizzle-orm";
 import { maskCpf } from "@/lib/lgpd/legal.constants";
+import { maskTenantDocument } from "@/utils/checkCnpj";
 
 export async function usecaseGetSystemMetrics() {
     // 1. Estatísticas de Entidades
@@ -110,7 +111,8 @@ export async function usecaseGetCascadeHierarchy() {
             id: branch.id,
             registeredCompanyName: branch.registeredCompanyName,
             tradeName: branch.tradeName,
-            cnpj: branch.cnpj,
+            cnpj: maskTenantDocument(branch.cnpj, branch.accountType),
+            allowManualFinanceCodes: Boolean(branch.allowManualFinanceCodes),
             email: branch.email,
             phone: branch.phone,
             active: branch.active,
@@ -124,7 +126,12 @@ export async function usecaseGetCascadeHierarchy() {
             id: mother.id,
             registeredCompanyName: mother.registeredCompanyName,
             tradeName: mother.tradeName,
-            cnpj: mother.cnpj,
+            cnpj: maskTenantDocument(mother.cnpj, mother.accountType),
+            accountType:
+                mother.accountType === "personal"
+                    ? ("personal" as const)
+                    : ("business" as const),
+            allowManualFinanceCodes: Boolean(mother.allowManualFinanceCodes),
             email: mother.email,
             phone: mother.phone,
             active: mother.active,

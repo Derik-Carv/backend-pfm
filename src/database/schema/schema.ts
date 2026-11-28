@@ -38,6 +38,10 @@ export const companies = pgTable(
         registeredCompanyName: text("registered_company_name").notNull(),
         tradeName: text("trade_name").notNull(),
         cnpj: text("cnpj").unique().notNull(),
+        accountType: text("account_type").default("business").notNull(),
+        allowManualFinanceCodes: boolean("allow_manual_finance_codes")
+            .default(false)
+            .notNull(),
         email: text("email"),
         phone: text("phone"),
         motherId: uuid("mother_id").references((): any => companies.id),
@@ -51,6 +55,7 @@ export const companies = pgTable(
     (table) => [
         index("companies_mother_id_idx").on(table.motherId),
         index("companies_cnpj_idx").on(table.cnpj),
+        index("companies_account_type_idx").on(table.accountType),
         index("companies_active_idx").on(table.active),
     ],
 );
@@ -125,6 +130,7 @@ export const companyRegistrationRequests = pgTable(
         registeredCompanyName: text("registered_company_name").notNull(),
         tradeName: text("trade_name").notNull(),
         cnpj: text("cnpj").notNull(),
+        accountType: text("account_type").default("business").notNull(),
         companyEmail: text("company_email"),
         phone: text("phone"),
         adminName: text("admin_name").notNull(),

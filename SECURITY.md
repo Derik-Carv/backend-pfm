@@ -3,7 +3,7 @@
 > **CONSULTA OBRIGATÓRIA:**
 > Este documento (`SECURITY.md`) é referência permanente de segurança do **Backend PFM** e **deve ser consultado antes de implementar ou alterar** qualquer rota, schema Zod, middleware, repositório Drizzle, upload de arquivo, envio de e-mail, integração externa, variável de ambiente ou configuração de deploy/Docker.
 >
-> Base oficial: [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/index.html) | Última revisão: `2026-11-26`.
+> Base oficial: [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/index.html) | Última revisão: `2026-11-28`.
 
 ---
 
@@ -36,6 +36,42 @@ Antes de concluir qualquer alteração neste repositório, verifique:
 - [ ] Webhooks de pagamento/banco validam assinatura HMAC sobre *raw body* (`timingSafeEqual`) + anti-replay, e exportações CSV/XLSX neutralizam fórmulas (`=`, `+`, `-`, `@`)?
 - [ ] Novas dependências foram auditadas (`bun audit`) e não introduzem vulnerabilidades conhecidas?
 - [ ] Mudanças de rota, permissão, auditoria ou produção foram documentadas em `CHANGELOG.md`?
+
+---
+
+## Consulta Obrigatória Antes de Criar ou Alterar Qualquer Funcionalidade (Regressões & Armadilhas Conhecidas)
+
+> **PARE E LEIA ANTES DE CODIFICAR:**
+> As falhas abaixo já ocorreram no histórico real deste projeto — algumas **retornaram** ao adicionar novas funcionalidades (como a expansão para Contas Pessoais/CPF e Códigos Financeiros Manuais) e outras foram **criadas** durante implementações novas. Consulte esta lista antes de criar ou editar qualquer rota, schema Zod, migration SQL, regra de negócio ou fluxo LGPD.
+
+### Falhas que Retornaram (Regressões Recorrentes)
+
+1. **Oráculo de enumeração em rotas públicas por ordem de validação (`request-code`, `forgot`):**
+   - *O que aconteceu:* Em `POST /public/company-requests/request-code`, ao adicionar suporte a `personal` (CPF) e `business` (CNPJ), consultas ao banco (`existingUserByEmail`, `pendingEmailReq`) foram colocadas **antes** de `cpfValidateNormal`/`cnpjValidate`. Enviar e-mail existente + CPF inválido devolvia `200`, enquanto e-mail inexistente + CPF inválido devolvia `400`, reabrindo enumeração de e-mails.
+   - *Regra inviolável:* Sempre execute todas as validações sintáticas/matemáticas (Zod, dígito verificador de CPF/CNPJ) **antes** de qualquer query no banco, e devolva a mesma resposta `200` uniforme para e-mail/CPF/CNPJ já cadastrado, pendente ou em cooldown de OTP.
+2. **Reabertura de mutação pós-baixa em títulos financeiros (`PATCH /finance/entries/:id`):**
+   - *O que aconteceu:* Ao liberar `counterpartyName` editável para contas pessoais (PF), o campo foi adicionado ao `updateEntryBodySchema` sem ser incluído em `hasMonetaryOrScheduleChange` no `finance.repository.ts`, permitindo alterar a contraparte depois de o título já possuir baixa parcial.
+   - *Regra inviolável:* Todo novo campo fiscal, de contraparte, valor, data ou classificação adicionado ao `updateEntry` deve ser avaliado contra a trava `existing.settledAmountCents > 0n` (`409 ENTRY_HAS_SETTLEMENTS`). Em contas PJ (`business`), `counterpartyName`/`counterpartyDocument` nunca podem ser editáveis manualmente (devem sempre derivar de `clients`).
+3. **Divergência na política de senhas em novos schemas (`adminPassword` / `password`):**
+   - *O que aconteceu:* `createCompanyRequestBodySchema` voltou a usar `.trim()` e `.max(100)` em `adminPassword`, divergindo do padrão (`8..128` caracteres sem `.trim()` para cadastro/reset e `6..128` sem `.trim()` no login).
+   - *Regra inviolável:* Nunca aplique `.trim()` em campos de senha e padronize `min(8).max(128)` em criação/redefinição.
+
+### Falhas Criadas em Novas Implementações (PF/CPF, Financeiro e Migrations)
+
+4. **Anonimização LGPD incompleta em tabelas secundárias + `CHECK` que trava `ANON-%`:**
+   - *O que aconteceu:* O auto-cadastro PF gravava CPF, nome e e-mail em `company_registration_requests`. Ao anonimizar a conta em `POST /account/privacy/anonymize`, apenas `users` e `companies` eram anonimizados, deixando o CPF real na solicitação — além da constraint `company_reg_req_document_length_chk` exigir 11 dígitos sem prever `LIKE 'ANON-%'`.
+   - *Regra inviolável:* Sempre que uma nova tabela armazenar PII (`cpf`, `cnpj` pessoal, `email`, `phone`, `adminCpf`, `ip`), atualize `POST /account/privacy/anonymize` (incluindo incremento de `token_version`) e `src/lib/lgpd/retention.ts`, e garanta que constraints `CHECK` de comprimento aceitem `OR <coluna> LIKE 'ANON-%'`.
+5. **Bloqueio parcial de superfícies por `accountType` + código morto (`if` duplicado):**
+   - *O que aconteceu:* Contas pessoais (CPF) passaram a ser bloqueadas em `/nf` e `/notes`, mas `/movimentations` (atrelada a NF) ficou acessível; e em `GET /companies/branches` dois blocos `if` para `accountType === "personal"` deixaram o segundo (`200 []`) inalcançável atrás de um `403`.
+   - *Regra inviolável:* Ao restringir um domínio por tipo de conta (`business` vs `personal`), audite **todos** os prefixos dependentes em `src/router/index.ts` (ex.: `/nf`, `/notes`, `/movimentations`) e diferencie corretamente leitura segura (`GET`) de mutação proibida (`POST`/`PATCH`).
+6. **Violação única (`23505`) em fluxos concorrentes públicos e financeiros:**
+   - *O que aconteceu:* Transações de auto-aprovação PF (`/public/company-requests`) e gravações idempotentes podem receber duas requisições paralelas antes do commit, convertendo `23505` em HTTP `500` se não houver tratamento explícito.
+   - *Regra inviolável:* Todo `insert`/`transaction` com índice único acionado por entrada externa deve capturar `23505` (`code` / `cause.code`) e responder `409` (ou replay seguro no caso de `Idempotency-Key`).
+7. **Overflow de faixa em geradores automáticos de código:**
+   - *O que aconteceu:* `createCategory` buscava `maxSeq` dentro da banda `1..89`, mas ao incrementar `nextSeq = maxSeq + 1` não checava `nextSeq > maxBand`, permitindo que receita `1.89` virasse `1.90` (faixa reservada a deduções).
+   - *Regra inviolável:* Todo gerador sequencial delimitado por faixa deve validar explicitamente `nextSeq > maxBand` antes de tentar o `INSERT`.
+8. **Constraints `CHECK` em migrations de produção sobre dados legados:**
+   - *Cuidado obrigatório:* Antes de aplicar migrations com `CHECK (char_length(cnpj) = 14)` em produção (ex.: `0021_personal_cpf_accounts.sql`), auditar se não há registros antigos salvos com pontuação/máscara (`18` caracteres) para evitar falha na aplicação do DDL.
 
 ---
 
@@ -297,7 +333,7 @@ Todo módulo futuro envolvendo **contas a pagar/receber, fluxo de caixa, concili
 
 ## Diagnóstico Atual do Projeto (Status vs. Backlog de Hardening)
 
-*Estado atualizado em `2026-11-27` após revisão geral de segurança, testes de estresse locais e blindagem em rodadas P1, P2 e P3:*
+*Estado atualizado em `2026-11-28` após revisão de segurança da versão PF (CPF) + Códigos Financeiros Manuais/Automáticos e rodadas P1/P2/P3:*
 
 ### Controles implementados e verificados
 
@@ -319,7 +355,9 @@ Todo módulo futuro envolvendo **contas a pagar/receber, fluxo de caixa, concili
   - **P1 (`finance`):** vínculo intercompany restrito ao mesmo grupo econômico (`motherId`, eliminando oráculo cross-tenant), bloqueio de alteração de contraparte pós-baixa e derivação autoritativa a partir de cliente ativo não anonimizado (`updateEntry`), proteção de `kind`/`dreGroup`/`parentId` em categorias de sistema + detecção de ciclos em `parentId`, validação estrita de calendário em `isoDateSchema` / `diffDaysIso` / exportação CSV, e suporte explícito a saldo inicial negativo em contas bancárias/cartões (`intToCents(..., { allowNegative: true })`).
   - **P2 (`finance`, `public`, `frontend-pfm`):** conversão de erros matemáticos de domínio para HTTP `400`, tratamento de colisão `23505` / reuso cross-endpoint de `Idempotency-Key` como `409` ou replay seguro (+ chave estável em retries no `FinancePanel.tsx`), consistência estrita Serviço ↔ NF ↔ Cliente em `/finance/entries` e `/from-service/:serviceId`, e respostas uniformes `200` em `/public/company-requests/request-code` e `/public/password/forgot` (eliminando oráculos de enumeração de e-mail, CNPJ e cooldown).
   - **P3 (`finance`, `account`, `lgpd`, `adminData`):** `Cache-Control: private, no-store` e rate limit `sensitive` em `GET /finance/reports/export` (e `Cache-Control: private, no-store` nas rotas `/account/privacy/*`), expurgo de `financial_idempotency_keys` após 30 dias em `retention.ts` (exposto em `/admin/lgpd/cleanup`), e rejeição com `400` de payloads vazios/fora da allowlist em `/admin/data/:table`.
-- Suíte de testes automatizados (`bun test`: 28 testes base + regressões P1/P2/P3 em `src/tests/finance.test.ts`, `src/tests/security.test.ts` e `src/tests/infra.test.ts`).
+- Suporte e blindagem para contas pessoais (CPF) e códigos financeiros automáticos/manuais (`2026-11-28`):
+  - Validação completa de CNPJ (`src/utils/checkCnpj.ts`), mascaramento consistente (`maskTenantDocument`) em `/companies/*`, `/account/privacy/*`, `/admin/company-requests` e `/admin/system/hierarchy` (incluindo filiais), isolamento `isConsolidated = false`, bloqueio de `/nf`, `/notes` e `/movimentations` para `accountType = "personal"`, auto-geração de códigos respeitando limite de banda (`CATEGORY_CODE_BAND_EXHAUSTED`), validação matemática antes de consultas ao banco em `request-code`, tratamento de `23505` no auto-cadastro PF, trava de `counterpartyName` pós-baixa e anonimização LGPD completa em `users`, `companies` e `company_registration_requests` (com `token_version` incrementado e constraint `ANON-%` em `0021_personal_cpf_accounts.sql`).
+- Suíte de testes automatizados (`bun test`: 37 testes passando em `src/tests/finance.test.ts`, `src/tests/personalAccount.test.ts`, `src/tests/security.test.ts` e `src/tests/infra.test.ts`).
 
 > **Aviso operacional de deploy (volume `nf_archives`):** Como o container de produção do backend executa como `USER bun`, se o volume `nf_archives` já existir na VM com dono `root:root`, execute `docker compose -f compose.yaml -f compose.production.yaml run --rm --user root backend chown -R bun:bun /usr/src/app/archives` e aplique a migration `drizzle/0019_user_token_version.sql` ao atualizar a produção.
 

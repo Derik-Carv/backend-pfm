@@ -4,13 +4,15 @@ import { CompaniesRepository } from "@/database/tables/companies/companies.repos
 import { UserCompaniesRepository } from "@/database/tables/userCompanies/userCompanies.repository";
 import { hashPassword } from "@/lib/hash";
 import { maskCpf } from "@/lib/lgpd/legal.constants";
-import { cpfClean } from "@/utils/checkCpf";
+import { cnpjClean, cnpjValidate, maskTenantDocument } from "@/utils/checkCnpj";
+import { cpfClean, cpfValidateNormal } from "@/utils/checkCpf";
 import { generateNick, slugifyCompanyName } from "@/utils/createNick";
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import type {
     CreateMotherCompanyInput,
     CreateBranchCompanyInput,
     UpdateCompanyInput,
+    UpdateMyCompanySettingsInput,
     CreateCompanyUserInput,
     UpdateCompanyUserInput,
 } from "./companies.schemas";
@@ -48,6 +50,19 @@ export async function resolveUniqueUsername(
     throw new Error("USERNAME_ALREADY_EXISTS");
 }
 
+export function serializeCompanySafe<
+    T extends { cnpj: string; accountType?: string | null },
+>(company: T) {
+    return {
+        ...company,
+        accountType:
+            company.accountType === "personal"
+                ? ("personal" as const)
+                : ("business" as const),
+        cnpj: maskTenantDocument(company.cnpj, company.accountType),
+    };
+}
+
 export async function usecaseCreateMotherCompany(
     data: CreateMotherCompanyInput,
     creatorUserId: string,
@@ -55,7 +70,12 @@ export async function usecaseCreateMotherCompany(
     const companiesRepo = new CompaniesRepository();
     const userCompaniesRepo = new UserCompaniesRepository();
 
-    const existing = await companiesRepo.findByCnpj(data.cnpj);
+    const cleanedCnpj = cnpjClean(data.cnpj);
+    if (!cnpjValidate(cleanedCnpj)) {
+        throw new Error("INVALID_CNPJ");
+    }
+
+    const existing = await companiesRepo.findByCnpj(cleanedCnpj);
     if (existing) {
         throw new Error("COMPANY_CNPJ_ALREADY_EXISTS");
     }
@@ -66,7 +86,7 @@ export async function usecaseCreateMotherCompany(
 
     if (data.admin) {
         cleanedAdminCpf = cpfClean(data.admin.cpf);
-        if (!/^\d{11}$/.test(cleanedAdminCpf)) {
+        if (!(await cpfValidateNormal(cleanedAdminCpf))) {
             throw new Error("INVALID_CPF");
         }
 
@@ -110,7 +130,8 @@ export async function usecaseCreateMotherCompany(
     const newCompany = await companiesRepo.create({
         registeredCompanyName: data.registeredCompanyName,
         tradeName: data.tradeName,
-        cnpj: data.cnpj,
+        cnpj: cleanedCnpj,
+        accountType: "business",
         email: data.email,
         phone: data.phone,
         motherId: null,
@@ -182,6 +203,27 @@ export async function usecaseUpdateMotherCompany(
     return updated;
 }
 
+export async function usecaseUpdateMyCompanySettings(
+    companyId: string,
+    data: UpdateMyCompanySettingsInput,
+) {
+    const companiesRepo = new CompaniesRepository();
+    const target = await companiesRepo.findById(companyId);
+
+    if (!target || !target.active) {
+        throw new Error("COMPANY_NOT_FOUND");
+    }
+
+    const updated = await companiesRepo.update(companyId, {
+        allowManualFinanceCodes: data.allowManualFinanceCodes,
+    });
+    if (!updated) {
+        throw new Error("COMPANY_NOT_FOUND");
+    }
+
+    return updated;
+}
+
 export async function usecaseCreateBranchCompany(
     data: CreateBranchCompanyInput,
     motherId: string,
@@ -194,8 +236,16 @@ export async function usecaseCreateBranchCompany(
     if (!mother || !mother.active || mother.motherId !== null) {
         throw new Error("MOTHER_COMPANY_NOT_FOUND");
     }
+    if (mother.accountType === "personal") {
+        throw new Error("PERSONAL_ACCOUNT_NOT_ALLOWED");
+    }
 
-    const existing = await companiesRepo.findByCnpj(data.cnpj);
+    const cleanedCnpj = cnpjClean(data.cnpj);
+    if (!cnpjValidate(cleanedCnpj)) {
+        throw new Error("INVALID_CNPJ");
+    }
+
+    const existing = await companiesRepo.findByCnpj(cleanedCnpj);
     if (existing) {
         throw new Error("COMPANY_CNPJ_ALREADY_EXISTS");
     }
@@ -203,7 +253,8 @@ export async function usecaseCreateBranchCompany(
     const newBranch = await companiesRepo.create({
         registeredCompanyName: data.registeredCompanyName,
         tradeName: data.tradeName,
-        cnpj: data.cnpj,
+        cnpj: cleanedCnpj,
+        accountType: "business",
         email: data.email,
         phone: data.phone,
         motherId: mother.id,
@@ -408,6 +459,9 @@ export async function usecaseCreateCompanyUser(
     const targetCompany = await companiesRepo.findById(targetCompanyId);
     if (!targetCompany) {
         throw new Error("COMPANY_NOT_FOUND");
+    }
+    if (targetCompany.accountType === "personal") {
+        throw new Error("PERSONAL_ACCOUNT_NOT_ALLOWED");
     }
 
     let desiredUsername: string;

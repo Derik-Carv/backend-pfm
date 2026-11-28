@@ -6,7 +6,12 @@ export type Company = typeof companies.$inferSelect;
 export type UpdateCompanyDatabaseInput = Partial<
     Pick<
         CreateCompanyDatabaseInput,
-        "registeredCompanyName" | "tradeName" | "email" | "phone" | "active"
+        | "registeredCompanyName"
+        | "tradeName"
+        | "email"
+        | "phone"
+        | "active"
+        | "allowManualFinanceCodes"
     >
 >;
 

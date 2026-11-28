@@ -20,6 +20,8 @@ export interface TenantRequestContext {
     motherId: string;
     accessibleCompanyIds: string[];
     isConsolidated: boolean;
+    accountType: "business" | "personal";
+    allowManualFinanceCodes: boolean;
     userId: string;
 }
 
@@ -97,6 +99,7 @@ export class FinanceUseCase {
         const categories = await this.repo.listCategories(
             tenant.activeCompanyId,
             tenant.accessibleCompanyIds,
+            tenant.accountType,
         );
         return {
             message: "Categorias financeiras recuperadas com sucesso",
@@ -108,7 +111,7 @@ export class FinanceUseCase {
         tenant: TenantRequestContext,
         body: {
             parentId?: string | null;
-            code: string;
+            code?: string;
             name: string;
             kind: string;
             dreGroup?: string | null;
@@ -116,6 +119,8 @@ export class FinanceUseCase {
     ) {
         const category = await this.repo.createCategory({
             companyId: tenant.activeCompanyId,
+            accountType: tenant.accountType,
+            allowManualFinanceCodes: tenant.allowManualFinanceCodes,
             ...body,
         });
         return {
@@ -159,10 +164,11 @@ export class FinanceUseCase {
 
     async createCostCenter(
         tenant: TenantRequestContext,
-        body: { code: string; name: string },
+        body: { code?: string; name: string },
     ) {
         const costCenter = await this.repo.createCostCenter({
             companyId: tenant.activeCompanyId,
+            allowManualFinanceCodes: tenant.allowManualFinanceCodes,
             ...body,
         });
         return {
@@ -238,7 +244,8 @@ export class FinanceUseCase {
             description: string;
             documentNumber?: string | null;
             notes?: string | null;
-            clientId: string;
+            clientId?: string | null;
+            counterpartyName?: string | null;
             serviceId?: string | null;
             nfId?: string | null;
             categoryId: string;
@@ -260,6 +267,7 @@ export class FinanceUseCase {
         return this.repo.createEntries({
             companyId: tenant.activeCompanyId,
             motherId: tenant.motherId,
+            accountType: tenant.accountType,
             userId: tenant.userId,
             idempotencyKey,
             endpoint: "POST /finance/entries",
@@ -309,7 +317,11 @@ export class FinanceUseCase {
 
         let resolvedCategoryId = body.categoryId;
         if (!resolvedCategoryId) {
-            await ensureDefaultFinancialCategories(tenant.activeCompanyId);
+            await ensureDefaultFinancialCategories(
+                tenant.activeCompanyId,
+                db,
+                tenant.accountType,
+            );
             const [defaultRevCat] = await db
                 .select({ id: financialCategories.id })
                 .from(financialCategories)
@@ -355,6 +367,13 @@ export class FinanceUseCase {
         let issueDate = body.issueDate ?? service.initialDate ?? todayIsoUtc();
 
         if (body.nfId) {
+            if (tenant.accountType === "personal") {
+                throw new FinanceDomainError(
+                    403,
+                    "NF_NOT_AVAILABLE_FOR_PERSONAL",
+                    "Notas fiscais estão disponíveis apenas para contas empresariais (CNPJ).",
+                );
+            }
             const [note] = await db
                 .select()
                 .from(nf)
@@ -402,6 +421,7 @@ export class FinanceUseCase {
         const result = await this.repo.createEntries({
             companyId: tenant.activeCompanyId,
             motherId: tenant.motherId,
+            accountType: tenant.accountType,
             userId: tenant.userId,
             idempotencyKey,
             endpoint: `POST /finance/entries/from-service/${serviceId}`,
@@ -448,6 +468,7 @@ export class FinanceUseCase {
             id,
             tenant.accessibleCompanyIds,
             body,
+            tenant.accountType,
         );
         return {
             message: "Título financeiro atualizado com sucesso",

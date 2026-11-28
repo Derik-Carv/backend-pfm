@@ -156,7 +156,8 @@ export const createCategoryBodySchema = z.object({
         .trim()
         .min(1)
         .max(30)
-        .regex(/^[A-Za-z0-9._-]+$/),
+        .regex(/^[A-Za-z0-9._-]+$/)
+        .optional(),
     name: z.string().trim().min(2).max(120),
     kind: categoryKindEnum,
     dreGroup: dreGroupEnum.nullable().optional(),
@@ -201,7 +202,8 @@ export const createCostCenterBodySchema = z.object({
         .trim()
         .min(1)
         .max(20)
-        .regex(/^[A-Za-z0-9._-]+$/),
+        .regex(/^[A-Za-z0-9._-]+$/)
+        .optional(),
     name: z.string().trim().min(2).max(120),
 });
 
@@ -278,7 +280,8 @@ export const createEntryBodySchema = z
         description: z.string().trim().min(2).max(240),
         documentNumber: z.string().trim().max(80).nullable().optional(),
         notes: z.string().trim().max(1000).nullable().optional(),
-        clientId: uuidSchema,
+        clientId: uuidSchema.nullable().optional(),
+        counterpartyName: z.string().trim().max(120).nullable().optional(),
         serviceId: uuidSchema.nullable().optional(),
         nfId: uuidSchema.nullable().optional(),
         categoryId: uuidSchema,
@@ -342,6 +345,7 @@ export const updateEntryBodySchema = z.object({
     documentNumber: z.string().trim().max(80).nullable().optional(),
     notes: z.string().trim().max(1000).nullable().optional(),
     clientId: uuidSchema.optional(),
+    counterpartyName: z.string().trim().max(120).nullable().optional(),
     categoryId: uuidSchema.optional(),
     costCenterId: uuidSchema.nullable().optional(),
     competenceDate: isoDateSchema.optional(),

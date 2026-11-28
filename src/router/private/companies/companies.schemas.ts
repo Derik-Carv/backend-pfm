@@ -44,13 +44,22 @@ export const updateCompanyBodySchema = z.object({
     email: z.string().email().nullable().optional(),
     phone: z.string().nullable().optional(),
     active: z.boolean().optional(),
+    allowManualFinanceCodes: z.boolean().optional(),
 });
+
+export const updateMyCompanySettingsBodySchema = z
+    .object({
+        allowManualFinanceCodes: z.boolean(),
+    })
+    .strict();
 
 export const companyResponseSchema = z.object({
     id: z.string().uuid(),
     registeredCompanyName: z.string(),
     tradeName: z.string(),
     cnpj: z.string(),
+    accountType: z.enum(["business", "personal"]).optional(),
+    allowManualFinanceCodes: z.boolean().optional(),
     email: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
     motherId: z.string().uuid().nullable().optional(),
@@ -134,5 +143,6 @@ export const singleCompanyUserResponseSchema = z.object({
 export type CreateMotherCompanyInput = z.infer<typeof createMotherCompanyBodySchema>;
 export type CreateBranchCompanyInput = z.infer<typeof createBranchCompanyBodySchema>;
 export type UpdateCompanyInput = z.infer<typeof updateCompanyBodySchema>;
+export type UpdateMyCompanySettingsInput = z.infer<typeof updateMyCompanySettingsBodySchema>;
 export type CreateCompanyUserInput = z.infer<typeof createCompanyUserBodySchema>;
 export type UpdateCompanyUserInput = z.infer<typeof updateCompanyUserBodySchema>;

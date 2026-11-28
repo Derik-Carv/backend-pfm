@@ -29,6 +29,14 @@ export async function requestCompanyCodeController(
             });
         }
 
+        if (error.message === "INVALID_CPF") {
+            return reply.status(400).send({ message: "Invalid CPF" });
+        }
+
+        if (error.message === "INVALID_CNPJ") {
+            return reply.status(400).send({ message: "Invalid CNPJ" });
+        }
+
         if (error.message === "EMAIL_ALREADY_EXISTS") {
             return reply.status(409).send({ message: "Email is already registered" });
         }
@@ -74,9 +82,14 @@ export async function createCompanyRequestController(
         const created = await usecaseCreateCompanyRequest(data, meta);
 
         return reply.status(201).send({
-            message:
-                "Solicitação de cadastro enviada! Aguarde a aprovação do administrador da plataforma.",
-            request: created,
+            message: created.autoApproved
+                ? "Conta pessoal criada e ativada com sucesso! Já pode entrar com seu e-mail e senha."
+                : "Solicitação de cadastro enviada! Aguarde a aprovação do administrador da plataforma.",
+            autoApproved: created.autoApproved,
+            ...("username" in created && created.username
+                ? { username: created.username }
+                : {}),
+            request: created.request,
         });
     } catch (error: any) {
         request.log.error(error);
@@ -90,6 +103,10 @@ export async function createCompanyRequestController(
 
         if (error.message === "INVALID_CPF") {
             return reply.status(400).send({ message: "Invalid CPF" });
+        }
+
+        if (error.message === "INVALID_CNPJ") {
+            return reply.status(400).send({ message: "Invalid CNPJ" });
         }
 
         if (error.message === "INVALID_OR_EXPIRED_CODE") {

@@ -1,4 +1,4 @@
-import { type FastifyInstance } from "fastify";
+import { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { rateLimitProfiles } from "@/policies/rateLimit";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { inspectRole } from "@/middlewares/role.middleware";
@@ -30,10 +30,25 @@ const allowedRolesManager = [
     allRoles.finance,
 ];
 
+async function blockPersonalAccountNf(
+    request: FastifyRequest,
+    reply: FastifyReply,
+) {
+    if (
+        request.user?.role !== allRoles.administrator &&
+        request.tenant?.accountType === "personal"
+    ) {
+        return reply.status(403).send({
+            message: "Notas fiscais não estão disponíveis para contas pessoais (CPF).",
+        });
+    }
+}
+
 export async function nfServicesRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
 
     app.addHook("preHandler", inspectRole(allowedRolesFinance));
+    app.addHook("preHandler", blockPersonalAccountNf);
 
     app.post("/", createNfRouteOptions, createNfServicesController);
 
@@ -43,6 +58,7 @@ export async function nfServicesRoutes(app: FastifyInstance) {
 export async function nfQueryRoutes(app: FastifyInstance) {
     app.addHook("preHandler", authMiddleware);
     app.addHook("preHandler", inspectRole(allowedRolesManager));
+    app.addHook("preHandler", blockPersonalAccountNf);
 
     app.get("/", listNfRouteOptions, listNfController);
     app.get("/:id/file", getNfFileController);

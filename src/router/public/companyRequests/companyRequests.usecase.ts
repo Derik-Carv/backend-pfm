@@ -3,8 +3,11 @@ import {
     companies,
     companyRegistrationRequests,
     legalAcceptances,
+    roles,
+    userCompanies,
     users,
 } from "@/database/schema/schema";
+import { ensureDefaultFinancialCategories } from "@/lib/finance/defaultCategories";
 import {
     LEGAL_PRIVACY_VERSION,
     LEGAL_TERMS_VERSION,
@@ -18,7 +21,10 @@ import {
     sendCompanyRequestDecisionEmail,
     sendVerificationCodeEmail,
 } from "@/lib/nodemailer/nodemailer";
-import { cpfValidateNormal } from "@/utils/checkCpf";
+import { resolveUniqueUsername } from "@/router/private/companies/companies.usecase";
+import { cnpjClean, cnpjValidate, maskTenantDocument } from "@/utils/checkCnpj";
+import { cpfClean, cpfValidateNormal } from "@/utils/checkCpf";
+import { slugifyCompanyName } from "@/utils/createNick";
 import { and, eq, sql } from "drizzle-orm";
 import type {
     CreateCompanyRequestInput,
@@ -32,6 +38,20 @@ const UNIFORM_COMPANY_CODE_RESPONSE = {
 };
 
 export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
+    if (data.accountType === "personal" && data.cpf) {
+        const cleanedCpf = cpfClean(data.cpf);
+        if (!(await cpfValidateNormal(cleanedCpf))) {
+            throw new Error("INVALID_CPF");
+        }
+    }
+
+    if (data.accountType === "business" && data.cnpj) {
+        const cleanedCnpj = cnpjClean(data.cnpj);
+        if (!cnpjValidate(cleanedCnpj)) {
+            throw new Error("INVALID_CNPJ");
+        }
+    }
+
     const [existingUserByEmail] = await db
         .select({ id: users.id })
         .from(users)
@@ -55,8 +75,45 @@ export async function usecaseRequestCompanyCode(data: RequestCompanyCodeInput) {
         return UNIFORM_COMPANY_CODE_RESPONSE;
     }
 
-    if (data.cnpj) {
-        const cleanedCnpj = data.cnpj.replace(/\D/g, "");
+    if (data.accountType === "personal" && data.cpf) {
+        const cleanedCpf = cpfClean(data.cpf);
+        if (cleanedCpf.length === 11) {
+            const [existingUserByCpf] = await db
+                .select({ id: users.id })
+                .from(users)
+                .where(eq(users.cpf, cleanedCpf))
+                .limit(1);
+            if (existingUserByCpf) {
+                return UNIFORM_COMPANY_CODE_RESPONSE;
+            }
+
+            const [existingPersonalTenant] = await db
+                .select({ id: companies.id })
+                .from(companies)
+                .where(eq(companies.cnpj, cleanedCpf))
+                .limit(1);
+            if (existingPersonalTenant) {
+                return UNIFORM_COMPANY_CODE_RESPONSE;
+            }
+
+            const [pendingCpfReq] = await db
+                .select({ id: companyRegistrationRequests.id })
+                .from(companyRegistrationRequests)
+                .where(
+                    and(
+                        eq(companyRegistrationRequests.adminCpf, cleanedCpf),
+                        eq(companyRegistrationRequests.status, "pending"),
+                    ),
+                )
+                .limit(1);
+            if (pendingCpfReq) {
+                return UNIFORM_COMPANY_CODE_RESPONSE;
+            }
+        }
+    }
+
+    if (data.accountType === "business" && data.cnpj) {
+        const cleanedCnpj = cnpjClean(data.cnpj);
         if (cleanedCnpj.length === 14) {
             const [existingCompany] = await db
                 .select({ id: companies.id })
@@ -116,6 +173,24 @@ export async function usecaseCreateCompanyRequest(
         throw new Error("INVALID_CPF");
     }
 
+    const accountType = data.accountType;
+    const isPersonal = accountType === "personal";
+
+    if (!isPersonal) {
+        if (!data.cnpj || !cnpjValidate(data.cnpj)) {
+            throw new Error("INVALID_CNPJ");
+        }
+    }
+
+    const tenantDocument = isPersonal ? data.adminCpf : data.cnpj!;
+    const fullName = `${data.adminName} ${data.adminSurname}`.trim();
+    const resolvedRegisteredName = isPersonal
+        ? fullName
+        : data.registeredCompanyName!;
+    const resolvedTradeName = isPersonal
+        ? data.tradeName || fullName
+        : data.tradeName!;
+
     const codesRepo = new EmailVerificationCodesRepository();
     const verification = await codesRepo.verifyAndConsumeCode(
         data.adminEmail,
@@ -129,23 +204,25 @@ export async function usecaseCreateCompanyRequest(
     const [existingCompany] = await db
         .select({ id: companies.id })
         .from(companies)
-        .where(eq(companies.cnpj, data.cnpj))
+        .where(eq(companies.cnpj, tenantDocument))
         .limit(1);
     if (existingCompany) {
-        throw new Error("COMPANY_CNPJ_ALREADY_EXISTS");
+        throw new Error(
+            isPersonal ? "CPF_ALREADY_EXISTS" : "COMPANY_CNPJ_ALREADY_EXISTS",
+        );
     }
 
-    const [pendingCnpjReq] = await db
+    const [pendingDocReq] = await db
         .select({ id: companyRegistrationRequests.id })
         .from(companyRegistrationRequests)
         .where(
             and(
-                eq(companyRegistrationRequests.cnpj, data.cnpj),
+                eq(companyRegistrationRequests.cnpj, tenantDocument),
                 eq(companyRegistrationRequests.status, "pending"),
             ),
         )
         .limit(1);
-    if (pendingCnpjReq) {
+    if (pendingDocReq) {
         throw new Error("REQUEST_ALREADY_PENDING");
     }
 
@@ -198,13 +275,181 @@ export async function usecaseCreateCompanyRequest(
     const adminPasswordHash = await hashPassword(data.adminPassword);
     const acceptedAt = new Date();
 
+    if (isPersonal) {
+        const [companyAdminRole] = await db
+            .select({ id: roles.id })
+            .from(roles)
+            .where(and(eq(roles.name, "company_admin"), eq(roles.active, true)))
+            .limit(1);
+        if (!companyAdminRole) {
+            throw new Error("ROLE_NOT_FOUND");
+        }
+
+        const slugBase = slugifyCompanyName(resolvedTradeName) || "pessoal";
+        const generatedUsername = await resolveUniqueUsername(
+            `pessoal.${slugBase}`,
+            false,
+        );
+
+        let created;
+        try {
+            created = await db.transaction(async (tx) => {
+                const [newCompany] = await tx
+                    .insert(companies)
+                    .values({
+                        registeredCompanyName: resolvedRegisteredName,
+                        tradeName: resolvedTradeName,
+                        cnpj: tenantDocument,
+                        accountType: "personal",
+                        email: data.adminEmail,
+                        phone: data.phone ?? null,
+                        motherId: null,
+                        active: true,
+                    })
+                    .returning();
+
+                const [createdUser] = await tx
+                    .insert(users)
+                    .values({
+                        name: data.adminName,
+                        surname: data.adminSurname,
+                        username: generatedUsername,
+                        email: data.adminEmail.toLowerCase(),
+                        emailVerified: true,
+                        password: adminPasswordHash,
+                        roleId: companyAdminRole.id,
+                        primaryCompanyId: newCompany.id,
+                        cpf: data.adminCpf,
+                        active: true,
+                        passwordChangeRequired: false,
+                    })
+                    .returning({
+                        id: users.id,
+                        username: users.username,
+                    });
+
+                await tx.insert(userCompanies).values({
+                    userId: createdUser.id,
+                    companyId: newCompany.id,
+                    isDefault: true,
+                });
+
+                await ensureDefaultFinancialCategories(newCompany.id, tx, "personal");
+
+                const [reqRow] = await tx
+                    .insert(companyRegistrationRequests)
+                    .values({
+                        accountType: "personal",
+                        registeredCompanyName: resolvedRegisteredName,
+                        tradeName: resolvedTradeName,
+                        cnpj: tenantDocument,
+                        companyEmail: data.adminEmail,
+                        phone: data.phone ?? null,
+                        adminName: data.adminName,
+                        adminSurname: data.adminSurname,
+                        adminEmail: data.adminEmail,
+                        adminCpf: data.adminCpf,
+                        adminPasswordHash: null,
+                        status: "approved",
+                        reviewedAt: acceptedAt,
+                        approvedCompanyId: newCompany.id,
+                        approvedUserId: createdUser.id,
+                        acceptedTermsVersion: LEGAL_TERMS_VERSION,
+                        acceptedPrivacyVersion: LEGAL_PRIVACY_VERSION,
+                        acceptedIp: meta.ipAddress,
+                        acceptedAt,
+                    })
+                    .returning({
+                        id: companyRegistrationRequests.id,
+                        accountType: companyRegistrationRequests.accountType,
+                        registeredCompanyName:
+                            companyRegistrationRequests.registeredCompanyName,
+                        tradeName: companyRegistrationRequests.tradeName,
+                        cnpj: companyRegistrationRequests.cnpj,
+                        adminName: companyRegistrationRequests.adminName,
+                        adminSurname: companyRegistrationRequests.adminSurname,
+                        adminEmail: companyRegistrationRequests.adminEmail,
+                        status: companyRegistrationRequests.status,
+                        createdAt: companyRegistrationRequests.createdAt,
+                    });
+
+                await tx.insert(legalAcceptances).values([
+                    {
+                        userId: createdUser.id,
+                        companyRequestId: reqRow.id,
+                        documentType: "terms_of_use",
+                        documentVersion: LEGAL_TERMS_VERSION,
+                        ipAddress: meta.ipAddress,
+                        userAgent: meta.userAgent,
+                        acceptedAt,
+                    },
+                    {
+                        userId: createdUser.id,
+                        companyRequestId: reqRow.id,
+                        documentType: "privacy_policy",
+                        documentVersion: LEGAL_PRIVACY_VERSION,
+                        ipAddress: meta.ipAddress,
+                        userAgent: meta.userAgent,
+                        acceptedAt,
+                    },
+                ]);
+
+                return {
+                    autoApproved: true,
+                    username: createdUser.username,
+                    request: {
+                        ...reqRow,
+                        accountType: "personal" as const,
+                        cnpj: maskTenantDocument(reqRow.cnpj, "personal"),
+                    },
+                };
+            });
+        } catch (err) {
+            const pgErr = err as {
+                code?: string;
+                constraint_name?: string;
+                constraint?: string;
+                cause?: { code?: string; constraint_name?: string; constraint?: string };
+            };
+            const pgCode = pgErr?.code ?? pgErr?.cause?.code;
+            const pgConstraint = String(
+                pgErr?.constraint_name ??
+                    pgErr?.constraint ??
+                    pgErr?.cause?.constraint_name ??
+                    pgErr?.cause?.constraint ??
+                    "",
+            ).toLowerCase();
+            if (pgCode === "23505") {
+                if (pgConstraint.includes("email")) {
+                    throw new Error("EMAIL_ALREADY_EXISTS");
+                }
+                if (pgConstraint.includes("cpf") || pgConstraint.includes("cnpj")) {
+                    throw new Error("CPF_ALREADY_EXISTS");
+                }
+                throw new Error("REQUEST_ALREADY_PENDING");
+            }
+            throw err;
+        }
+
+        void sendCompanyRequestDecisionEmail({
+            to: created.request.adminEmail,
+            companyName: created.request.tradeName,
+            adminName: created.request.adminName,
+            decision: "approved",
+            username: created.username,
+        });
+
+        return created;
+    }
+
     const created = await db.transaction(async (tx) => {
         const [reqRow] = await tx
             .insert(companyRegistrationRequests)
             .values({
-                registeredCompanyName: data.registeredCompanyName,
-                tradeName: data.tradeName,
-                cnpj: data.cnpj,
+                accountType: "business",
+                registeredCompanyName: resolvedRegisteredName,
+                tradeName: resolvedTradeName,
+                cnpj: tenantDocument,
                 companyEmail: data.companyEmail ?? null,
                 phone: data.phone ?? null,
                 adminName: data.adminName,
@@ -220,7 +465,9 @@ export async function usecaseCreateCompanyRequest(
             })
             .returning({
                 id: companyRegistrationRequests.id,
-                registeredCompanyName: companyRegistrationRequests.registeredCompanyName,
+                accountType: companyRegistrationRequests.accountType,
+                registeredCompanyName:
+                    companyRegistrationRequests.registeredCompanyName,
                 tradeName: companyRegistrationRequests.tradeName,
                 cnpj: companyRegistrationRequests.cnpj,
                 adminName: companyRegistrationRequests.adminName,
@@ -249,13 +496,19 @@ export async function usecaseCreateCompanyRequest(
             },
         ]);
 
-        return reqRow;
+        return {
+            autoApproved: false,
+            request: {
+                ...reqRow,
+                accountType: "business" as const,
+            },
+        };
     });
 
     void sendCompanyRequestDecisionEmail({
-        to: created.adminEmail,
-        companyName: created.tradeName,
-        adminName: created.adminName,
+        to: created.request.adminEmail,
+        companyName: created.request.tradeName,
+        adminName: created.request.adminName,
         decision: "received",
     });
 

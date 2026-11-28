@@ -373,8 +373,12 @@ export class FinanceRepository {
     }
 
     // -------------------- Categories --------------------
-    async listCategories(activeCompanyId: string, companyIds: string[]) {
-        await ensureDefaultFinancialCategories(activeCompanyId);
+    async listCategories(
+        activeCompanyId: string,
+        companyIds: string[],
+        accountType: "business" | "personal" = "business",
+    ) {
+        await ensureDefaultFinancialCategories(activeCompanyId, db, accountType);
 
         const rows = await db
             .select()
@@ -405,15 +409,51 @@ export class FinanceRepository {
         }));
     }
 
+    private resolveAutoCategoryCodeConfig(
+        kind: string,
+        accountType: "business" | "personal",
+    ): { prefix: string; startSeq: number; minBand: number; maxBand: number } {
+        switch (kind) {
+            case "revenue":
+                return { prefix: "1", startSeq: 1, minBand: 1, maxBand: 89 };
+            case "deduction":
+                return { prefix: "1", startSeq: 90, minBand: 90, maxBand: 999 };
+            case "direct_cost":
+                return { prefix: "2", startSeq: 1, minBand: 1, maxBand: 89 };
+            case "operating_expense":
+                return accountType === "personal"
+                    ? { prefix: "2", startSeq: 1, minBand: 1, maxBand: 89 }
+                    : { prefix: "3", startSeq: 1, minBand: 1, maxBand: 89 };
+            case "financial_result":
+                return { prefix: "4", startSeq: 1, minBand: 1, maxBand: 89 };
+            case "transfer":
+                return { prefix: "5", startSeq: 90, minBand: 90, maxBand: 999 };
+            default:
+                return { prefix: "3", startSeq: 1, minBand: 1, maxBand: 89 };
+        }
+    }
+
     async createCategory(input: {
         companyId: string;
+        accountType?: "business" | "personal";
+        allowManualFinanceCodes?: boolean;
         parentId?: string | null;
-        code: string;
+        code?: string;
         name: string;
         kind: string;
         dreGroup?: string | null;
     }) {
-        await ensureDefaultFinancialCategories(input.companyId);
+        const accountType = input.accountType ?? "business";
+        await ensureDefaultFinancialCategories(input.companyId, db, accountType);
+
+        const trimmedManualCode = input.code?.trim();
+        if (trimmedManualCode && !input.allowManualFinanceCodes) {
+            throw new FinanceDomainError(
+                403,
+                "MANUAL_CODE_NOT_ENABLED",
+                "Código manual desabilitado para esta conta. Habilite a opção nas configurações administrativas para informar códigos manualmente.",
+            );
+        }
 
         if (input.parentId) {
             const [parent] = await db
@@ -435,51 +475,133 @@ export class FinanceRepository {
             }
         }
 
-        const [duplicate] = await db
-            .select({ id: financialCategories.id })
-            .from(financialCategories)
-            .where(
-                and(
-                    eq(financialCategories.companyId, input.companyId),
-                    eq(financialCategories.code, input.code),
-                ),
-            )
-            .limit(1);
+        if (trimmedManualCode) {
+            const [duplicate] = await db
+                .select({ id: financialCategories.id })
+                .from(financialCategories)
+                .where(
+                    and(
+                        eq(financialCategories.companyId, input.companyId),
+                        eq(financialCategories.code, trimmedManualCode),
+                    ),
+                )
+                .limit(1);
 
-        if (duplicate) {
-            throw new FinanceDomainError(
-                409,
-                "CATEGORY_CODE_CONFLICT",
-                "Já existe uma categoria financeira com este código.",
-            );
-        }
-
-        try {
-            const [created] = await db
-                .insert(financialCategories)
-                .values({
-                    companyId: input.companyId,
-                    parentId: input.parentId ?? null,
-                    code: input.code,
-                    name: input.name,
-                    kind: input.kind,
-                    dreGroup: input.dreGroup ?? null,
-                    isSystem: false,
-                    active: true,
-                })
-                .returning();
-
-            return created;
-        } catch (err) {
-            if (getPgUniqueViolationConstraint(err)) {
+            if (duplicate) {
                 throw new FinanceDomainError(
                     409,
                     "CATEGORY_CODE_CONFLICT",
                     "Já existe uma categoria financeira com este código.",
                 );
             }
-            throw err;
+
+            try {
+                const [created] = await db
+                    .insert(financialCategories)
+                    .values({
+                        companyId: input.companyId,
+                        parentId: input.parentId ?? null,
+                        code: trimmedManualCode,
+                        name: input.name,
+                        kind: input.kind,
+                        dreGroup: input.dreGroup ?? null,
+                        isSystem: false,
+                        active: true,
+                    })
+                    .returning();
+
+                return created;
+            } catch (err) {
+                if (getPgUniqueViolationConstraint(err)) {
+                    throw new FinanceDomainError(
+                        409,
+                        "CATEGORY_CODE_CONFLICT",
+                        "Já existe uma categoria financeira com este código.",
+                    );
+                }
+                throw err;
+            }
         }
+
+        const existingRows = await db
+            .select({ code: financialCategories.code })
+            .from(financialCategories)
+            .where(eq(financialCategories.companyId, input.companyId));
+        const existingSet = new Set(existingRows.map((r) => r.code));
+        const { prefix, startSeq, minBand, maxBand } =
+            this.resolveAutoCategoryCodeConfig(input.kind, accountType);
+
+        const codeRegex = new RegExp(`^${prefix}\\.(\\d+)$`);
+        let maxSeq = startSeq - 1;
+        for (const existingCode of existingSet) {
+            const match = codeRegex.exec(existingCode);
+            if (!match) continue;
+            const n = Number.parseInt(match[1], 10);
+            if (Number.isInteger(n) && n >= minBand && n <= maxBand && n > maxSeq) {
+                maxSeq = n;
+            }
+        }
+
+        let nextSeq = maxSeq + 1;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            if (nextSeq > maxBand) {
+                throw new FinanceDomainError(
+                    409,
+                    "CATEGORY_CODE_BAND_EXHAUSTED",
+                    "Limite de códigos automáticos atingido para esta classificação. Habilite códigos manuais nas configurações para continuar.",
+                );
+            }
+            let candidate = `${prefix}.${String(nextSeq).padStart(2, "0")}`;
+            while (existingSet.has(candidate)) {
+                nextSeq += 1;
+                if (nextSeq > maxBand) {
+                    throw new FinanceDomainError(
+                        409,
+                        "CATEGORY_CODE_BAND_EXHAUSTED",
+                        "Limite de códigos automáticos atingido para esta classificação. Habilite códigos manuais nas configurações para continuar.",
+                    );
+                }
+                candidate = `${prefix}.${String(nextSeq).padStart(2, "0")}`;
+            }
+            existingSet.add(candidate);
+
+            try {
+                const [created] = await db
+                    .insert(financialCategories)
+                    .values({
+                        companyId: input.companyId,
+                        parentId: input.parentId ?? null,
+                        code: candidate,
+                        name: input.name,
+                        kind: input.kind,
+                        dreGroup: input.dreGroup ?? null,
+                        isSystem: false,
+                        active: true,
+                    })
+                    .returning();
+
+                return created;
+            } catch (err) {
+                if (getPgUniqueViolationConstraint(err) && attempt < 4) {
+                    nextSeq += 1;
+                    continue;
+                }
+                if (getPgUniqueViolationConstraint(err)) {
+                    throw new FinanceDomainError(
+                        409,
+                        "CATEGORY_CODE_CONFLICT",
+                        "Não foi possível gerar código único para a categoria. Tente novamente.",
+                    );
+                }
+                throw err;
+            }
+        }
+
+        throw new FinanceDomainError(
+            500,
+            "CATEGORY_CODE_GENERATION_FAILED",
+            "Não foi possível gerar código automático para a categoria financeira.",
+        );
     }
 
     async updateCategory(
@@ -601,50 +723,120 @@ export class FinanceRepository {
 
     async createCostCenter(input: {
         companyId: string;
-        code: string;
+        allowManualFinanceCodes?: boolean;
+        code?: string;
         name: string;
     }) {
-        const [duplicate] = await db
-            .select({ id: costCenters.id })
-            .from(costCenters)
-            .where(
-                and(
-                    eq(costCenters.companyId, input.companyId),
-                    eq(costCenters.code, input.code),
-                ),
-            )
-            .limit(1);
-
-        if (duplicate) {
+        const trimmedManualCode = input.code?.trim();
+        if (trimmedManualCode && !input.allowManualFinanceCodes) {
             throw new FinanceDomainError(
-                409,
-                "COST_CENTER_CODE_CONFLICT",
-                "Já existe um centro de custo com este código.",
+                403,
+                "MANUAL_CODE_NOT_ENABLED",
+                "Código manual desabilitado para esta conta. Habilite a opção nas configurações administrativas para informar códigos manualmente.",
             );
         }
 
-        try {
-            const [created] = await db
-                .insert(costCenters)
-                .values({
-                    companyId: input.companyId,
-                    code: input.code,
-                    name: input.name,
-                    active: true,
-                })
-                .returning();
+        if (trimmedManualCode) {
+            const [duplicate] = await db
+                .select({ id: costCenters.id })
+                .from(costCenters)
+                .where(
+                    and(
+                        eq(costCenters.companyId, input.companyId),
+                        eq(costCenters.code, trimmedManualCode),
+                    ),
+                )
+                .limit(1);
 
-            return created;
-        } catch (err) {
-            if (getPgUniqueViolationConstraint(err)) {
+            if (duplicate) {
                 throw new FinanceDomainError(
                     409,
                     "COST_CENTER_CODE_CONFLICT",
                     "Já existe um centro de custo com este código.",
                 );
             }
-            throw err;
+
+            try {
+                const [created] = await db
+                    .insert(costCenters)
+                    .values({
+                        companyId: input.companyId,
+                        code: trimmedManualCode,
+                        name: input.name,
+                        active: true,
+                    })
+                    .returning();
+
+                return created;
+            } catch (err) {
+                if (getPgUniqueViolationConstraint(err)) {
+                    throw new FinanceDomainError(
+                        409,
+                        "COST_CENTER_CODE_CONFLICT",
+                        "Já existe um centro de custo com este código.",
+                    );
+                }
+                throw err;
+            }
         }
+
+        const existingRows = await db
+            .select({ code: costCenters.code })
+            .from(costCenters)
+            .where(eq(costCenters.companyId, input.companyId));
+        const existingSet = new Set(existingRows.map((r) => r.code.toUpperCase()));
+        let maxNum = 0;
+        for (const existingCode of existingRows) {
+            const match = /^CC-(\d+)$/i.exec(existingCode.code.trim());
+            if (!match) continue;
+            const n = Number.parseInt(match[1], 10);
+            if (Number.isInteger(n) && n > maxNum) {
+                maxNum = n;
+            }
+        }
+
+        let nextNum = maxNum + 1;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            let candidate = `CC-${String(nextNum).padStart(2, "0")}`;
+            while (existingSet.has(candidate)) {
+                nextNum += 1;
+                candidate = `CC-${String(nextNum).padStart(2, "0")}`;
+            }
+            existingSet.add(candidate);
+
+            try {
+                const [created] = await db
+                    .insert(costCenters)
+                    .values({
+                        companyId: input.companyId,
+                        code: candidate,
+                        name: input.name,
+                        active: true,
+                    })
+                    .returning();
+
+                return created;
+            } catch (err) {
+                if (getPgUniqueViolationConstraint(err) && attempt < 4) {
+                    nextNum += 1;
+                    continue;
+                }
+                if (getPgUniqueViolationConstraint(err)) {
+                    throw new FinanceDomainError(
+                        409,
+                        "COST_CENTER_CODE_CONFLICT",
+                        "Não foi possível gerar código único para o centro de custo. Tente novamente.",
+                    );
+                }
+                throw err;
+            }
+        }
+
+        throw new FinanceDomainError(
+            500,
+            "COST_CENTER_CODE_GENERATION_FAILED",
+            "Não foi possível gerar código automático para o centro de custo.",
+        );
     }
 
     async updateCostCenter(
@@ -927,6 +1119,7 @@ export class FinanceRepository {
     async createEntries(input: {
         companyId: string;
         motherId: string;
+        accountType?: "business" | "personal";
         userId: string;
         idempotencyKey: string;
         endpoint: string;
@@ -936,7 +1129,8 @@ export class FinanceRepository {
         description: string;
         documentNumber?: string | null;
         notes?: string | null;
-        clientId: string;
+        clientId?: string | null;
+        counterpartyName?: string | null;
         serviceId?: string | null;
         nfId?: string | null;
         categoryId: string;
@@ -988,7 +1182,32 @@ export class FinanceRepository {
                 };
             }
 
-            await ensureDefaultFinancialCategories(input.companyId, tx);
+            const accountType = input.accountType ?? "business";
+
+            if (accountType === "personal") {
+                if (input.nfId) {
+                    throw new FinanceDomainError(
+                        403,
+                        "NF_NOT_AVAILABLE_FOR_PERSONAL",
+                        "Notas fiscais estão disponíveis apenas para contas empresariais (CNPJ).",
+                    );
+                }
+                if (input.isIntercompany || input.counterpartyCompanyId) {
+                    throw new FinanceDomainError(
+                        400,
+                        "INTERCOMPANY_NOT_ALLOWED_FOR_PERSONAL",
+                        "Lançamentos intercompany estão disponíveis apenas para contas empresariais (CNPJ).",
+                    );
+                }
+            } else if (!input.clientId) {
+                throw new FinanceDomainError(
+                    400,
+                    "CLIENT_REQUIRED",
+                    "Selecione um cliente ou fornecedor cadastrado.",
+                );
+            }
+
+            await ensureDefaultFinancialCategories(input.companyId, tx, accountType);
 
             const [category] = await tx
                 .select()
@@ -1030,38 +1249,48 @@ export class FinanceRepository {
                 }
             }
 
-            const [client] = await tx
-                .select({
-                    id: clients.id,
-                    tradeName: clients.tradeName,
-                    registeredCompanyName: clients.registeredCompanyName,
-                    cnpj: clients.cnpj,
-                    cpf: clients.cpf,
-                })
-                .from(clients)
-                .where(
-                    and(
-                        eq(clients.id, input.clientId),
-                        eq(clients.companyId, input.companyId),
-                        eq(clients.active, true),
-                        sql`${clients.anonymizedAt} IS NULL`,
-                    ),
-                )
-                .limit(1);
-            if (!client) {
-                throw new FinanceDomainError(
-                    404,
-                    "CLIENT_NOT_FOUND",
-                    "Cliente/Fornecedor não encontrado ou inativo nesta empresa.",
-                );
+            let resolvedClientId: string | null = null;
+            let resolvedCounterpartyName: string;
+            let resolvedCounterpartyDocument: string | null = null;
+
+            if (input.clientId) {
+                const [client] = await tx
+                    .select({
+                        id: clients.id,
+                        tradeName: clients.tradeName,
+                        registeredCompanyName: clients.registeredCompanyName,
+                        cnpj: clients.cnpj,
+                        cpf: clients.cpf,
+                    })
+                    .from(clients)
+                    .where(
+                        and(
+                            eq(clients.id, input.clientId),
+                            eq(clients.companyId, input.companyId),
+                            eq(clients.active, true),
+                            sql`${clients.anonymizedAt} IS NULL`,
+                        ),
+                    )
+                    .limit(1);
+                if (!client) {
+                    throw new FinanceDomainError(
+                        404,
+                        "CLIENT_NOT_FOUND",
+                        "Cliente/Fornecedor não encontrado ou inativo nesta empresa.",
+                    );
+                }
+                resolvedClientId = client.id;
+                resolvedCounterpartyName =
+                    client.tradeName || client.registeredCompanyName;
+                resolvedCounterpartyDocument = client.cnpj
+                    ? client.cnpj
+                    : client.cpf && client.cpf.length >= 4
+                      ? `***.***.***-${client.cpf.slice(-2)}`
+                      : null;
+            } else {
+                const customName = input.counterpartyName?.trim();
+                resolvedCounterpartyName = customName || "Não informado";
             }
-            const resolvedCounterpartyName =
-                client.tradeName || client.registeredCompanyName;
-            const resolvedCounterpartyDocument = client.cnpj
-                ? client.cnpj
-                : client.cpf && client.cpf.length >= 4
-                  ? `***.***.***-${client.cpf.slice(-2)}`
-                  : null;
 
             if (input.serviceId) {
                 const [service] = await tx
@@ -1212,7 +1441,7 @@ export class FinanceRepository {
                     description: input.description,
                     documentNumber: input.documentNumber ?? null,
                     notes: input.notes ?? null,
-                    clientId: input.clientId,
+                    clientId: resolvedClientId,
                     counterpartyName: resolvedCounterpartyName,
                     counterpartyDocument: resolvedCounterpartyDocument,
                     serviceId: input.serviceId ?? null,
@@ -1277,7 +1506,7 @@ export class FinanceRepository {
                         description: `${input.description} (${idx + 1}/${input.totalInstallments})`,
                         documentNumber: input.documentNumber ?? null,
                         notes: input.notes ?? null,
-                        clientId: input.clientId,
+                        clientId: resolvedClientId,
                         counterpartyName: resolvedCounterpartyName,
                         counterpartyDocument: resolvedCounterpartyDocument,
                         serviceId: input.serviceId ?? null,
@@ -1389,6 +1618,7 @@ export class FinanceRepository {
             documentNumber?: string | null;
             notes?: string | null;
             clientId?: string;
+            counterpartyName?: string | null;
             categoryId?: string;
             costCenterId?: string | null;
             competenceDate?: string;
@@ -1399,6 +1629,7 @@ export class FinanceRepository {
             interestCents?: number;
             fineCents?: number;
         },
+        accountType: "business" | "personal" = "business",
     ) {
         return db.transaction(async (tx) => {
             const [existing] = await tx
@@ -1439,6 +1670,7 @@ export class FinanceRepository {
                 input.dueDate !== undefined ||
                 input.categoryId !== undefined ||
                 input.clientId !== undefined ||
+                input.counterpartyName !== undefined ||
                 input.status !== undefined;
 
             if (existing.settledAmountCents > 0n && hasMonetaryOrScheduleChange) {
@@ -1602,7 +1834,14 @@ export class FinanceRepository {
                               counterpartyDocument:
                                   resolvedCounterparty.counterpartyDocument,
                           }
-                        : {}),
+                        : accountType === "personal" &&
+                            !existing.clientId &&
+                            input.counterpartyName !== undefined
+                          ? {
+                                counterpartyName:
+                                    input.counterpartyName?.trim() || "Não informado",
+                            }
+                          : {}),
                     ...(input.categoryId !== undefined
                         ? { categoryId: input.categoryId }
                         : {}),
